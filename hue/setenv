@@ -1,0 +1,10 @@
+export PYTHON_VER=python3.8.2
+export SKIP_PYTHONDEV_CHECK=true
+export CFLAGS="-I$(xcrun --show-sdk-path)/usr/include/sasl"
+export LDFLAGS="-L/usr/local/opt/libffi/lib -L/usr/local/opt/openssl/lib"
+export CPPFLAGS="-I/usr/local/opt/libffi/include -I/usr/local/opt/openssl/include"
+
+export PATH=$PATH:~/Library/Python/3.8/bin
+export DYLD_LIBRARY_PATH="/usr/local/mysql/lib:$PATH"
+
+# make apps

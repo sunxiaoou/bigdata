@@ -1,0 +1,38 @@
+<template>
+  <div id="app">
+    <img src="./assets/logo.png" />
+    <router-view />
+  </div>
+</template>
+
+<script>
+import axios from "axios";
+
+var config = {
+  method: "get",
+  url: "http://localhost:8090/hue/accounts/logout",
+  headers: {
+    "Response-type": "application/json",
+  },
+};
+
+axios(config)
+  .then(function (response) {
+    console.log(response.data);
+  })
+  .catch(function (error) {
+    console.log(error);
+  });
+</script>
+
+<style>
+#app {
+  font-family: "Avenir", Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+
+  -moz-osx-font-smoothing: grayscale;
+  text-align: center;
+  color: #2c3e50;
+  margin-top: 60px;
+}
+</style>

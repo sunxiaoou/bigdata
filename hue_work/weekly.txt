@@ -1,0 +1,104 @@
+20220627——0701
+1) 研究oozie 对 hive / shell / sqoop的集成，oozie调度sqoop一直跑不过，主要是oozie的本地日志过于简略，出错后难以排查，后来在hdfs上找到有关任务的完整日志，才找到问题
+2) 试验hue与oozie集成后，在hue中利用拖拽实现调度的功能
+
+
+20220704——0708
+1) 熟悉django框架，搭建一个示例项目，尝试进行开发与调试
+2) 搭建hue的开发调试环境，为二次开发做准备
+
+
+20220711——0715
+1) 研究Hue加入新组件，跑通了一个简单的demo，但可以看出真做的话工作量不小
+2) 了解oozie 调度ssh的方法，与调度shell的区别在于不需要把相关资源放在hdfs上，这里想到，如果要集成本身与大数据无关的组件，直接令oozie调度ssh不失为一个更简明的方案，之后试了一下 hue + oozie + ssh + datax，看来也没什么问题
+3) 尝试在hue中的 oozie edit中添加分支，结果参见 https://blog.csdn.net/sun_xo/article/details/125808867?spm=1001.2014.3001.5501
+
+
+20220718——0722
+1. 研究oozie schedules
+2. 搭建Hue / Oozie用例：每逢工作日定时从网上采集数据保存至RDBMS，之后读取RDBMS的数据备份至数据仓库，实现时用schedule定时触发一个workflow，workflow由3个action组成，分别是：1) 爬取网上实时数据至MySQL表；2) 计算Hive表中最后的timestamp；3）根据 timestamp由Sqoop抽取MySQL中的增量数据存入Hive
+目前用例基本可以运行，但还需做一些调整
+
+
+20220725——0729
+1. 完成基于 Hue / Oozie 的定时抽取用例，并进行演示
+2. 学习Javascript，因为Hue的Oozie Editor 实现涉及到不少 Javascript
+
+
+20220808—0812
+1. 试验了JS本身的拖拽功能
+2. 开始看Hue源码，发现问题：Hue未使用Django原生模版生成页面，而使用第三方的mako模版，导致无法对嵌入其中的大量JS代码进行debug，使得理解程序逻辑变得很困难
+
+
+20220815—0819
+1. 周一讨论mako模版等问题，进一步引出前端开发是否应基于Hue界面的疑问，不利之处有：
+1）Django + mako模版方案本身的技术困难
+2）形式上Hue界面不一定满足要求
+3）前后端耦合紧密，不利于任务拆分
+另一方面，仍希望能够复用Hue 、Oozie等对大数据各组件工作流及管理功能
+综上，我倾向于保留Hue / Django的框架，引入DRF (Django restful framework) 对Hue做前后端分离，同时使用Vue代替原有mako模版部分实现前端功能，这样做的好处如下：
+1）Vue比mako模版更普及，公司内部有技术储备
+2）易于和公司产品风格保持统一，不必受原Hue界面风格的限制
+3）可以拆分前后端到不同的人或小组，便于发挥所长
+4）即使此后采用不同技术方案，只要保持接口稳定，改变一端不会影响另一端
+2. 熟悉DRF，搭建环境并着手做测试
+
+
+20220822—0826
+1. 熟悉DRF，尝试将一个Django项目改为前后端分离
+2. 调试并熟悉Hue代码
+
+
+20220829——0902
+1）尝试用DRF将Hue进行前后端分离：
+在Hue中加入2个class based view (CBV)，分别实现以下方法：
+Get workflow list
+Add a new workflow
+Get a workflow
+Modify a workflow
+Delete a workflow
+同时用postman模拟前端向Hue发出请求
+2）拆分前后端涉及跨域认证的问题，估计需要修改Hue现有的安全机制，具体细节还有待研究，目前我先用预存cookie的方法workaround，但目前只能进行读操作，也就是用postman发送2个Get命令
+
+
+20220905——0907
+学习DRF用户认证和权限管理相关代码
+
+
+20220914——0916
+1） Hue前后端分离后，需要用DRF的安全机制代替Hue原有机制，这里有一定工作量，目前阶段可暂时关闭Hue的安全机制
+2）在View层 开发Post  / Put命令用于添加 / 修改workflow
+
+
+20220920——0923
+1）完成workflow（document）增删改查Restful API
+2）了解Json Web Token（JWT）认证
+3）搭建Django/ Vue环境，了解前后端分离中的跨域问题
+4）尝试用Postman + cookie模拟Hue登录过程
+
+
+20221008——1014
+1）目前开发中暂时使用cookie代替登录过程，但由于Vue不允许设置cookie，只好将token（实际是sessionid）放入x-csrftoken中，同时修改了Django中的SessionMiddleware，以使Vue能够访问Hue的RESTful接口
+2）研究Hue中Oozie workflow的创建细节，开发了一个Python脚本模拟前端利用RESTful接口在HDFS中查找文件和创建workflow的行为，目前可包含shell和sqoop节点
+
+
+20221017——1021
+1）用postman模拟提交workflow以及获取job相关信息
+2）研究Hue / Django中的反CSRF（跨站请求伪造）机制，大致如下：前端Get登录表单时，Csrf中间件生成两个同源的token，一个隐藏在表单里，另一个和sessionid一起放在cookie里返回，前端在表单中填入用户密码后，Post表单会带回两个token，由Csrf中间件进行校验，如登录成功在cookie中返回一组新的token和sessionid
+3）修改desktop/auth/views.py使之能返回json格式，用postman和pyhton脚本模拟Hue登录过程
+
+
+20221024——1028
+1）调整前后端分离code以适应原Hue安全机制（之前为简化开发将其关闭）
+2）开发Vue登录脚本：之前用postman/python模拟了Hue的登录过程，Vue的不同之处在于它的客户端是浏览器，前后端分离违反了浏览器的同源策略，由于前端Vue和后端Django端口不同，导致浏览器无法从Django接收响应数据。曾考虑在后端设置CORS（跨域资源共享）来解决问题，但在登录的Get和Post过程中，Django都需要向浏览器当前站点的Cookie中设置csrftoken/sessionid（也与postman不同，postman得手动设置Cookie），所以需引入nginx将前端和后端服务代理到同一端口，从而解决了前后端分离的跨域问题；开发Vue列workflow job脚本：登录后Vue需要保留csrftoken，因为后续Post/Put等请求需要将其设置为x-csrftoken用于后端的Csrf校验；开发Vue登出脚本：用于删除浏览器中的sessionid，并使csrftoken失效
+3）撤销Django SessionMiddleware中此前为解决Vue同源问题的workaround
+
+
+20221031——1104
+1）用postman模拟Hue的用户管理
+2）整理之前开发的restful接口，编写测试相关python用例，包括以下内容：
+login, logout, list users, add a user, delete a user
+add a workflow (shell / sqoop), get / modify / delete workflow, list workflow / documents
+submit a workflow, get workflow log, get job log, list workflow logs, list job logs
+list directories in Hdfs
+

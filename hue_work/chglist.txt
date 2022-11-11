@@ -1,0 +1,10 @@
+apps/filebrowser/src/filebrowser/urls.py
+apps/filebrowser/src/filebrowser/views.py
+apps/useradmin/src/useradmin/views.py
+desktop/core/r2.txt
+desktop/core/requirements.txt
+desktop/core/src/desktop/auth/views.py
+desktop/core/src/desktop/management/commands/create_desktop_app.py
+desktop/core/src/desktop/settings.py
+desktop/core/src/desktop/urls.py
+desktop/core/src/desktop/views2.py
