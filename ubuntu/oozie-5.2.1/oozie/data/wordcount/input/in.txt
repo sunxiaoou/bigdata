@@ -1,0 +1,13 @@
+hadoop
+mapreduce
+hdfs
+hbase
+hdfs
+spark
+hive
+hcatalog
+sqoop
+flume
+kafka
+oozie
+hue
