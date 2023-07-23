@@ -1,0 +1,11 @@
+// $ cd ~/learn/java/netty/nettyInAction/xo/src/main/java
+// $ protoc --java_out . xo/netty/codec/Student.proto
+
+syntax = "proto3";
+option java_package = "xo.netty.codec";
+option java_outer_classname = "StudentPOJO";
+
+message Student {
+    int32 id = 1;
+    string name = 2;
+}
