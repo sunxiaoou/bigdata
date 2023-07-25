@@ -212,13 +212,13 @@ public class HBase {
     }
 
     public static Map<String, Map<String, Map<String, String>>> fruits() {
-        final Triple<Integer, String, Float>[] triples = new Triple[]{
-                new Triple<>(101, "香瓜", (float) 800.0),
-                new Triple<>(102, "草莓", (float) 150.0),
-                new Triple<>(103, "苹果", (float) 120.0),
-                new Triple<>(104, "柠檬", (float) 200.0),
-                new Triple<>(105, "橙子", (float) 115.0),
-                new Triple<>(106, "香蕉", (float) 110.0)
+        final Triple<Integer, String, Float>[] triples = new Triple[] {
+                new Triple<>(101, "🍉", (float) 800.0),
+                new Triple<>(102, "🍓", (float) 150.0),
+                new Triple<>(103, "🍎", (float) 120.0),
+                new Triple<>(104, "🍋", (float) 200.0),
+                new Triple<>(105, "🍊", (float) 115.0),
+                new Triple<>(106, "🍌", (float) 110.0)
         };
         Map<String, Map<String, Map<String, String>>> rows = new HashMap<>();
         for (Triple<Integer, String, Float> triple : triples) {
@@ -230,7 +230,8 @@ public class HBase {
     }
 
     public static void main(String[] args) throws IOException {
-        HBase db = new HBase("localhost", 2181, "/hbase");
+//        HBase db = new HBase("localhost", 2181, "/hbase");
+        HBase db = new HBase("192.168.55.250", 2181, "/hbase");
 
         if (args.length > 0) {
             if ("put".equals(args[0])) {
@@ -247,7 +248,6 @@ public class HBase {
             }
         }
 
-//        HBase db = new HBase("192.168.55.250", 2181, "/hbase");
 //        db.listNameSpaces();
 //        db.listTables("manga");
 

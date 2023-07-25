@@ -35,7 +35,7 @@ import java.util.UUID;
  */
 @InterfaceAudience.Private
 public class DummyReplicationEndpoint extends BaseReplicationEndpoint {
-  private static final Logger LOG = LoggerFactory.getLogger(lambdasinaction.hbase.DummyReplicationEndpoint.class);
+  private static final Logger LOG = LoggerFactory.getLogger(DummyReplicationEndpoint.class);
 
   @Override
   public boolean canReplicateToSameCluster() {
