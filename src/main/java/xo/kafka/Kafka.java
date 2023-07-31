@@ -1,5 +1,6 @@
 package xo.kafka;
 
+import org.apache.hadoop.hbase.util.Triple;
 import org.apache.kafka.clients.admin.*;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
@@ -13,6 +14,10 @@ import org.apache.kafka.common.errors.UnknownTopicOrPartitionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
@@ -20,6 +25,20 @@ import java.util.concurrent.Future;
 
 public class Kafka {
     private static final Logger LOG = LoggerFactory.getLogger(Kafka.class);
+
+    private static Properties loadProperties(String fileName) {
+        Properties properties = new Properties();
+        try (InputStream inputStream = Kafka.class.getClassLoader().getResourceAsStream(fileName)) {
+            if (inputStream != null) {
+                properties.load(inputStream);
+            } else {
+                throw new IOException("Unable to load the properties file: " + fileName);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return properties;
+    }
 
     static class KfkAdmin {
         AdminClient admin;
@@ -116,7 +135,7 @@ public class Kafka {
     }
 
     static class KfkConsumer {
-        KafkaConsumer<String, String> consumer;
+        KafkaConsumer<String, Object> consumer;
 
         KfkConsumer(String host, int port, List<String> topics) {
             Properties props = new Properties();
@@ -130,17 +149,23 @@ public class Kafka {
             consumer.subscribe(topics);
         }
 
-        void close() {
-            consumer.close();
+        KfkConsumer(String properties, List<String> topics) {
+            Properties props = loadProperties(properties);
+            consumer = new KafkaConsumer<>(props);
+            consumer.subscribe(topics);
         }
 
-        List<List<Object>> poll(int num) {
-            List<List<Object>> result = new ArrayList<>();
-            while (result.size() < num) {
-                ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
-                for (ConsumerRecord<String, String> record : records) {
-                    result.add(Arrays.asList(record.offset(), record.key(), record.value()));
+        List<Triple<Long, String, Object>> poll(int num) {
+            List<Triple<Long, String, Object>> result = new ArrayList<>();
+            try {
+                while (result.size() < (Math.max(num, 1))) {
+                    ConsumerRecords<String, Object> records = consumer.poll(Duration.ofMillis(100));
+                    for (ConsumerRecord<String, Object> record : records) {
+                        result.add(new Triple<>(record.offset(), record.key(), record.value()));
+                    }
                 }
+            } finally {
+                consumer.close();
             }
             return result;
         }
@@ -155,14 +180,21 @@ public class Kafka {
         producer.close();
     }
 
-    public static void testConsumer(String host, int port) {
-        KfkConsumer consumer = new KfkConsumer(host, port, Arrays.asList("test"));
-        List<List<Object>> records = consumer.poll(5);
-        for (List<Object> record: records) {
+    public static void testConsumer(String host, int port, String topic) {
+        KfkConsumer consumer = new KfkConsumer(host, port, Arrays.asList(topic));
+        List<Triple<Long, String, Object>> records = consumer.poll(5);
+        for (Triple<Long, String, Object> record: records) {
             System.out.printf("offset = %d, key = %s, value = %s%n",
-                    (long)(record.get(0)), record.get(1), record.get(2));
+                    record.getFirst(), record.getSecond(), record.getThird());
         }
-        consumer.close();
+    }
+
+    public static void testConsumer2(String properties, String topic) {
+        KfkConsumer consumer = new KfkConsumer(properties, Arrays.asList(topic));
+        List<Triple<Long, String, Object>> records = consumer.poll(0);
+        for (Triple<Long, String, Object> record: records) {
+            System.out.println(StandardCharsets.UTF_8.decode((ByteBuffer) record.getThird()).toString());
+        }
     }
 
     public static void main(String... argv) throws ExecutionException, InterruptedException {
@@ -173,8 +205,9 @@ public class Kafka {
 //        admin.createTopic("test", 1, 1);
         System.out.println(admin.topics());
         System.out.println(admin.topicDescription("test"));
-        testProducer(host, port);
-        testConsumer(host, port);
+//        testProducer(host, port);
+//        testConsumer(host, port, "test");
+        testConsumer2("kafka_consumer.properties", "fruit");
 //        admin.deleteTopic("test");
     }
 }

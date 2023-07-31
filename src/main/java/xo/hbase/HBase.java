@@ -90,6 +90,16 @@ public class HBase {
         }
     }
 
+    public void putCell(String space, String name, byte[] key, byte[] family, byte[] qualifier, byte[] value)
+            throws IOException {
+        TableName tableName = TableName.valueOf(space == null ? name : space + ':' + name);    // qualified name
+        try (Table table = conn.getTable(tableName)) {
+            Put put = new Put(key);
+            put.addColumn(family, qualifier, value);
+            table.put(put);
+        }
+    }
+
     public void putRow(String space, String name, Pair<String, Map<String, Map<String, String>>> row)
             throws IOException {
         TableName tableName = TableName.valueOf(space == null ? name : space + ':' + name);    // qualified name
@@ -133,6 +143,15 @@ public class HBase {
                 }
                 table.put(put);
             }
+        }
+    }
+
+    public void deleteCell(String space, String name, byte[] key, byte[] family) throws IOException {
+        TableName tableName = TableName.valueOf(space == null ? name : space + ':' + name);    // qualified name
+        try (Table table = conn.getTable(tableName)) {
+            Delete delete = new Delete(key);
+            delete.addFamily(family);
+            table.delete(delete);
         }
     }
 
@@ -230,31 +249,41 @@ public class HBase {
     }
 
     public static void main(String[] args) throws IOException {
-//        HBase db = new HBase("localhost", 2181, "/hbase");
-        HBase db = new HBase("192.168.55.250", 2181, "/hbase");
-
-        if (args.length > 0) {
-            if ("put".equals(args[0])) {
-                db.putRow("manga", "fruit", fruit(new Triple<>(107, "🍐", (float) 115)));
-                System.out.println(db.scanTable("manga", "fruit"));
-                return;
-            } else if ("delete".equals(args[0])) {
-                db.deleteRow("manga", "fruit", "107");
-                System.out.println(db.scanTable("manga", "fruit"));
-                return;
-            } else if ("scan".equals(args[0])) {
-                System.out.println(db.scanTable("manga", "fruit"));
-                return;
+        String host = "localhost";
+        String op = null;
+        if (args.length > 1) {
+            host = args[0];
+            op = args[1];
+        } else if (args.length > 0) {
+            host = args[0];
+        }
+        HBase db = new HBase(host, 2181, "/hbase");
+        if (op != null) {
+            switch (op) {
+                case "put":
+                    db.putRow("manga", "fruit", fruit(new Triple<>(107, "🍐", (float) 115)));
+                    System.out.println(db.scanTable("manga", "fruit"));
+                    return;
+                case "delete":
+                    db.deleteRow("manga", "fruit", "107");
+                    System.out.println(db.scanTable("manga", "fruit"));
+                    return;
+                case "scan":
+                    System.out.println(db.scanTable("manga", "fruit"));
+                    return;
+                default:
+                    System.out.println("unknown op: " + op);
+                    return;
             }
         }
 
-//        db.listNameSpaces();
-//        db.listTables("manga");
+        db.listNameSpaces();
+        db.listTables("manga");
 
 //        db.dropTable(null, "fruit");
-//        db.createTable("manga", "fruit", "cf");
+        db.createTable("manga", "fruit", "cf");
 //        db.truncateTable("manga", "fruit");
-//        db.putRows("manga", "fruit", fruits());
+        db.putRows("manga", "fruit", fruits());
 //        db.putRow("manga", "fruit", fruit(new Triple<>(107, "🍐", (float) 115)));
 //        db.deleteRow("manga", "fruit", "107");
         System.out.println(db.scanTable("manga", "fruit"));
