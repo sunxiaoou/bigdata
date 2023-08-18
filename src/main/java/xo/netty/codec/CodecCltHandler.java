@@ -16,7 +16,7 @@ public class CodecCltHandler extends SimpleChannelInboundHandler<ByteBuf> {
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
 //        ctx.writeAndFlush(Unpooled.copiedBuffer("Netty rocks!", CharsetUtil.UTF_8));
-        StudentPOJO.Student student = StudentPOJO.Student.newBuilder().setId(1).setName("红线").build();
+        StudentPOJO.Student student = StudentPOJO.Student.newBuilder().setId(1).setName("hongXian").build();
         ctx.writeAndFlush(student);
     }
 
