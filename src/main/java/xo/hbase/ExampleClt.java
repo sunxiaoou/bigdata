@@ -4,7 +4,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.ipc.*;
+import org.apache.hadoop.hbase.ipc.AbstractRpcClient;
+import org.apache.hadoop.hbase.ipc.HBaseRpcControllerImpl;
+import org.apache.hadoop.hbase.ipc.NettyRpcClient;
+import org.apache.hadoop.hbase.ipc.NettyRpcClientConfigHelper;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
@@ -17,8 +20,8 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 
 
-public class RpcClt {
-    private static final Logger LOG = LoggerFactory.getLogger(RpcClt.class);
+public class ExampleClt {
+    private static final Logger LOG = LoggerFactory.getLogger(ExampleClt.class);
 
     private static final NioEventLoopGroup NIO = new NioEventLoopGroup();
     private static final byte[] CELL_BYTES = Bytes.toBytes("xyz");
@@ -29,16 +32,15 @@ public class RpcClt {
         NettyRpcClientConfigHelper.setEventLoopConfig(conf, NIO, NioSocketChannel.class);
         AbstractRpcClient<?> client =
                 new NettyRpcClient(conf, HConstants.CLUSTER_ID_DEFAULT, null, null);
-        RpcServiceProtos.RpcService.BlockingInterface stub =
-                RpcServiceBlockImpl.newBlockingStub(client, new InetSocketAddress("localhost", 8813));
-        StringBuilder message = new StringBuilder(1200);
-        for (int i = 0; i < 3; i ++) {
-            message.append("hello.");
-        }
-        RpcProtos.EchoRequestProto param =
-                RpcProtos.EchoRequestProto.newBuilder().setMessage(message.toString()).build();
-        RpcProtos.EchoResponseProto responseProto =
-                stub.echo(new HBaseRpcControllerImpl(CellUtil.createCellScanner(ImmutableList.of(CELL))), param);
-        LOG.info("response:" + responseProto.toString());
+        ExampleProto.RowCountService.BlockingInterface stub =
+                ExampleService.newBlockingStub(client, new InetSocketAddress("localhost", 8813));
+
+        ExampleProto.CountRequest param = ExampleProto.CountRequest.newBuilder().build();
+        HBaseRpcControllerImpl hBaseRpcController =
+                new HBaseRpcControllerImpl(CellUtil.createCellScanner(ImmutableList.of(CELL)));
+        ExampleProto.CountResponse responseProto = stub.getRowCount(hBaseRpcController, param);
+        LOG.info("RowCount - " + responseProto.toString());
+        responseProto = stub.getKeyValueCount(hBaseRpcController, param);
+        LOG.info("KeyValueCount - " + responseProto.toString());
     }
 }

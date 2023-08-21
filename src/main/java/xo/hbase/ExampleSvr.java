@@ -14,12 +14,12 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 
 
-public class RpcSvr {
-    private static final Logger LOG = LoggerFactory.getLogger(RpcSvr.class);
+public class ExampleSvr {
+    private static final Logger LOG = LoggerFactory.getLogger(ExampleSvr.class);
 
     private static final Configuration CONF = HBaseConfiguration.create();
     private static final BlockingService SERVICE =
-            RpcServiceProtos.RpcService.newReflectiveBlockingService(new RpcServiceBlockImpl());
+            ExampleProto.RowCountService.newReflectiveBlockingService(new ExampleService());
 
     public static void main(String[] args) throws IOException {
         Configuration conf = new Configuration(CONF);
