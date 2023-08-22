@@ -1,4 +1,4 @@
-package xo.protobuf;
+package xo.netty.codec;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -6,7 +6,7 @@ import io.netty.buffer.ByteBufAllocator;
 import static io.netty.buffer.ByteBufUtil.appendPrettyHexDump;
 import static io.netty.util.internal.StringUtil.NEWLINE;
 
-public class TestByteBuf {
+public class ByteBufTest {
     private static void log(ByteBuf buf) {
         int length = buf.readableBytes();
         int rows = length / 16 + (length % 15 == 0 ? 0: 1) + 4;
@@ -18,7 +18,6 @@ public class TestByteBuf {
         appendPrettyHexDump(sb, buf);
         System.out.println(sb.toString());
     }
-
     public static void main(String[] args) {
         ByteBuf buf = ByteBufAllocator.DEFAULT.buffer();
         log(buf);
