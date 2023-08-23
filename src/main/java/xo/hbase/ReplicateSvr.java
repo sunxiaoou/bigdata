@@ -19,20 +19,23 @@ public class ReplicateSvr {
     private static final Logger LOG = LoggerFactory.getLogger(ReplicateSvr.class);
 
     private static final Configuration CONF = HBaseConfiguration.create();
-    private static final BlockingService SERVICE =
-            AdminProtos.AdminService.newReflectiveBlockingService(new ReplicateService());
+    NettyRpcServer rpcServer;
 
-    public static void main(String[] args) throws IOException {
+    public ReplicateSvr(String host, int port) throws IOException {
         Configuration conf = new Configuration(CONF);
-        NettyRpcServer rpcServer = new NettyRpcServer(null,
+        BlockingService service =
+                AdminProtos.AdminService.newReflectiveBlockingService(new ReplicateService());
+        this.rpcServer = new NettyRpcServer(null,
                 "rpcSvr",
-                Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(SERVICE, null)),
-                new InetSocketAddress("localhost", 8813),
+                Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(service, null)),
+                new InetSocketAddress(host, port),
                 conf,
                 new FifoRpcScheduler(conf, 1),
                 true
         );
+    }
 
+    private void run() {
         rpcServer.start();
         LOG.info("RPC server started on: " + rpcServer.getListenerAddress());
 
@@ -45,5 +48,10 @@ public class ReplicateSvr {
             rpcServer.stop();
             LOG.info("RPC server stopped.");
         }
+    }
+
+    public static void main(String[] args) throws IOException {
+        ReplicateSvr svr = new ReplicateSvr("localhost", 8813);
+        svr.run();
     }
 }
