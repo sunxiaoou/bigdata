@@ -30,11 +30,38 @@ import java.util.List;
 public class ReplicateClt {
     private static final Logger LOG = LoggerFactory.getLogger(ReplicateClt.class);
 
-    private static final NioEventLoopGroup NIO = new NioEventLoopGroup();
-    private static final byte[] CELL_BYTES = Bytes.toBytes("xyz");
-    private static final KeyValue CELL = new KeyValue(CELL_BYTES, CELL_BYTES, CELL_BYTES, CELL_BYTES);
+    AdminProtos.AdminService.BlockingInterface admin;
 
-    private static WALEdit createEdit(List<KeyValue> keyValues, boolean replay) {
+    public ReplicateClt(String host, int port) throws IOException {
+        Configuration conf = new Configuration();
+        NioEventLoopGroup nio = new NioEventLoopGroup();
+        NettyRpcClientConfigHelper.setEventLoopConfig(conf, nio, NioSocketChannel.class);
+        AbstractRpcClient<?> client =
+                new NettyRpcClient(conf, HConstants.CLUSTER_ID_DEFAULT, null, null);
+        admin = ReplicateService.newBlockingStub(client, new InetSocketAddress(host, port));
+    }
+
+    private void replicate(KeyValue kv) throws ServiceException {
+        AdminProtos.ReplicateWALEntryRequest param = AdminProtos.ReplicateWALEntryRequest.newBuilder().build();
+        HBaseRpcControllerImpl controller =
+                new HBaseRpcControllerImpl(CellUtil.createCellScanner(ImmutableList.of(kv)));
+        AdminProtos.ReplicateWALEntryResponse responseProto = admin.replicateWALEntry(controller, param);
+        LOG.info(responseProto.toString());
+    }
+
+    private void replicate(WAL.Entry entry) throws IOException {
+        List<WAL.Entry> entries = Arrays.asList(entry);
+        ReplicationProtbufUtil.replicateWALEntry(
+                admin,
+                (WAL.Entry[]) entries.toArray(),
+                "",
+                new Path("hdfs://localhost:8020/hbase/data"),
+                new Path("hdfs://localhost:8020/hbase/archive/data"),
+                0);
+        LOG.info("replicated");
+    }
+
+    static private WALEdit createEdit(List<KeyValue> keyValues, boolean replay) {
         WALEdit edit = new WALEdit(keyValues.size(), replay);
         for (KeyValue keyValue : keyValues) {
             edit.add(keyValue);
@@ -42,7 +69,7 @@ public class ReplicateClt {
         return edit;
     }
 
-    private static WAL.Entry createEntry() {
+    static private WAL.Entry createEntry() {
         WALKeyImpl key = new WALKeyImpl(Bytes.toBytes("encode_region_name"), TableName.valueOf("manga:fruit"),
                 42, System.currentTimeMillis(), HConstants.DEFAULT_CLUSTER_ID);
         List<KeyValue> keyValues = new ArrayList<>();
@@ -55,27 +82,11 @@ public class ReplicateClt {
     }
 
     public static void main(String[] args) throws IOException, ServiceException {
-        Configuration conf = new Configuration();
-        NettyRpcClientConfigHelper.setEventLoopConfig(conf, NIO, NioSocketChannel.class);
-        AbstractRpcClient<?> client =
-                new NettyRpcClient(conf, HConstants.CLUSTER_ID_DEFAULT, null, null);
-        AdminProtos.AdminService.BlockingInterface admin =
-                ReplicateService.newBlockingStub(client, new InetSocketAddress("localhost", 8813));
+        ReplicateClt clt = new ReplicateClt("localhost", 8813);
 
-//        AdminProtos.ReplicateWALEntryRequest param = AdminProtos.ReplicateWALEntryRequest.newBuilder().build();
-//        HBaseRpcControllerImpl controller =
-//                new HBaseRpcControllerImpl(CellUtil.createCellScanner(ImmutableList.of(CELL)));
-//        AdminProtos.ReplicateWALEntryResponse responseProto = admin.replicateWALEntry(controller, param);
-//        LOG.info(responseProto.toString());
-
-        List<WAL.Entry> entries = Arrays.asList(createEntry());
-        ReplicationProtbufUtil.replicateWALEntry(
-                admin,
-                (WAL.Entry[]) entries.toArray(),
-                "",
-                new Path("hdfs://localhost:8020/hbase/data"),
-                new Path("hdfs://localhost:8020/hbase/archive/data"),
-                0);
-        LOG.info("replicated");
+        final byte[] CELL_BYTES = Bytes.toBytes("xyz");
+        final KeyValue CELL = new KeyValue(CELL_BYTES, CELL_BYTES, CELL_BYTES, CELL_BYTES);
+        clt.replicate(CELL);
+        clt.replicate(createEntry());
     }
 }

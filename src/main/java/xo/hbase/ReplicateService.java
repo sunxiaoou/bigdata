@@ -89,7 +89,7 @@ public class ReplicateService implements AdminService.BlockingInterface {
     @Override
     public ReplicateWALEntryResponse replicateWALEntry(RpcController controller, ReplicateWALEntryRequest request) {
         List<WALEntry> entries = request.getEntryList();
-        LOG.info(entries.toString());
+        LOG.info("entries: " + entries.toString());
         CellScanner cellScanner = ((HBaseRpcController) controller).cellScanner();
         ((HBaseRpcController) controller).setCellScanner(null);
         List<Cell> cells = new ArrayList<>();
@@ -101,7 +101,7 @@ public class ReplicateService implements AdminService.BlockingInterface {
             }
             cells.add(cellScanner.current());
         }
-        LOG.info(cells.toString());
+        LOG.info("cells: " + cells.toString());
         ReplicateWALEntryResponse.Builder responseBuilder = ReplicateWALEntryResponse.newBuilder();
         // Add any response data to the response builder
         return responseBuilder.build();
