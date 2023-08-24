@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 
 
@@ -36,7 +37,7 @@ public class ReplicateSvr {
         );
     }
 
-    private String register(String zkHost, int zkPort, String zkPath)
+    private String register(String zkHost, int zkPort, String zkPeer, String host, int port)
             throws IOException, KeeperException, InterruptedException {
         String connectString = String.format("%s:%d", zkHost, zkPort);
         int sessionTimeout = 90000;
@@ -49,7 +50,22 @@ public class ReplicateSvr {
                 }
             }
         });
-        return zk.create(zkPath, null, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
+
+        String path = zkPeer;
+        if (zk.exists(path, false) == null) {
+            zk.create(path, null, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+        }
+        if (zk.exists(path + "/hbaseid", false) == null) {
+            String uuid = UUID.randomUUID().toString();
+            zk.create(path + "/hbaseid", uuid.getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+        }
+        path += "/rs";
+        if (zk.exists(path, false) == null) {
+            zk.create(path, null, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+        }
+        path += String.format("/%s,%d,%d", host, port, System.currentTimeMillis());
+
+        return zk.create(path, null, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
     }
 
     private void run() {
@@ -70,9 +86,12 @@ public class ReplicateSvr {
     public static void main(String[] args) throws IOException, KeeperException, InterruptedException {
         String host = "macos";
         int port = 8813;
+        String zkHost = "macos";
+        int zkPort = 2181;
+        String zkPeer = "/myPeer";
+
         ReplicateSvr svr = new ReplicateSvr("0", port);
-        LOG.info(svr.register("ubuntu", 2181,
-                String.format("/hbase/rs/%s,%d,%d", host, port, System.currentTimeMillis())));
+        LOG.info(svr.register(zkHost, zkPort, zkPeer, host, port));
         svr.run();
     }
 }
