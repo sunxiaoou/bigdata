@@ -8,11 +8,13 @@ import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
+import org.apache.zookeeper.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.concurrent.CountDownLatch;
 
 
 public class ReplicateSvr {
@@ -50,8 +52,22 @@ public class ReplicateSvr {
         }
     }
 
-    public static void main(String[] args) throws IOException {
-        ReplicateSvr svr = new ReplicateSvr("localhost", 8813);
+    public static void main(String[] args) throws IOException, KeeperException, InterruptedException {
+        ReplicateSvr svr = new ReplicateSvr("0", 8813);
+
+        String connectString = "ubuntu:2181";
+        int sessionTimeout = 90000;
+        CountDownLatch connSignal = new CountDownLatch(0);
+        ZooKeeper zk = new ZooKeeper(connectString, sessionTimeout, new Watcher() {
+            @Override
+            public void process(WatchedEvent event) {
+                if (event.getState() == Event.KeeperState.SyncConnected) {
+                    connSignal.countDown();
+                }
+            }
+        });
+        String path = "/hbase/rs/macos,8813," + System.currentTimeMillis();
+        LOG.info(zk.create(path, null, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL));
         svr.run();
     }
 }
