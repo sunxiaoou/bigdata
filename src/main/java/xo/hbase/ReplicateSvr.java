@@ -37,7 +37,7 @@ public class ReplicateSvr {
         );
     }
 
-    private String register(String zkHost, int zkPort, String zkPeer, String host, int port)
+    private String register(String zkHost, int zkPort, String zkPath, String host, int port)
             throws IOException, KeeperException, InterruptedException {
         String connectString = String.format("%s:%d", zkHost, zkPort);
         int sessionTimeout = 90000;
@@ -51,7 +51,7 @@ public class ReplicateSvr {
             }
         });
 
-        String path = zkPeer;
+        String path = zkPath;
         if (zk.exists(path, false) == null) {
             zk.create(path, null, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
         }
@@ -83,15 +83,18 @@ public class ReplicateSvr {
         }
     }
 
+    /**
+     * hbase> add_peer 'macos', CLUSTER_KEY => "macos:2181:/myPeer"
+     */
     public static void main(String[] args) throws IOException, KeeperException, InterruptedException {
         String host = "macos";
         int port = 8813;
         String zkHost = "macos";
         int zkPort = 2181;
-        String zkPeer = "/myPeer";
+        String zkPath = "/myPeer";
 
         ReplicateSvr svr = new ReplicateSvr("0", port);
-        LOG.info(svr.register(zkHost, zkPort, zkPeer, host, port));
+        LOG.info(svr.register(zkHost, zkPort, zkPath, host, port));
         svr.run();
     }
 }
