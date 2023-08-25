@@ -25,12 +25,17 @@ public class HBase {
     Connection conn;
     Admin admin;
 
+    public HBase() throws IOException {
+        Configuration conf = HBaseConfiguration.create();
+        conn = ConnectionFactory.createConnection(conf);
+        admin = conn.getAdmin();
+    }
+
     public HBase(String host, int port, String znode) throws IOException {
         Configuration conf = HBaseConfiguration.create();
         conf.set("hbase.zookeeper.quorum", host);
         conf.set("hbase.zookeeper.property.clientPort", "" + port);
         conf.set("zookeeper.znode.parent", znode);
-//        conf.addResource("target/classes/lambdasinaction/tmp/hbase-site.xml");
         conn = ConnectionFactory.createConnection(conf);
         admin = conn.getAdmin();
     }
@@ -249,16 +254,13 @@ public class HBase {
     }
 
     public static void main(String[] args) throws IOException {
-        String host = "localhost";
-        String op = null;
+        String host;
+        String op;
+        HBase db;
         if (args.length > 1) {
             host = args[0];
             op = args[1];
-        } else if (args.length > 0) {
-            host = args[0];
-        }
-        HBase db = new HBase(host, 2181, "/hbase");
-        if (op != null) {
+            db = new HBase(host, 2181, "/hbase");
             switch (op) {
                 case "put":
                     db.putRow("manga", "fruit", fruit(new Triple<>(107, "🍐", (float) 115)));
@@ -275,15 +277,20 @@ public class HBase {
                     System.out.println("unknown op: " + op);
                     return;
             }
+        } else if (args.length > 0) {
+            host = args[0];
+            db = new HBase(host, 2181, "/hbase");
+        } else {
+            db = new HBase();   // use resources/hbase-site.xml
         }
 
         db.listNameSpaces();
         db.listTables("manga");
 
 //        db.dropTable(null, "fruit");
-        db.createTable("manga", "fruit", "cf");
+//        db.createTable("manga", "fruit", "cf");
 //        db.truncateTable("manga", "fruit");
-        db.putRows("manga", "fruit", fruits());
+//        db.putRows("manga", "fruit", fruits());
 //        db.putRow("manga", "fruit", fruit(new Triple<>(107, "🍐", (float) 115)));
 //        db.deleteRow("manga", "fruit", "107");
         System.out.println(db.scanTable("manga", "fruit"));
