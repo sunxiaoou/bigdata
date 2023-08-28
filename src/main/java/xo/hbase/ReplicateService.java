@@ -106,6 +106,10 @@ public class ReplicateService implements AdminService.BlockingInterface {
         List<WALEntry> entries = request.getEntryList();
         LOG.info("entries: " + entries.toString());
         CellScanner cellScanner = ((HBaseRpcController) controller).cellScanner();
+//        logCells(cellScanner);  // alternative with replication as cellScanner can only use once
+        LOG.info(request.getReplicationClusterId());
+        LOG.info(request.getSourceBaseNamespaceDirPath());
+        LOG.info(request.getSourceHFileArchiveDirPath());
         ((HBaseRpcController) controller).setCellScanner(null);
 
         try {
@@ -120,8 +124,6 @@ public class ReplicateService implements AdminService.BlockingInterface {
         } catch (IOException e) {
             e.printStackTrace();
         }
-
-//        logCells(cellScanner);  // alternative with replication as cellScanner can only use once
 
         ReplicateWALEntryResponse.Builder responseBuilder = ReplicateWALEntryResponse.newBuilder();
         // Add any response data to the response builder
