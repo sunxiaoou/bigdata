@@ -3,6 +3,7 @@ package xo.hdfs;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -12,7 +13,19 @@ public class Hdfs {
     private static final Logger LOG = LoggerFactory.getLogger(Hdfs.class);
     FileSystem fileSystem;
 
+    public Hdfs(Configuration conf) throws IOException {
+        fileSystem = FileSystem.get(conf);
+    }
+
     public Hdfs(String host, int port) throws IOException {
+        Configuration conf = new Configuration();
+        conf.set("fs.defaultFS", String.format("hdfs://%s:%d", host, port));
+        fileSystem = FileSystem.get(conf);
+    }
+
+    public Hdfs(String host, int port, String user) throws IOException {
+        UserGroupInformation ugi = UserGroupInformation.createRemoteUser(user);
+        UserGroupInformation.setLoginUser(ugi);
         Configuration conf = new Configuration();
         conf.set("fs.defaultFS", String.format("hdfs://%s:%d", host, port));
         fileSystem = FileSystem.get(conf);
@@ -33,6 +46,7 @@ public class Hdfs {
         os.close();
     }
 
+    // hdfs dfs -text filePath
     public String readFile(String filePath) throws IOException {
         InputStream in = fileSystem.open(new Path(filePath));
         byte[] buffer = new byte[256];
@@ -40,15 +54,26 @@ public class Hdfs {
         return new String(buffer, 0, bytesRead);
     }
 
+    // hdfs dfs -rm -r -f filePath
     public boolean delFile(String filePath) throws IOException {
-        return fileSystem.delete(new Path(filePath), false);
+        return fileSystem.delete(new Path(filePath), true);
+    }
+
+    private static void wordCount(Hdfs fs) throws IOException {
+        String text = "apache, http, hadoop, hadoop, sqoop, hue, mapreduce, sqoop, oozie, hbase, http";
+        String path = "wordcount/input/wc.txt";
+        fs.createFile(path, text);
+        LOG.info("read: " + fs.readFile(path));
     }
 
     public static void main(String[] args) throws IOException {
-        Hdfs fs = new Hdfs("192.168.55.250", 8020);
-        fs.createFile("/tmp/output/hello.txt", "Hello Hadoop");
-        LOG.info(fs.readFile("/tmp/output/hello.txt"));
-        LOG.debug("delete - {}", fs.delFile("/tmp/output/myfile.txt"));
+        Hdfs fs = new Hdfs("192.168.55.250", 8020, "sunxo");
+//        fs.createFile("/tmp/output/hello.txt", "Hello Hadoop");
+//        LOG.info(fs.readFile("/tmp/output/hello.txt"));
+//        LOG.debug("delete - {}", fs.delFile("/tmp/output/myfile.txt"));
+//        wordCount(fs);
+//        LOG.info(String.valueOf(fs.delFile("wordcount/output")));
+        LOG.info(fs.readFile("wordcount/output/part-r-00000"));
         fs.close();
     }
 }
