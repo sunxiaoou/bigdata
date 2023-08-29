@@ -56,8 +56,6 @@ public class WordCount extends Configured implements Tool {
         job.setJarByClass(WordCount.class);
 
         job.setInputFormatClass(TextInputFormat.class);
-//        TextInputFormat.addInputPath(job, new Path("file:///" + base + "/input"));
-//        TextInputFormat.addInputPath(job, new Path(input));
         TextInputFormat.addInputPath(job, new Path(args[0]));
 
         job.setMapperClass(MyMapper.class);
@@ -69,8 +67,6 @@ public class WordCount extends Configured implements Tool {
         job.setOutputValueClass(LongWritable.class);
 
         job.setOutputFormatClass(TextOutputFormat.class);
-//        TextOutputFormat.setOutputPath(job, new Path("file:///" + base + "/output"));
-//        TextOutputFormat.setOutputPath(job, new Path(output));
         TextOutputFormat.setOutputPath(job, new Path(args[1]));
 
         boolean b = job.waitForCompletion(true);
