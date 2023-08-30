@@ -1,5 +1,6 @@
 package xo.mapreduce;
 
+import org.apache.hadoop.mapreduce.Counter;
 import xo.hdfs.Hdfs;
 
 import org.apache.hadoop.conf.Configuration;
@@ -36,6 +37,8 @@ public class WordCount extends Configured implements Tool {
                 longWritable.set(1);
                 context.write(text, longWritable);
             }
+            Counter counter = context.getCounter("MR_COUNTER", "myMapCounter");
+            counter.increment(1L);      // count line of input file
         }
     }
 

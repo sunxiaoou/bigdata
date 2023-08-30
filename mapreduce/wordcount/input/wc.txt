@@ -1,0 +1,2 @@
+apache, hadoop, hadoop, sqoop, hue, mapreduce, sqoop, oozie, hbase
+hive, yarn, zookeeper, kafka, kafka
