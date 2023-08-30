@@ -25,7 +25,7 @@ import java.nio.file.Paths;
 public class WordCount extends Configured implements Tool {
     private static final Logger LOG = LoggerFactory.getLogger(WordCount.class);
 
-    public static class MyMapper extends Mapper<LongWritable, Text, Text, LongWritable> {
+    static class MyMapper extends Mapper<LongWritable, Text, Text, LongWritable> {
         @Override
         protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
             Text text = new Text();
@@ -39,7 +39,7 @@ public class WordCount extends Configured implements Tool {
         }
     }
 
-    public static class MyReducer extends Reducer<Text, LongWritable, Text, LongWritable> {
+    static class MyReducer extends Reducer<Text, LongWritable, Text, LongWritable> {
         @Override
         protected void reduce(Text key, Iterable<LongWritable> values, Context context) throws IOException, InterruptedException {
             long count = 0;
@@ -73,7 +73,7 @@ public class WordCount extends Configured implements Tool {
         return b ? 0: 1;
     }
 
-    private static void delDir(String dir) throws IOException {
+    static void delDir(String dir) throws IOException {
         java.nio.file.Path path = Paths.get(dir);
         if (Files.exists(path)) {
             Files.walk(path)
@@ -88,7 +88,7 @@ public class WordCount extends Configured implements Tool {
         }
     }
 
-    private static String readFile(String file) throws IOException {
+    static String readFile(String file) throws IOException {
         java.nio.file.Path path = Paths.get(file);
         byte[] fileBytes = Files.readAllBytes(path);
         return new String(fileBytes);
