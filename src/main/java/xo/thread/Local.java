@@ -31,12 +31,21 @@ public class Local {
     // 自定义 ThreadLocal 变量
     private static final ThreadLocal<UserInfo> userInfoThreadLocal = ThreadLocal.withInitial(UserInfo::new);
 
-    public static void main(String[] args) {
-        // 模拟线程池中的任务
-        Runnable task = () -> {
+    // 模拟线程池中的任务
+    static class MyRunnable implements Runnable {
+        private final int id;
+        private final String name;
+
+        public MyRunnable(int id, String name) {
+            this.id = id;
+            this.name = name;
+        }
+
+        @Override
+        public void run() {
             UserInfo userInfo = new UserInfo();
-            userInfo.setUserId(123);
-            userInfo.setUsername("john_doe");
+            userInfo.setUserId(id);
+            userInfo.setUsername(name);
             userInfoThreadLocal.set(userInfo);
 
             try {
@@ -47,12 +56,14 @@ public class Local {
                 // 在 finally 块中确保回收 ThreadLocal 变量
                 userInfoThreadLocal.remove();
             }
-        };
+        }
+    }
 
+    public static void main(String[] args) {
         // 创建线程池并提交任务
         Pool pool = new Pool("Worker");
-        pool.execute(task);
-        pool.execute(task);
+        pool.execute(new MyRunnable(42, "john_doe"));
+        pool.execute(new MyRunnable(43, "john_smith"));
 
         // 关闭线程池
         pool.shutdown();
