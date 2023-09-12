@@ -281,6 +281,7 @@ public class HBase {
             host = args[0];
             db = new HBase(host, 2181, "/hbase");
         } else {
+//            System.exit(1);
             db = new HBase();   // use resources/hbase-site.xml
         }
 

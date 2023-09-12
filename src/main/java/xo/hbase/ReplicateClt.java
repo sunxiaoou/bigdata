@@ -29,6 +29,7 @@ import java.util.List;
 
 public class ReplicateClt {
     private static final Logger LOG = LoggerFactory.getLogger(ReplicateClt.class);
+    private static final String CLIENT_NAME = "ReplicateClt";
 
     AdminProtos.AdminService.BlockingInterface admin;
 
@@ -42,7 +43,11 @@ public class ReplicateClt {
     }
 
     private void replicate(KeyValue kv) throws ServiceException {
-        AdminProtos.ReplicateWALEntryRequest param = AdminProtos.ReplicateWALEntryRequest.newBuilder().build();
+        AdminProtos.ReplicateWALEntryRequest param = AdminProtos
+                .ReplicateWALEntryRequest
+                .newBuilder()
+                .setReplicationClusterId(CLIENT_NAME)
+                .build();
         HBaseRpcControllerImpl controller =
                 new HBaseRpcControllerImpl(CellUtil.createCellScanner(ImmutableList.of(kv)));
         AdminProtos.ReplicateWALEntryResponse responseProto = admin.replicateWALEntry(controller, param);
@@ -54,7 +59,7 @@ public class ReplicateClt {
         ReplicationProtbufUtil.replicateWALEntry(
                 admin,
                 (WAL.Entry[]) entries.toArray(),
-                "",
+                CLIENT_NAME,
                 new Path("hdfs://localhost:8020/hbase/data"),
                 new Path("hdfs://localhost:8020/hbase/archive/data"),
                 0);

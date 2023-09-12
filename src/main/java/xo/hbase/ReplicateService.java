@@ -28,6 +28,7 @@ import java.util.List;
 
 public class ReplicateService implements AdminService.BlockingInterface {
     private static final Logger LOG = LoggerFactory.getLogger(ReplicateService.class);
+    private static final String CLIENT_NAME = "ReplicateClt";
 
     public static AdminProtos.AdminService.BlockingInterface newBlockingStub(RpcClient client, InetSocketAddress addr)
             throws IOException {
@@ -103,28 +104,32 @@ public class ReplicateService implements AdminService.BlockingInterface {
 
     @Override
     public ReplicateWALEntryResponse replicateWALEntry(RpcController controller, ReplicateWALEntryRequest request) {
+        String clusterId = request.getReplicationClusterId();
+        LOG.info(clusterId);
+        String sourceBaseNamespaceDirPath = request.getSourceBaseNamespaceDirPath();
+        LOG.info(sourceBaseNamespaceDirPath);
+        String sourceHFileArchiveDirPath = request.getSourceHFileArchiveDirPath();
+        LOG.info(sourceHFileArchiveDirPath);
         List<WALEntry> entries = request.getEntryList();
         LOG.info("entries: " + entries.toString());
         CellScanner cellScanner = ((HBaseRpcController) controller).cellScanner();
-//        logCells(cellScanner);  // alternative with replication as cellScanner can only use once
-        LOG.info(request.getReplicationClusterId());
-        LOG.info(request.getSourceBaseNamespaceDirPath());
-        LOG.info(request.getSourceHFileArchiveDirPath());
         ((HBaseRpcController) controller).setCellScanner(null);
-
-        try {
-            ReplicationSink sink = new ReplicationSink(HBaseConfiguration.create(), null);
-            // replicate to HBase cluster described in resources/hbase-site.xml
-            sink.replicateEntries(
-                    entries,
-                    cellScanner,
-                    request.getReplicationClusterId(),
-                    request.getSourceBaseNamespaceDirPath(),
-                    request.getSourceHFileArchiveDirPath());
-        } catch (IOException e) {
-            e.printStackTrace();
+        if (CLIENT_NAME.equals(clusterId)) {
+            logCells(cellScanner);  // alternative with replication as cellScanner can only use once
+        } else {
+            try {
+                ReplicationSink sink = new ReplicationSink(HBaseConfiguration.create(), null);
+                // replicate to HBase cluster described in resources/hbase-site.xml
+                sink.replicateEntries(
+                        entries,
+                        cellScanner,
+                        clusterId,
+                        sourceBaseNamespaceDirPath,
+                        sourceHFileArchiveDirPath);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
-
         ReplicateWALEntryResponse.Builder responseBuilder = ReplicateWALEntryResponse.newBuilder();
         // Add any response data to the response builder
         return responseBuilder.build();
