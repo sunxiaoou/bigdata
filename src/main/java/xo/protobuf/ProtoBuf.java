@@ -171,7 +171,13 @@ public class ProtoBuf {
         WAL.Entry entry2 = proto2Entry(entryProto);
         LOG.info(entry2.toString());
 
-        return compareEntry(entry, entry2);
+        String path = "target/fruit.dat";
+        ProtoBufFile.deleteFile(path);
+        ProtoBufFile.append(path, entryProto);
+        WAL.Entry entry3 = proto2Entry(ProtoBufFile.readAll(path, EntryProto.Entry.class).get(0));
+        LOG.info(entry3.toString());
+
+        return compareEntry(entry, entry2) && compareEntry(entry, entry3);
     }
 
     public static void main(String[] args) {
