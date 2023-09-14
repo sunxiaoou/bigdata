@@ -10,6 +10,8 @@ import org.apache.hadoop.hbase.ipc.NettyRpcClientConfigHelper;
 import org.apache.hadoop.hbase.protobuf.ReplicationProtbufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.Triple;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
@@ -22,9 +24,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
 
 public class ReplicateClt {
@@ -42,6 +42,44 @@ public class ReplicateClt {
         admin = ReplicateService.newBlockingStub(client, new InetSocketAddress(host, port));
     }
 
+    static private WALEdit createEdit(Map<String, Map<String, Map<String, String>>> map) {
+        WALEdit edit = new WALEdit(map.size(), false);
+        for (Map.Entry<String, Map<String, Map<String, String>>> rowEntry : map.entrySet()) {
+            String row = rowEntry.getKey();
+            Map<String, Map<String, String>> families = rowEntry.getValue();
+            for (Map.Entry<String, Map<String, String>> familyEntry : families.entrySet()) {
+                String columnFamily = familyEntry.getKey();
+                Map<String, String> qualifiers = familyEntry.getValue();
+                for (Map.Entry<String, String> qualifierEntry : qualifiers.entrySet()) {
+                    String qualifier = qualifierEntry.getKey();
+                    String value = qualifierEntry.getValue();
+                    edit.add(new KeyValue(Bytes.toBytes(row), Bytes.toBytes(columnFamily),
+                            Bytes.toBytes(qualifier), Bytes.toBytes(value)));
+                }
+            }
+        }
+        return edit;
+    }
+
+    static private WAL.Entry[] createEntries() {
+        WALKeyImpl key = new WALKeyImpl(Bytes.toBytes("encode_region_name"), TableName.valueOf("manga:fruit"),
+                42, System.currentTimeMillis(), HConstants.DEFAULT_CLUSTER_ID);
+        WALEdit edit = createEdit(HBase.fruits());
+
+        WALKeyImpl key2 = new WALKeyImpl(Bytes.toBytes("encode_region_name"), TableName.valueOf("manga:fruit"),
+                43, System.currentTimeMillis(), HConstants.DEFAULT_CLUSTER_ID);
+        Map<String, Map<String, Map<String, String>>> map = new HashMap<>();
+        Pair<String, Map<String, Map<String, String>>> p =
+                HBase.fruit(new Triple<>(107, "🍐", (float) 115));
+        map.put(p.getFirst(), p.getSecond());
+        WALEdit edit2 = createEdit(map);
+
+        return new WAL.Entry[] {
+                new WAL.Entry(key, edit),
+                new WAL.Entry(key2, edit2)
+        };
+    }
+
     private void replicate(KeyValue kv) throws ServiceException {
         AdminProtos.ReplicateWALEntryRequest param = AdminProtos
                 .ReplicateWALEntryRequest
@@ -54,36 +92,15 @@ public class ReplicateClt {
         LOG.info(responseProto.toString());
     }
 
-    private void replicate(WAL.Entry entry) throws IOException {
-        List<WAL.Entry> entries = Arrays.asList(entry);
+    private void replicate(WAL.Entry[] entries) throws IOException {
         ReplicationProtbufUtil.replicateWALEntry(
                 admin,
-                (WAL.Entry[]) entries.toArray(),
+                entries,
                 CLIENT_NAME,
                 new Path("hdfs://localhost:8020/hbase/data"),
                 new Path("hdfs://localhost:8020/hbase/archive/data"),
                 0);
         LOG.info("replicated");
-    }
-
-    static private WALEdit createEdit(List<KeyValue> keyValues, boolean replay) {
-        WALEdit edit = new WALEdit(keyValues.size(), replay);
-        for (KeyValue keyValue : keyValues) {
-            edit.add(keyValue);
-        }
-        return edit;
-    }
-
-    static private WAL.Entry createEntry() {
-        WALKeyImpl key = new WALKeyImpl(Bytes.toBytes("encode_region_name"), TableName.valueOf("manga:fruit"),
-                42, System.currentTimeMillis(), HConstants.DEFAULT_CLUSTER_ID);
-        List<KeyValue> keyValues = new ArrayList<>();
-        keyValues.add(new KeyValue(Bytes.toBytes("107"), Bytes.toBytes("cf"), Bytes.toBytes("name"),
-                new byte[30]));
-        keyValues.add(new KeyValue(Bytes.toBytes("107"), Bytes.toBytes("cf"), Bytes.toBytes("price"),
-                new byte[30]));
-        WALEdit edit = createEdit(keyValues, false);
-        return new WAL.Entry(key, edit);
     }
 
     public static void main(String[] args) throws IOException, ServiceException {
@@ -92,6 +109,6 @@ public class ReplicateClt {
         final byte[] CELL_BYTES = Bytes.toBytes("xyz");
         final KeyValue CELL = new KeyValue(CELL_BYTES, CELL_BYTES, CELL_BYTES, CELL_BYTES);
         clt.replicate(CELL);
-        clt.replicate(createEntry());
+        clt.replicate(createEntries());
     }
 }
