@@ -1,9 +1,14 @@
 package xo.hbase;
 
+import xo.protobuf.EntryProto;
+import xo.protobuf.ProtoBuf;
+import xo.protobuf.ProtoBufFile;
+
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSink;
@@ -15,6 +20,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWA
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
+import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hbase.thirdparty.com.google.protobuf.BlockingRpcChannel;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.slf4j.Logger;
@@ -102,6 +111,41 @@ public class ReplicateService implements AdminService.BlockingInterface {
         LOG.info("cells: " + cells.toString());
     }
 
+    private List<WAL.Entry> merge(List<WALEntry> entries, CellScanner scanner) {
+        List<WAL.Entry> list = new ArrayList<>();
+        for (WALEntry entry: entries) {
+            WALProtos.WALKey walKey = entry.getKey();
+            WALKeyImpl key = new WALKeyImpl(
+                    walKey.getEncodedRegionName().toByteArray(),
+                    TableName.valueOf(walKey.getTableName().toByteArray()),
+                    walKey.getLogSequenceNumber(),
+                    walKey.getWriteTime(),
+                    null);
+            int count = entry.getAssociatedCellCount();
+            WALEdit edit = new WALEdit(count, false);
+            for (int i = 0; i < count; i ++) {
+                try {
+                    if (!scanner.advance())
+                        break;
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                edit.add(scanner.current());
+            }
+            list.add(new WAL.Entry(key, edit));
+        }
+        return list;
+    }
+
+    private void writeLog(List<WAL.Entry> entries) {
+        String path = "target/entry.dat";
+        ProtoBufFile.deleteFile(path);
+        for (WAL.Entry entry: entries) {
+            EntryProto.Entry entryProto = ProtoBuf.entry2Proto(entry);
+            ProtoBufFile.append(path, entryProto);
+        }
+    }
+
     @Override
     public ReplicateWALEntryResponse replicateWALEntry(RpcController controller, ReplicateWALEntryRequest request) {
         String clusterId = request.getReplicationClusterId();
@@ -115,7 +159,8 @@ public class ReplicateService implements AdminService.BlockingInterface {
         CellScanner cellScanner = ((HBaseRpcController) controller).cellScanner();
         ((HBaseRpcController) controller).setCellScanner(null);
         if (CLIENT_NAME.equals(clusterId)) {
-            logCells(cellScanner);  // alternative with replication as cellScanner can only use once
+//            logCells(cellScanner);  // alternative with replication as cellScanner can only use once
+            writeLog(merge(entries, cellScanner));
         } else {
             try {
                 ReplicationSink sink = new ReplicationSink(HBaseConfiguration.create(), null);

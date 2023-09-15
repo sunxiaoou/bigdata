@@ -108,7 +108,7 @@ public class ReplicateClt {
 
         final byte[] CELL_BYTES = Bytes.toBytes("xyz");
         final KeyValue CELL = new KeyValue(CELL_BYTES, CELL_BYTES, CELL_BYTES, CELL_BYTES);
-        clt.replicate(CELL);
+//        clt.replicate(CELL);
         clt.replicate(createEntries());
     }
 }

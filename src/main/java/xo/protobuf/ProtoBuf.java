@@ -48,7 +48,7 @@ public class ProtoBuf {
                 null);
     }
 
-    public static EntryProto.KeyValue keyValue2Proto(KeyValue kv) {
+    public static EntryProto.KeyValue keyValue2Proto(Cell kv) {
         return EntryProto.KeyValue.newBuilder()
                 .setRow(com.google.protobuf.ByteString
                         .copyFrom(kv.getRowArray(), kv.getRowOffset(), kv.getRowLength()))
@@ -89,7 +89,8 @@ public class ProtoBuf {
         EntryProto.Edit.Builder builder = EntryProto.Edit.newBuilder();
         builder.setReplay(edit.isReplay());
         for (Cell cell: edit.getCells()) {
-            builder.addCells(keyValue2Proto((KeyValue) cell));
+            // NoTagsByteBufferKeyValue cannot be cast to KeyValue
+            builder.addCells(keyValue2Proto(cell));
         }
         return builder.build();
     }

@@ -2,10 +2,11 @@ package xo.protobuf;
 
 import xo.netty.codec.StudentPOJO.Student;
 
-import com.google.protobuf.GeneratedMessageV3;
 import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.CodedOutputStream;
+import com.google.protobuf.GeneratedMessageV3;
 
+import org.apache.hadoop.hbase.wal.WAL;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -69,15 +70,14 @@ public class ProtoBufFile {
         return file.exists() && file.delete();
     }
 
-    public static void main(String[] args) {
-        final String path = "target/student.dat";
+    private static void test() {
+        String path = "target/student.dat";
+        deleteFile(path);
 
-//        deleteFile(path);
-
-//        Student student1 = Student.newBuilder().setId(42).setName("Alice").build();
-//        Student student2 = Student.newBuilder().setId(43).setName("Bob").build();
-        Student student1 = Student.newBuilder().setId(44).setName("Charles").build();
-        Student student2 = Student.newBuilder().setId(45).setName("Debby").build();
+        Student student1 = Student.newBuilder().setId(42).setName("Alice").build();
+        Student student2 = Student.newBuilder().setId(43).setName("Bob").build();
+//        Student student1 = Student.newBuilder().setId(44).setName("Charles").build();
+//        Student student2 = Student.newBuilder().setId(45).setName("Debby").build();
 
         append(path, student1);
         append(path, student2);
@@ -87,5 +87,18 @@ public class ProtoBufFile {
             LOG.info("ID: " + student.getId());
             LOG.info("Name: " + student.getName());
         }
+    }
+
+    private static void test2() {
+        String path = "target/entry.dat";
+        for (EntryProto.Entry proto: readAll(path, EntryProto.Entry.class)) {
+            WAL.Entry entry = ProtoBuf.proto2Entry(proto);
+            LOG.info(entry.toString());
+        }
+    }
+
+    public static void main(String[] args) {
+//        test();
+        test2();
     }
 }
