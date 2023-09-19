@@ -1,14 +1,12 @@
 package xo.hbase;
 
+import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.protobuf.ReplicationProtbufUtil;
+import org.apache.hadoop.hbase.util.Pair;
 import xo.protobuf.EntryProto;
 import xo.protobuf.ProtoBuf;
 import xo.protobuf.ProtoBufFile;
 
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellScanner;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSink;
@@ -33,6 +31,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 
 public class ReplicateService implements AdminService.BlockingInterface {
@@ -115,12 +114,13 @@ public class ReplicateService implements AdminService.BlockingInterface {
         List<WAL.Entry> list = new ArrayList<>();
         for (WALEntry entry: entries) {
             WALProtos.WALKey walKey = entry.getKey();
+            HBaseProtos.UUID id = walKey.getClusterIdsList().get(0);
             WALKeyImpl key = new WALKeyImpl(
                     walKey.getEncodedRegionName().toByteArray(),
                     TableName.valueOf(walKey.getTableName().toByteArray()),
                     walKey.getLogSequenceNumber(),
                     walKey.getWriteTime(),
-                    null);
+                    new UUID(id.getMostSigBits(), id.getLeastSigBits()));
             int count = entry.getAssociatedCellCount();
             WALEdit edit = new WALEdit(count, false);
             for (int i = 0; i < count; i ++) {
@@ -146,6 +146,23 @@ public class ReplicateService implements AdminService.BlockingInterface {
         }
     }
 
+    private void replicateEntries(List<WALEntry> entries, final CellScanner cellScanner,
+                                  String clusterId, String sourceBaseNamespaceDirPath,
+                                  String sourceHFileArchiveDirPath) {
+        try {
+            ReplicationSink sink = new ReplicationSink(HBaseConfiguration.create(), null);
+            // replicate to HBase cluster described in resources/hbase-site.xml
+            sink.replicateEntries(
+                    entries,
+                    cellScanner,
+                    clusterId,
+                    sourceBaseNamespaceDirPath,
+                    sourceHFileArchiveDirPath);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     @Override
     public ReplicateWALEntryResponse replicateWALEntry(RpcController controller, ReplicateWALEntryRequest request) {
         String clusterId = request.getReplicationClusterId();
@@ -160,20 +177,23 @@ public class ReplicateService implements AdminService.BlockingInterface {
         ((HBaseRpcController) controller).setCellScanner(null);
         if (CLIENT_NAME.equals(clusterId)) {
 //            logCells(cellScanner);  // alternative with replication as cellScanner can only use once
-            writeLog(merge(entries, cellScanner));
-        } else {
+            List<WAL.Entry> list = merge(entries, cellScanner);
+            writeLog(list);
             try {
-                ReplicationSink sink = new ReplicationSink(HBaseConfiguration.create(), null);
-                // replicate to HBase cluster described in resources/hbase-site.xml
-                sink.replicateEntries(
-                        entries,
-                        cellScanner,
-                        clusterId,
-                        sourceBaseNamespaceDirPath,
-                        sourceHFileArchiveDirPath);
+                WAL.Entry[] arr = new WAL.Entry[list.size()];
+                Pair<ReplicateWALEntryRequest, CellScanner> pair =
+                        ReplicationProtbufUtil.buildReplicateWALEntryRequest(
+                                list.toArray(arr), null, clusterId, null,
+                                null);
+                replicateEntries(request.getEntryList(), pair.getSecond(), null, null,
+                        null);
+
             } catch (IOException e) {
                 e.printStackTrace();
             }
+        } else {
+            replicateEntries(entries, cellScanner, null, null,
+                    null);
         }
         ReplicateWALEntryResponse.Builder responseBuilder = ReplicateWALEntryResponse.newBuilder();
         // Add any response data to the response builder

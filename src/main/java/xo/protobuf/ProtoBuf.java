@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 public class ProtoBuf {
     private static final Logger LOG = LoggerFactory.getLogger(ProtoBuf.class);
@@ -32,20 +33,26 @@ public class ProtoBuf {
     }
 
     public static EntryProto.Key key2Proto(WALKey key) {
+        UUID id = ((WALKeyImpl) key).getClusterIds().get(0);
         return EntryProto.Key.newBuilder()
                 .setEncodedRegionName(com.google.protobuf.ByteString.copyFrom(key.getEncodedRegionName()))
                 .setTablename(com.google.protobuf.ByteString.copyFrom(key.getTableName().toBytes()))
                 .setSequenceId(key.getSequenceId())
+                .addClusterIds(EntryProto.UUID.newBuilder()
+                        .setLeastSigBits(id.getLeastSignificantBits())
+                        .setMostSigBits(id.getMostSignificantBits())
+                        .build())
                 .setWriteTime(key.getWriteTime()).build();
     }
 
     public static WALKey proto2Key(EntryProto.Key keyProto) {
+        EntryProto.UUID id = keyProto.getClusterIds(0);
         return new WALKeyImpl(
                 keyProto.getEncodedRegionName().toByteArray(),
                 TableName.valueOf(keyProto.getTablename().toByteArray()),
                 keyProto.getSequenceId(),
                 keyProto.getWriteTime(),
-                null);
+                new UUID(id.getMostSigBits(), id.getLeastSigBits()));
     }
 
     public static EntryProto.KeyValue keyValue2Proto(Cell kv) {
@@ -157,7 +164,7 @@ public class ProtoBuf {
 
     public static boolean testEntry() {
         WALKeyImpl key = new WALKeyImpl(Bytes.toBytes("encode_region_name"), TableName.valueOf("manga:fruit"),
-                42, System.currentTimeMillis(), null);
+                42, System.currentTimeMillis(), HConstants.DEFAULT_CLUSTER_ID);
         List<KeyValue> keyValues = new ArrayList<>();
 
         keyValues.add(new KeyValue(Bytes.toBytes("107"), Bytes.toBytes("cf"), Bytes.toBytes("name"),

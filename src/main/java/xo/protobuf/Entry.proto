@@ -57,9 +57,15 @@ message KeyValue {
   optional bytes tags = 7;
 }
 
+message UUID {
+  required uint64 least_sig_bits = 1;
+  required uint64 most_sig_bits = 2;
+}
+
 message Key {
   required bytes encodedRegionName = 1;
   required bytes tablename = 2;
   required int64 sequenceId = 3;
   required int64 writeTime = 4;
+  repeated UUID cluster_ids = 5;
 }
