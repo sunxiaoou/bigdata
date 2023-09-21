@@ -115,23 +115,6 @@ public class ReplicateService implements AdminService.BlockingInterface {
         LOG.info("cells: " + cells.toString());
     }
 
-    private void replicateEntries(List<WALEntry> entries, final CellScanner cellScanner,
-                                  String clusterId, String sourceBaseNamespaceDirPath,
-                                  String sourceHFileArchiveDirPath) {
-        try {
-            ReplicationSink sink = new ReplicationSink(HBaseConfiguration.create(), null);
-            // replicate to HBase cluster described in resources/hbase-site.xml
-            sink.replicateEntries(
-                    entries,
-                    cellScanner,
-                    clusterId,
-                    sourceBaseNamespaceDirPath,
-                    sourceHFileArchiveDirPath);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
     @Override
     public ReplicateWALEntryResponse replicateWALEntry(RpcController controller, ReplicateWALEntryRequest request) {
         String clusterId = request.getReplicationClusterId();

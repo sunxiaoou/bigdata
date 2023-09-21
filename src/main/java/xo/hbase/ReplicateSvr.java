@@ -108,13 +108,6 @@ public class ReplicateSvr {
      * hbase> add_peer 'macos', CLUSTER_KEY => "macos:2181:/myPeer"
      */
     public static void main(String[] args) throws IOException, KeeperException, InterruptedException {
-//        Properties properties = PropertyTool.loadProperties("replicate_svr.properties");
-//        String host = properties.getProperty("replicate.server.host");
-//        int port = Integer.parseInt(properties.getProperty("replicate.server.port"));
-//        String zkHost = properties.getProperty("replicate.server.quorum.host");
-//        int zkPort = Integer.parseInt(properties.getProperty("replicate.server.quorum.port"));
-//        String zkPath = properties.getProperty("replicate.server.quorum.path");
-
         ReplicateSvr svr = new ReplicateSvr();
         LOG.info(svr.register());
         svr.run();
