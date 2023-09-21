@@ -13,10 +13,9 @@ import java.io.IOException;
 
 public class EntryFile {
     private static final Logger LOG = LoggerFactory.getLogger(EntryFile.class);
-    private static final String FILE_PATH = "target/entry.dat";
 
-    public static void append(EntryProto.Entry entryProto) {
-        try (FileOutputStream fos = new FileOutputStream(FILE_PATH, true)) {
+    public static void append(String filePath, EntryProto.Entry entryProto) {
+        try (FileOutputStream fos = new FileOutputStream(filePath, true)) {
             CodedOutputStream output = CodedOutputStream.newInstance(fos);
 
             int size = entryProto.getSerializedSize();
@@ -30,11 +29,11 @@ public class EntryFile {
         }
     }
 
-    public static Pair<Integer, Integer> readAll() {
+    public static Pair<Integer, Integer> readAll(String filePath) {
         int entryCount = 0;
         int cellCount = 0;
 
-        try (FileInputStream fis = new FileInputStream(FILE_PATH)) {
+        try (FileInputStream fis = new FileInputStream(filePath)) {
             CodedInputStream input = CodedInputStream.newInstance(fis);
 
             while (!input.isAtEnd()) {
@@ -52,6 +51,6 @@ public class EntryFile {
     }
 
     public static void main(String[] args) {
-        LOG.info(readAll().toString());
+        LOG.info(readAll("target/entry.dat").toString());
     }
 }

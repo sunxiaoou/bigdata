@@ -1,12 +1,10 @@
 package xo.hbase;
 
-import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.hbase.protobuf.ReplicationProtbufUtil;
-import org.apache.hadoop.hbase.util.Pair;
 import xo.protobuf.EntryProto;
 import xo.protobuf.ProtoBuf;
 import xo.protobuf.ProtoBufFile;
 
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSink;
@@ -31,12 +29,19 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 import java.util.UUID;
 
 
 public class ReplicateService implements AdminService.BlockingInterface {
     private static final Logger LOG = LoggerFactory.getLogger(ReplicateService.class);
     private static final String CLIENT_NAME = "ReplicateClt";
+
+    private final AbstractSink sink;
+
+    public ReplicateService(Properties properties) throws Exception {
+        this.sink = new SinkFactory.Builder().withConfiguration(properties).build();
+    }
 
     public static AdminProtos.AdminService.BlockingInterface newBlockingStub(RpcClient client, InetSocketAddress addr)
             throws IOException {
@@ -110,42 +115,6 @@ public class ReplicateService implements AdminService.BlockingInterface {
         LOG.info("cells: " + cells.toString());
     }
 
-    private List<WAL.Entry> merge(List<WALEntry> entries, CellScanner scanner) {
-        List<WAL.Entry> list = new ArrayList<>();
-        for (WALEntry entry: entries) {
-            WALProtos.WALKey walKey = entry.getKey();
-            HBaseProtos.UUID id = walKey.getClusterIdsList().get(0);
-            WALKeyImpl key = new WALKeyImpl(
-                    walKey.getEncodedRegionName().toByteArray(),
-                    TableName.valueOf(walKey.getTableName().toByteArray()),
-                    walKey.getLogSequenceNumber(),
-                    walKey.getWriteTime(),
-                    new UUID(id.getMostSigBits(), id.getLeastSigBits()));
-            int count = entry.getAssociatedCellCount();
-            WALEdit edit = new WALEdit(count, false);
-            for (int i = 0; i < count; i ++) {
-                try {
-                    if (!scanner.advance())
-                        break;
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                edit.add(scanner.current());
-            }
-            list.add(new WAL.Entry(key, edit));
-        }
-        return list;
-    }
-
-    private void writeLog(List<WAL.Entry> entries) {
-        String path = "target/entry.dat";
-//        ProtoBufFile.deleteFile(path);
-        for (WAL.Entry entry: entries) {
-            EntryProto.Entry entryProto = ProtoBuf.entry2Proto(entry);
-            ProtoBufFile.append(path, entryProto);
-        }
-    }
-
     private void replicateEntries(List<WALEntry> entries, final CellScanner cellScanner,
                                   String clusterId, String sourceBaseNamespaceDirPath,
                                   String sourceHFileArchiveDirPath) {
@@ -171,15 +140,19 @@ public class ReplicateService implements AdminService.BlockingInterface {
         LOG.info(sourceBaseNamespaceDirPath);
         String sourceHFileArchiveDirPath = request.getSourceHFileArchiveDirPath();
         LOG.info(sourceHFileArchiveDirPath);
-        List<WALEntry> entries = request.getEntryList();
-        LOG.info("entries: " + entries.toString());
+        List<WALEntry> entryProtos = request.getEntryList();
+        LOG.info("entryProtos: " + entryProtos.toString());
         CellScanner cellScanner = ((HBaseRpcController) controller).cellScanner();
         ((HBaseRpcController) controller).setCellScanner(null);
-        List<WAL.Entry> list = merge(entries, cellScanner);
-        writeLog(list);
+        if (sink != null) {
+            sink.put(entryProtos, cellScanner);
+        }
+
+//        List<WAL.Entry> list = merge(entryProtos, cellScanner);
+//        writeLog(list);
 //        if (CLIENT_NAME.equals(clusterId)) {
 ////            logCells(cellScanner);  // alternative with replication as cellScanner can only use once
-//            List<WAL.Entry> list = merge(entries, cellScanner);
+//            List<WAL.Entry> list = merge(entryProtos, cellScanner);
 //            writeLog(list);
 //            try {
 //                WAL.Entry[] arr = new WAL.Entry[list.size()];
@@ -194,7 +167,7 @@ public class ReplicateService implements AdminService.BlockingInterface {
 //                e.printStackTrace();
 //            }
 //        } else {
-//            replicateEntries(entries, cellScanner, null, null,
+//            replicateEntries(entryProtos, cellScanner, null, null,
 //                    null);
 //        }
         ReplicateWALEntryResponse.Builder responseBuilder = ReplicateWALEntryResponse.newBuilder();

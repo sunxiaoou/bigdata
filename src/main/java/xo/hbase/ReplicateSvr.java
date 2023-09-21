@@ -36,8 +36,14 @@ public class ReplicateSvr {
     public ReplicateSvr() throws IOException {
         this.properties = PropertyTool.loadProperties(PROPERTIES_FILE);
         Configuration conf = new Configuration(HBaseConfiguration.create());
-        BlockingService service =
-                AdminProtos.AdminService.newReflectiveBlockingService(new ReplicateService());
+        BlockingService service = null;
+        try {
+            service = AdminProtos.AdminService.newReflectiveBlockingService(new ReplicateService(properties));
+        } catch (Exception e) {
+            LOG.error("Unable to initialize dataSink. Make sure the sink implementation is in classpath"
+                    + e.getMessage(), e);
+            e.printStackTrace();
+        }
         this.rpcServer = new NettyRpcServer(null,
                 properties.getProperty(REPLICATE_SERVER_NAME),
                 Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(service, null)),
