@@ -139,7 +139,7 @@ public class ReplicateService implements AdminService.BlockingInterface {
 
     private void writeLog(List<WAL.Entry> entries) {
         String path = "target/entry.dat";
-        ProtoBufFile.deleteFile(path);
+//        ProtoBufFile.deleteFile(path);
         for (WAL.Entry entry: entries) {
             EntryProto.Entry entryProto = ProtoBuf.entry2Proto(entry);
             ProtoBufFile.append(path, entryProto);
@@ -175,26 +175,28 @@ public class ReplicateService implements AdminService.BlockingInterface {
         LOG.info("entries: " + entries.toString());
         CellScanner cellScanner = ((HBaseRpcController) controller).cellScanner();
         ((HBaseRpcController) controller).setCellScanner(null);
-        if (CLIENT_NAME.equals(clusterId)) {
-//            logCells(cellScanner);  // alternative with replication as cellScanner can only use once
-            List<WAL.Entry> list = merge(entries, cellScanner);
-            writeLog(list);
-            try {
-                WAL.Entry[] arr = new WAL.Entry[list.size()];
-                Pair<ReplicateWALEntryRequest, CellScanner> pair =
-                        ReplicationProtbufUtil.buildReplicateWALEntryRequest(
-                                list.toArray(arr), null, clusterId, null,
-                                null);
-                replicateEntries(request.getEntryList(), pair.getSecond(), null, null,
-                        null);
-
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        } else {
-            replicateEntries(entries, cellScanner, null, null,
-                    null);
-        }
+        List<WAL.Entry> list = merge(entries, cellScanner);
+        writeLog(list);
+//        if (CLIENT_NAME.equals(clusterId)) {
+////            logCells(cellScanner);  // alternative with replication as cellScanner can only use once
+//            List<WAL.Entry> list = merge(entries, cellScanner);
+//            writeLog(list);
+//            try {
+//                WAL.Entry[] arr = new WAL.Entry[list.size()];
+//                Pair<ReplicateWALEntryRequest, CellScanner> pair =
+//                        ReplicationProtbufUtil.buildReplicateWALEntryRequest(
+//                                list.toArray(arr), null, clusterId, null,
+//                                null);
+//                replicateEntries(request.getEntryList(), pair.getSecond(), null, null,
+//                        null);
+//
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//            }
+//        } else {
+//            replicateEntries(entries, cellScanner, null, null,
+//                    null);
+//        }
         ReplicateWALEntryResponse.Builder responseBuilder = ReplicateWALEntryResponse.newBuilder();
         // Add any response data to the response builder
         return responseBuilder.build();

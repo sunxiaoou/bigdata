@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 
@@ -21,25 +22,37 @@ import java.util.concurrent.CountDownLatch;
 public class ReplicateSvr {
     private static final Logger LOG = LoggerFactory.getLogger(ReplicateSvr.class);
 
-    NettyRpcServer rpcServer;
+    private static final String PROPERTIES_FILE = "replicate_svr.properties";
+    private static final String REPLICATE_SERVER_NAME = "replicate.server.name";
+    private static final String REPLICATE_SERVER_HOST = "replicate.server.host";
+    private static final String REPLICATE_SERVER_PORT = "replicate.server.port";
+    private static final String REPLICATE_SERVER_QUORUM_HOST = "replicate.server.quorum.host";
+    private static final String REPLICATE_SERVER_QUORUM_PORT = "replicate.server.quorum.port";
+    private static final String REPLICATE_SERVER_QUORUM_PATH = "replicate.server.quorum.path";
 
-    public ReplicateSvr(String host, int port) throws IOException {
+    private final Properties properties;
+    private final NettyRpcServer rpcServer;
+
+    public ReplicateSvr() throws IOException {
+        this.properties = PropertyTool.loadProperties(PROPERTIES_FILE);
         Configuration conf = new Configuration(HBaseConfiguration.create());
         BlockingService service =
                 AdminProtos.AdminService.newReflectiveBlockingService(new ReplicateService());
         this.rpcServer = new NettyRpcServer(null,
-                "rpcSvr",
+                properties.getProperty(REPLICATE_SERVER_NAME),
                 Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(service, null)),
-                new InetSocketAddress(host, port),
+                new InetSocketAddress("0", Integer.parseInt(properties.getProperty(REPLICATE_SERVER_PORT))),
                 conf,
                 new FifoRpcScheduler(conf, 1),
                 true
         );
     }
 
-    private String register(String zkHost, int zkPort, String zkPath, String host, int port)
+    private String register()
             throws IOException, KeeperException, InterruptedException {
-        String connectString = String.format("%s:%d", zkHost, zkPort);
+        String connectString = String.format("%s:%d",
+                properties.getProperty(REPLICATE_SERVER_QUORUM_HOST),
+                Integer.parseInt(properties.getProperty(REPLICATE_SERVER_QUORUM_PORT)));
         int sessionTimeout = 90000;
         CountDownLatch connSignal = new CountDownLatch(0);
         ZooKeeper zk = new ZooKeeper(connectString, sessionTimeout, new Watcher() {
@@ -51,7 +64,7 @@ public class ReplicateSvr {
             }
         });
 
-        String path = zkPath;
+        String path = properties.getProperty(REPLICATE_SERVER_QUORUM_PATH);
         if (zk.exists(path, false) == null) {
             zk.create(path, null, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
         }
@@ -63,8 +76,10 @@ public class ReplicateSvr {
         if (zk.exists(path, false) == null) {
             zk.create(path, null, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
         }
-        path += String.format("/%s,%d,%d", host, port, System.currentTimeMillis());
-
+        path += String.format("/%s,%d,%d",
+                properties.getProperty(REPLICATE_SERVER_HOST),
+                Integer.parseInt(properties.getProperty(REPLICATE_SERVER_PORT)),
+                System.currentTimeMillis());
         return zk.create(path, null, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
     }
 
@@ -87,14 +102,15 @@ public class ReplicateSvr {
      * hbase> add_peer 'macos', CLUSTER_KEY => "macos:2181:/myPeer"
      */
     public static void main(String[] args) throws IOException, KeeperException, InterruptedException {
-        String host = "macos";
-        int port = 8813;
-        String zkHost = "macos";
-        int zkPort = 2181;
-        String zkPath = "/myPeer";
+//        Properties properties = PropertyTool.loadProperties("replicate_svr.properties");
+//        String host = properties.getProperty("replicate.server.host");
+//        int port = Integer.parseInt(properties.getProperty("replicate.server.port"));
+//        String zkHost = properties.getProperty("replicate.server.quorum.host");
+//        int zkPort = Integer.parseInt(properties.getProperty("replicate.server.quorum.port"));
+//        String zkPath = properties.getProperty("replicate.server.quorum.path");
 
-        ReplicateSvr svr = new ReplicateSvr("0", port);
-        LOG.info(svr.register(zkHost, zkPort, zkPath, host, port));
+        ReplicateSvr svr = new ReplicateSvr();
+        LOG.info(svr.register());
         svr.run();
     }
 }
