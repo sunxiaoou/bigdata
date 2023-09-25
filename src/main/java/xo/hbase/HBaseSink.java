@@ -12,11 +12,11 @@ import java.util.List;
 import java.util.Properties;
 
 public class HBaseSink extends AbstractSink {
-    final private String SINK_HBASE_QUORUM_HOST = "sink.hbase.quorum.host";
-    final private String SINK_HBASE_QUORUM_PORT = "sink.hbase.quorum.port";
-    final private String SINK_HBASE_QUORUM_PATH = "sink.hbase.quorum.path";
+    private static final String SINK_HBASE_QUORUM_HOST = "sink.hbase.quorum.host";
+    private static final String SINK_HBASE_QUORUM_PORT = "sink.hbase.quorum.port";
+    private static final String SINK_HBASE_QUORUM_PATH = "sink.hbase.quorum.path";
 
-    ReplicationSink sink;
+    private final ReplicationSink sink;
 
     public HBaseSink(Properties properties) throws IOException {
         super(properties);

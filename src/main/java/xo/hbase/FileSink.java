@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Properties;
 
 public class FileSink extends AbstractSink {
-    final private String SINK_FILE_NAME = "sink.file.name";
+    private static final String SINK_FILE_NAME = "sink.file.name";
 
     public FileSink(Properties properties) {
         super(properties);
