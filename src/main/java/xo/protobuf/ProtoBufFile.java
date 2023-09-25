@@ -1,6 +1,6 @@
 package xo.protobuf;
 
-import xo.netty.codec.StudentPOJO.Student;
+import xo.protobuf.StudentProto.Student;
 
 import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.CodedOutputStream;
