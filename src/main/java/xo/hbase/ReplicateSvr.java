@@ -14,7 +14,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 
@@ -22,32 +21,24 @@ import java.util.concurrent.CountDownLatch;
 public class ReplicateSvr {
     private static final Logger LOG = LoggerFactory.getLogger(ReplicateSvr.class);
 
-    private static final String PROPERTIES_FILE = "replicate_svr.properties";
-    private static final String REPLICATE_SERVER_NAME = "replicate.server.name";
-    private static final String REPLICATE_SERVER_HOST = "replicate.server.host";
-    private static final String REPLICATE_SERVER_PORT = "replicate.server.port";
-    private static final String REPLICATE_SERVER_QUORUM_HOST = "replicate.server.quorum.host";
-    private static final String REPLICATE_SERVER_QUORUM_PORT = "replicate.server.quorum.port";
-    private static final String REPLICATE_SERVER_QUORUM_PATH = "replicate.server.quorum.path";
-
-    private final Properties properties;
+    private final ReplicateConfig config;
     private final NettyRpcServer rpcServer;
 
     public ReplicateSvr() throws IOException {
-        this.properties = PropertyTool.loadProperties(PROPERTIES_FILE);
+        this.config = ReplicateConfig.getInstance();
         Configuration conf = new Configuration(HBaseConfiguration.create());
         BlockingService service = null;
         try {
-            service = AdminProtos.AdminService.newReflectiveBlockingService(new ReplicateService(properties));
+            service = AdminProtos.AdminService.newReflectiveBlockingService(new ReplicateService(config));
         } catch (Exception e) {
             LOG.error("Unable to initialize dataSink. Make sure the sink implementation is in classpath"
                     + e.getMessage(), e);
             e.printStackTrace();
         }
         this.rpcServer = new NettyRpcServer(null,
-                properties.getProperty(REPLICATE_SERVER_NAME),
+                config.getReplicateServerName(),
                 Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(service, null)),
-                new InetSocketAddress("0", Integer.parseInt(properties.getProperty(REPLICATE_SERVER_PORT))),
+                new InetSocketAddress("0", config.getReplicateServerPort()),
                 conf,
                 new FifoRpcScheduler(conf, 1),
                 true
@@ -57,8 +48,8 @@ public class ReplicateSvr {
     private String register()
             throws IOException, KeeperException, InterruptedException {
         String connectString = String.format("%s:%d",
-                properties.getProperty(REPLICATE_SERVER_QUORUM_HOST),
-                Integer.parseInt(properties.getProperty(REPLICATE_SERVER_QUORUM_PORT)));
+                config.getReplicateServerQuorumHost(),
+                config.getReplicateServerQuorumPort());
         int sessionTimeout = 90000;
         CountDownLatch connSignal = new CountDownLatch(0);
         ZooKeeper zk = new ZooKeeper(connectString, sessionTimeout, new Watcher() {
@@ -70,7 +61,7 @@ public class ReplicateSvr {
             }
         });
 
-        String path = properties.getProperty(REPLICATE_SERVER_QUORUM_PATH);
+        String path = config.getReplicateServerQuorumPath();
         if (zk.exists(path, false) == null) {
             zk.create(path, null, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
         }
@@ -83,8 +74,8 @@ public class ReplicateSvr {
             zk.create(path, null, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
         }
         path += String.format("/%s,%d,%d",
-                properties.getProperty(REPLICATE_SERVER_HOST),
-                Integer.parseInt(properties.getProperty(REPLICATE_SERVER_PORT)),
+                config.getReplicateServerHost(),
+                config.getReplicateServerPort(),
                 System.currentTimeMillis());
         return zk.create(path, null, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
     }

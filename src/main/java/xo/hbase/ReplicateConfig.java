@@ -7,9 +7,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
 
-public class ReplicateProperty {
-    private static final Logger LOG = LoggerFactory.getLogger(ReplicateProperty.class);
-    private static final String PROPERTIES_FILE = "replicate_svr.properties";
+public class ReplicateConfig {
+    private static final Logger LOG = LoggerFactory.getLogger(ReplicateConfig.class);
+    private static final String PROPERTIES_FILE = "replicate.properties";
 
     private static final String REPLICATE_SERVER_NAME = "replicate.server.name";
     private static final String REPLICATE_SERVER_HOST = "replicate.server.host";
@@ -35,9 +35,9 @@ public class ReplicateProperty {
 
     private final Properties properties;
 
-    private ReplicateProperty() {
+    private ReplicateConfig() {
         this.properties = new Properties();
-        try (InputStream inputStream = ReplicateProperty.class.getClassLoader().getResourceAsStream(PROPERTIES_FILE)) {
+        try (InputStream inputStream = ReplicateConfig.class.getClassLoader().getResourceAsStream(PROPERTIES_FILE)) {
             if (inputStream != null) {
                 properties.load(inputStream);
             } else {
@@ -49,9 +49,9 @@ public class ReplicateProperty {
     }
 
     // Singleton instance
-    private static final ReplicateProperty instance = new ReplicateProperty();
+    private static final ReplicateConfig instance = new ReplicateConfig();
 
-    public static ReplicateProperty getInstance() {
+    public static ReplicateConfig getInstance() {
         return instance;
     }
 
@@ -137,11 +137,11 @@ public class ReplicateProperty {
 
 
     public static void main(String[] args) {
-        ReplicateProperty config = ReplicateProperty.getInstance();
+        ReplicateConfig config = ReplicateConfig.getInstance();
 //        System.out.println(config.properties);
 
-        System.out.println("Server Name: " + config.getReplicateServerName());
-        System.out.println("Server Host: " + config.getReplicateServerHost());
-        System.out.println("Server Port: " + config.getReplicateServerPort());
+        LOG.info("Server Name: " + config.getReplicateServerName());
+        LOG.info("Server Host: " + config.getReplicateServerHost());
+        LOG.info("Server Port: " + config.getReplicateServerPort());
     }
 }

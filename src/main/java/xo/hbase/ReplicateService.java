@@ -1,13 +1,8 @@
 package xo.hbase;
 
-import xo.protobuf.EntryProto;
-import xo.protobuf.ProtoBuf;
-import xo.protobuf.ProtoBufFile;
-
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcClient;
-import org.apache.hadoop.hbase.replication.regionserver.ReplicationSink;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
@@ -16,10 +11,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWA
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
-import org.apache.hadoop.hbase.wal.WAL;
-import org.apache.hadoop.hbase.wal.WALEdit;
-import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hbase.thirdparty.com.google.protobuf.BlockingRpcChannel;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.slf4j.Logger;
@@ -29,8 +20,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Properties;
-import java.util.UUID;
 
 
 public class ReplicateService implements AdminService.BlockingInterface {
@@ -39,8 +28,8 @@ public class ReplicateService implements AdminService.BlockingInterface {
 
     private final AbstractSink sink;
 
-    public ReplicateService(Properties properties) throws Exception {
-        this.sink = new SinkFactory.Builder().withConfiguration(properties).build();
+    public ReplicateService(ReplicateConfig config) throws Exception {
+        this.sink = new SinkFactory.Builder().withConfiguration(config).build();
     }
 
     public static AdminProtos.AdminService.BlockingInterface newBlockingStub(RpcClient client, InetSocketAddress addr)

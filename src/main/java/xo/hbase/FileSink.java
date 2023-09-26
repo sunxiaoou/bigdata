@@ -8,19 +8,16 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.wal.WAL;
 
 import java.util.List;
-import java.util.Properties;
 
 public class FileSink extends AbstractSink {
-    private static final String SINK_FILE_NAME = "sink.file.name";
-
-    public FileSink(Properties properties) {
-        super(properties);
+    public FileSink(ReplicateConfig config) {
+        super(config);
     }
 
     @Override
     public void put(List<AdminProtos.WALEntry> entryProtos, CellScanner cellScanner) {
         List<WAL.Entry> entries = merge(entryProtos, cellScanner);
-        String filePath = getProperties().getProperty(SINK_FILE_NAME);
+        String filePath = config.getSinkFileName();
         for (WAL.Entry entry: entries) {
             EntryProto.Entry entryProto = ProtoBuf.entry2Proto(entry);
             EntryFile.append(filePath, entryProto);
@@ -29,7 +26,6 @@ public class FileSink extends AbstractSink {
 
     @Override
     public void flush() {
-
     }
 
     @Override

@@ -12,18 +12,13 @@ import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Properties;
 import java.util.UUID;
 
 public abstract class AbstractSink {
-    private final Properties properties;
+    protected final ReplicateConfig config;
 
-    public AbstractSink(Properties properties) {
-        this.properties = properties;
-    }
-
-    public Properties getProperties() {
-        return properties;
+    public AbstractSink(ReplicateConfig config) {
+        this.config = config;
     }
 
     protected List<WAL.Entry> merge(List<AdminProtos.WALEntry> entries, CellScanner scanner) {
