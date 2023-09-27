@@ -119,29 +119,6 @@ public class ReplicateService implements AdminService.BlockingInterface {
         if (sink != null) {
             sink.put(entryProtos, cellScanner);
         }
-
-//        List<WAL.Entry> list = merge(entryProtos, cellScanner);
-//        writeLog(list);
-//        if (CLIENT_NAME.equals(clusterId)) {
-////            logCells(cellScanner);  // alternative with replication as cellScanner can only use once
-//            List<WAL.Entry> list = merge(entryProtos, cellScanner);
-//            writeLog(list);
-//            try {
-//                WAL.Entry[] arr = new WAL.Entry[list.size()];
-//                Pair<ReplicateWALEntryRequest, CellScanner> pair =
-//                        ReplicationProtbufUtil.buildReplicateWALEntryRequest(
-//                                list.toArray(arr), null, clusterId, null,
-//                                null);
-//                replicateEntries(request.getEntryList(), pair.getSecond(), null, null,
-//                        null);
-//
-//            } catch (IOException e) {
-//                e.printStackTrace();
-//            }
-//        } else {
-//            replicateEntries(entryProtos, cellScanner, null, null,
-//                    null);
-//        }
         ReplicateWALEntryResponse.Builder responseBuilder = ReplicateWALEntryResponse.newBuilder();
         // Add any response data to the response builder
         return responseBuilder.build();
