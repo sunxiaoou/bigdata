@@ -33,6 +33,13 @@ public class ReplicateConfig {
     private static final String SINK_KAFKA_SECURITY_PROTOCOL = "sink.kafka.security.protocol";
     private static final String SINK_KAFKA_TOPIC_TABLE_MAP = "sink.kafka.topic-table-map";
 
+    // kafka consumer
+    private static final String KAFKA_BOOTSTRAP_SERVERS = "kafka.bootstrap.servers";
+    private static final String KAFKA_GROUP_ID = "kafka.group.id";
+    private static final String KAFKA_ENABLE_AUTO_COMMIT = "kafka.enable.auto.commit";
+    private static final String KAFKA_AUTO_COMMIT_INTERVAL_MS = "kafka.auto.commit.interval.ms";
+    private static final String KAFKA_TOPICS = "kafka.topics";
+
     private final Properties properties;
 
     private ReplicateConfig() {
@@ -53,10 +60,6 @@ public class ReplicateConfig {
 
     public static ReplicateConfig getInstance() {
         return instance;
-    }
-
-    public Properties getProperties() {
-        return properties;
     }
 
     public String getReplicateServerName() {
@@ -135,6 +138,25 @@ public class ReplicateConfig {
         return properties.getProperty(SINK_KAFKA_TOPIC_TABLE_MAP);
     }
 
+    public String getKafkaBootstrapServers() {
+        return properties.getProperty(KAFKA_BOOTSTRAP_SERVERS);
+    }
+
+    public String getKafkaGroupId() {
+        return properties.getProperty(KAFKA_GROUP_ID);
+    }
+
+    public boolean getKafkaEnableAutoCommit() {
+        return Boolean.parseBoolean(properties.getProperty(KAFKA_ENABLE_AUTO_COMMIT));
+    }
+
+    public int getKafkaAutoCommitIntervalMs() {
+        return Integer.parseInt(properties.getProperty(KAFKA_AUTO_COMMIT_INTERVAL_MS));
+    }
+
+    public String getKafkaTopics() {
+        return properties.getProperty(KAFKA_TOPICS);
+    }
 
     public static void main(String[] args) {
         ReplicateConfig config = ReplicateConfig.getInstance();

@@ -291,11 +291,11 @@ public class HBase {
 //        db.dropTable(null, "fruit");
 //        db.createTable("manga", "fruit", "cf");
 //        db.truncateTable("manga", "fruit");
-//        db.putRows("manga", "fruit", fruits());
-//        db.putRow("manga", "fruit", fruit(new Triple<>(107, "🍐", (float) 115)));
+        db.putRows("manga", "fruit", fruits());
+        db.putRow("manga", "fruit", fruit(new Triple<>(107, "🍐", (float) 115)));
 //        db.deleteRow("manga", "fruit", "107");
         System.out.println(db.scanTable("manga", "fruit"));
-        System.out.println(db.getCell("manga", "fruit", "105", "cf", "name"));
+//        System.out.println(db.getCell("manga", "fruit", "105", "cf", "name"));
 //        db.addPeer("myPeer", "localhost:2181:/myPeer",
 //                "org.apache.hadoop.hbase.replication.TestReplicationEndpoint$ReplicationEndpointForTest");
 //        db.addPeer("dummy", "localhost:2181:/dummy",
