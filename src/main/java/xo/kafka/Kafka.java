@@ -197,9 +197,12 @@ public class Kafka {
         }
     }
 
-    public static void main(String... argv) throws ExecutionException, InterruptedException {
-        String host = "192.168.55.250";
+    public static void main(String[] args) throws ExecutionException, InterruptedException {
+        String host = "localhost";
         int port = 9092;
+        if (args.length > 0) {
+            host = args[0];
+        }
 
         KfkAdmin admin = new KfkAdmin(host, port);
 //        admin.createTopic("test", 1, 1);
@@ -207,7 +210,7 @@ public class Kafka {
         System.out.println(admin.topicDescription("test"));
 //        testProducer(host, port);
 //        testConsumer(host, port, "test");
-        testConsumer2("kafka_consumer.properties", "fruit");
+//        testConsumer2("kafka_consumer.properties", "fruit");
 //        admin.deleteTopic("test");
     }
 }

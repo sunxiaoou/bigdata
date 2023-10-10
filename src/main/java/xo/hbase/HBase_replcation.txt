@@ -1,5 +1,5 @@
 
-Replication from ClusterA to Cluster
+Replication from ClusterA to ClusterB
 
 +---------------+----------------------+----------------------+----------------------+
 |               | clusterA on serverA  | clusterB on serverB  | rpcServer on serverC |
@@ -13,27 +13,24 @@ Replication from ClusterA to Cluster
 | region server | HRegionServerA:16020 | HRegionServerB:16020 |                      |
 +---------------+----------------------+----------------------+----------------------|
 
-Add Peer
+1. Add Peer
 
-1. client connects HMasterA, issue following command
+1) client connects HMasterA, issue following command
         hbase> add_peer 'clusterB', CLUSTER_KEY => "serverB:2181:/hbase"
-2. HMasterA connects to QuorumA on serverA:2181, creates node /hbase/peer/clusterB with data
+2) HMasterA connects to QuorumA on serverA:2181, creates node /hbase/peer/clusterB with data
    "serverB:2181:/hbase"
-3. HMasterA notifies HRegionServerA and return to client
-4. HRegionServerA creates ReplicationSource thread
-5. ReplicationSource creates ReplicationEndpoint thread
-6. ReplicationSource connects to QuorumB on serverB:2181, checks existence of node hbase/hbaseid,
+3) HMasterA notifies HRegionServerA and return to client
+4) HRegionServerA creates ReplicationSource thread
+5) ReplicationSource creates ReplicationEndpoint thread
+6) ReplicationSource connects to QuorumB on serverB:2181, checks existence of node hbase/hbaseid,
    which is registered by HMasterB in its first starting, if it doesn't exist, keeps retry
 
 
-Replication
+2. Replication
 
-1. client connects HRegionServerA, issues Put / Delete commands
-2. ReplicationSource sends WAL entries to ReplicationEndpoint via queues
-3. ReplicationEndpoint package entries
-4. ReplicationEndpoint connects to QuorumB to get nodes under hbase/rs,
-   which is registered by each region server, here is only "HRegionServerB,16020"
-5. ReplicationEndpoint connects and then sends WAL entries to HRegionServerB via RPC requests
-
-
-
+1) client connects HRegionServerA, issues Put / Delete commands
+2) ReplicationSource sends WAL entries to ReplicationEndpoint via queues
+3) ReplicationEndpoint package entries
+4) ReplicationEndpoint connects to QuorumB to get nodes under hbase/rs,
+   which is registered by each region server, here is only "serverB,16020,<timestamp>"
+5) ReplicationEndpoint connects and then sends WAL entries to HRegionServerB via RPC requests

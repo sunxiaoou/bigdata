@@ -56,8 +56,8 @@ public class ReplicateConsumer {
             WALKey key = ProtoBuf.proto2Key(EntryProto.Key.parseFrom(record.key()));
             WALEdit edit = ProtoBuf.proto2Edit(EntryProto.Edit.parseFrom(record.value()));
             WAL.Entry entry = new WAL.Entry((WALKeyImpl) key, edit);
-            LOG.info("offset({})", offset);
-            LOG.info("entry: " + entry);
+//            LOG.info("offset({})", offset);
+//            LOG.info("entry: " + entry);
             entries.add(entry);
             count ++;
         }

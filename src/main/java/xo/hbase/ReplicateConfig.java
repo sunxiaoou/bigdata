@@ -31,7 +31,7 @@ public class ReplicateConfig {
     private static final String SINK_KAFKA_RETRY_BACKOFF_MS = "sink.kafka.retry.backoff.ms";
     private static final String SINK_KAFKA_TRANSACTION_TIMEOUT_MS = "sink.kafka.transaction.timeout.ms";
     private static final String SINK_KAFKA_SECURITY_PROTOCOL = "sink.kafka.security.protocol";
-    private static final String SINK_KAFKA_TOPIC_TABLE_MAP = "sink.kafka.topic-table-map";
+    private static final String SINK_KAFKA_TOPIC_TABLE_MAP = "sink.kafka.topic.table.map";
 
     // kafka consumer
     private static final String KAFKA_BOOTSTRAP_SERVERS = "kafka.bootstrap.servers";
@@ -43,6 +43,8 @@ public class ReplicateConfig {
     private final Properties properties;
 
     private ReplicateConfig() {
+        LOG.info(System.getProperty("user.dir"));
+        String Path = System.getProperty("replicate.properties.file");
         this.properties = new Properties();
         try (InputStream inputStream = ReplicateConfig.class.getClassLoader().getResourceAsStream(PROPERTIES_FILE)) {
             if (inputStream != null) {
