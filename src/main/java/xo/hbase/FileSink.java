@@ -1,5 +1,7 @@
 package xo.hbase;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import xo.protobuf.EntryFile;
 import xo.protobuf.EntryProto;
 import xo.protobuf.ProtoBuf;
@@ -10,6 +12,8 @@ import org.apache.hadoop.hbase.wal.WAL;
 import java.util.List;
 
 public class FileSink extends AbstractSink {
+    private static final Logger LOG = LoggerFactory.getLogger(FileSink.class);
+
     public FileSink(ReplicateConfig config) {
         super(config);
     }
@@ -21,6 +25,11 @@ public class FileSink extends AbstractSink {
         for (WAL.Entry entry: entries) {
             EntryProto.Entry entryProto = ProtoBuf.entry2Proto(entry);
             EntryFile.append(filePath, entryProto);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("entry: " + entry.toString());
+            } else {
+                LOG.info("sequenceId({})", entry.getKey().getSequenceId());
+            }
         }
     }
 

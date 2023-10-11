@@ -1,6 +1,5 @@
 package xo.hbase;
 
-import com.google.protobuf.InvalidProtocolBufferException;
 import xo.protobuf.EntryProto;
 import xo.protobuf.ProtoBuf;
 
@@ -63,17 +62,14 @@ public class KafkaSink extends AbstractSink {
             ProducerRecord<byte[], byte[]> record =
                     new ProducerRecord<>(tableName, keyProto.toByteArray(), editProto.toByteArray());
             Future<RecordMetadata> result = producer.send(record);
-            RecordMetadata meta = null;
             try {
-                meta = result.get();
-                String keyStr = EntryProto.Key.parseFrom(record.key()).toString();
+                RecordMetadata meta = result.get();
                 if (LOG.isDebugEnabled()) {
-                    LOG.debug(keyStr);
+                    LOG.debug("entry: " + entry.toString());
                 } else {
-                    // only log sequenceId
-                    LOG.info(keyStr.split("\n")[2]);
+                    LOG.info("sequenceId({})", entry.getKey().getSequenceId());
                 }
-            } catch (InterruptedException | ExecutionException | InvalidProtocolBufferException e) {
+            } catch (InterruptedException | ExecutionException e) {
                 e.printStackTrace();
             }
         }

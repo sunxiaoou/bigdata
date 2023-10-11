@@ -55,10 +55,13 @@ public class ReplicateConsumer {
             Long offset = record.offset();
             LOG.debug("offset({})", offset);
             WALKey key = ProtoBuf.proto2Key(EntryProto.Key.parseFrom(record.key()));
-            LOG.info("sequenceId({})", key.getSequenceId());
             WALEdit edit = ProtoBuf.proto2Edit(EntryProto.Edit.parseFrom(record.value()));
             WAL.Entry entry = new WAL.Entry((WALKeyImpl) key, edit);
-            LOG.debug("entry: " + entry);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("entry: " + entry.toString());
+            } else {
+                LOG.info("sequenceId({})", key.getSequenceId());
+            }
             entries.add(entry);
             count ++;
         }
