@@ -66,7 +66,13 @@ public class KafkaSink extends AbstractSink {
             RecordMetadata meta = null;
             try {
                 meta = result.get();
-                LOG.info(EntryProto.Key.parseFrom(record.key()).toString());
+                String keyStr = EntryProto.Key.parseFrom(record.key()).toString();
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug(keyStr);
+                } else {
+                    // only log sequenceId
+                    LOG.info(keyStr.split("\n")[2]);
+                }
             } catch (InterruptedException | ExecutionException | InvalidProtocolBufferException e) {
                 e.printStackTrace();
             }

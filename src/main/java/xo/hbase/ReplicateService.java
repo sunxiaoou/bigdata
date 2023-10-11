@@ -113,7 +113,7 @@ public class ReplicateService implements AdminService.BlockingInterface {
         String sourceHFileArchiveDirPath = request.getSourceHFileArchiveDirPath();
         LOG.info(sourceHFileArchiveDirPath);
         List<WALEntry> entryProtos = request.getEntryList();
-        LOG.info("entryProtos: " + entryProtos.toString());
+        LOG.debug("entryProtos: " + entryProtos.toString());
         CellScanner cellScanner = ((HBaseRpcController) controller).cellScanner();
         ((HBaseRpcController) controller).setCellScanner(null);
         if (sink != null) {
