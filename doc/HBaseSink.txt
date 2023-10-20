@@ -1,0 +1,35 @@
+Replication from ClusterA to ClusterB
+
+source1 - psuedo distribute cluster on hadoop1
+source2 - distribute cluster on hadoop3/4/5
+peer - a RPC server on hadoop2 
+
+1. start HBase on source
+
+2. start RPC server and Kafka consumer on peer
+1) modify hbase-site.xml and replicate.properties if need
+2) start servers
+$ java -cp ".:bigdata-1.0-SNAPSHOT-jar-with-dependencies.jar" xo.hbase.ReplicateSvr
+on another terminal
+$ java -cp ".:bigdata-1.0-SNAPSHOT-jar-with-dependencies.jar" xo.hbase.ReplicateConsumer
+
+3. create tables on source
+$ create 'manga:fruit', {NAME => 'cf', REPLICATION_SCOPE=>'1'}
+$ create 'peTable', {NAME => 'info0', VERSIONS => '1', KEEP_DELETED_CELLS => 'FALSE', DATA_BLOCK_ENCODING => 'NONE', TTL => 'FOREVER', MIN_VERSIONS => '0', REPLICATION_SCOPE => '1', BLOOMFILTER => 'ROW', IN_MEMORY => 'false', COMPRESSION => 'NONE', BLOCKCACHE => 'true', BLOCKSIZE => '65536', METADATA => {'IN_MEMORY_COMPACTION' => 'NONE'}}
+
+4. create peer on source
+$ add_peer 'hadoop2', CLUSTER_KEY => "hadoop2:2181:/myPeer", TABLE_CFS => { "peTable" => [], "manga:fruit"  => [] }
+
+5. case1 - 'manga:fruit'
+1) modify hbase-site.xml if need
+2) fill table on source
+$ cd ~/work/bigdata
+$ java -cp ".:bigdata-1.0-SNAPSHOT-jar-with-dependencies.jar" xo.hbase.HBase' 
+3) check output of RPC server and consumer on peer
+
+6. case2 - 'peTable'
+1) modify hbase-site.xml if need
+2) fill table on source
+$ $HBASE_HOME/bin/hbase pe --table=peTable --nomapred --valueSize=100 randomWrite 3
+3) check output of RPC server and consumer on peer
+4) As consumer put records to a HBase defined in replicate.properties, count and compare records on both source and peer
