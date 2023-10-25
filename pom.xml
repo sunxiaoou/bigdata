@@ -4,6 +4,7 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <!-- mvn dependency:tree -->
   <!-- mvn clean package -DskipTests -->
+  <!-- mvn clean package -DskipTests dependency:copy-dependencies -DoutputDirectory=lib -->
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>xo</groupId>
@@ -57,13 +58,18 @@
       <version>${hbase.version}</version>
     </dependency>
     <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-mapreduce</artifactId>
+      <version>${hbase.version}</version>
+    </dependency>
+    <dependency>
       <groupId>org.apache.kafka</groupId>
       <artifactId>kafka-clients</artifactId>
       <version>3.4.0</version>
     </dependency>
   </dependencies>
 
-  <build>
+  <!-- build>
     <plugins>
       <plugin>
         <artifactId>maven-assembly-plugin</artifactId>
@@ -83,5 +89,5 @@
         </executions>
       </plugin>
     </plugins>
-  </build>
+  </build-->
 </project>
