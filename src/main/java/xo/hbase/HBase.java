@@ -318,6 +318,14 @@ public class HBase {
                     System.out.println("Can only put to \"manga:fruit\"");
                 }
                 return;
+            case "delete":
+                if ("manga".equals(space) && "fruit".equals(name)) {
+                    db.deleteRow(space, name, "107");
+                    System.out.println(name + " deleted");
+                } else {
+                    System.out.println("Can only delete from \"manga:fruit\"");
+                }
+                return;
             case "scan":
                 if ("manga".equals(space) && "fruit".equals(name)) {
                     System.out.println(db.scanTable(space, name));
