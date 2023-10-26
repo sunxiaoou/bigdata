@@ -13,9 +13,11 @@ public class MyVerifyReplication extends VerifyReplication {
     @Override
     public Job createSubmittableJob(Configuration conf, String[] args) throws IOException {
         Job job = super.createSubmittableJob(conf, args);
-        String peer = job.getConfiguration().get("verifyrep.peerQuorumAddress");
-        String[] s = peer.split(":");
-        job.getConfiguration().set("verifyrep.peerQuorumAddress", String.format("%s:%s:/hbase", s[0], s[1]));
+        if (job != null) {
+            String peer = job.getConfiguration().get("verifyrep.peerQuorumAddress");
+            String[] s = peer.split(":");
+            job.getConfiguration().set("verifyrep.peerQuorumAddress", String.format("%s:%s:/hbase", s[0], s[1]));
+        }
         return job;
     }
 
