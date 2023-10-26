@@ -194,6 +194,39 @@ public class HBase {
         return tableData;
     }
 
+    public boolean isTableEmpty(String space, String name) throws IOException {
+        TableName tableName = TableName.valueOf(space == null ? name : space + ':' + name);    // qualified name
+        if (!admin.tableExists(tableName)) {
+            return false;
+        }
+        try (Table table = conn.getTable(tableName)) {
+            try (ResultScanner scanner = table.getScanner(new Scan())) {
+                Result result = scanner.next();
+                scanner.close();
+                table.close();
+                return result == null;
+            }
+        }
+    }
+
+    public long countTableRows(String space, String name) throws IOException {
+        TableName tableName = TableName.valueOf(space == null ? name : space + ':' + name);    // qualified name
+        if (!admin.tableExists(tableName)) {
+            return 0;
+        }
+        try (Table table = conn.getTable(tableName)) {
+            try (ResultScanner scanner = table.getScanner(new Scan())) {
+                long rowCount = 0;
+                for (Result result : scanner) {
+                    rowCount++;
+                }
+                scanner.close();
+                table.close();
+                return rowCount;
+            }
+        }
+    }
+
     public String getCell(String space, String name, String pk, String cf, String col) throws IOException {
         TableName tableName = TableName.valueOf(space == null ? name : space + ':' + name);    // qualified name
         try (Table table = conn.getTable(tableName)) {
@@ -253,55 +286,67 @@ public class HBase {
         return rows;
     }
 
-    public static void main(String[] args) throws IOException {
-        String host;
-        String op;
-        HBase db;
-        if (args.length > 1) {
-            host = args[0];
-            op = args[1];
-            db = new HBase(host, 2181, "/hbase");
-            switch (op) {
-                case "put":
-                    db.putRow("manga", "fruit", fruit(new Triple<>(107, "🍐", (float) 115)));
-                    System.out.println(db.scanTable("manga", "fruit"));
-                    return;
-                case "delete":
-                    db.deleteRow("manga", "fruit", "107");
-                    System.out.println(db.scanTable("manga", "fruit"));
-                    return;
-                case "scan":
-                    System.out.println(db.scanTable("manga", "fruit"));
-                    return;
-                default:
-                    System.out.println("unknown op: " + op);
-                    return;
-            }
-        } else if (args.length > 0) {
-            host = args[0];
-            db = new HBase(host, 2181, "/hbase");
+    private static void run(String op, String host, String table) throws IOException {
+        // use resources/hbase-site.xml as host is null
+        HBase db = host == null ? new HBase(): new HBase(host, 2181, "/hbase");
+        String space = "manga";
+        String name = "fruit";
+        if (table == null) {
+            System.out.println(db.listNameSpaces());
+            System.out.println(db.listTables("manga"));
         } else {
-//            System.exit(1);
-            db = new HBase();   // use resources/hbase-site.xml
+            if (table.contains(":")) {
+                String[] ss = table.split(":");
+                space = ss[0];
+                name = ss[1];
+            } else {
+                space = null;
+                name = table;
+            }
         }
-
-        db.listNameSpaces();
-        db.listTables("manga");
-
-//        db.dropTable(null, "fruit");
-//        db.createTable("manga", "fruit", "cf");
-//        db.truncateTable("manga", "fruit");
-        db.putRows("manga", "fruit", fruits());
-        db.putRow("manga", "fruit", fruit(new Triple<>(107, "🍐", (float) 115)));
-//        db.deleteRow("manga", "fruit", "107");
-        System.out.println(db.scanTable("manga", "fruit"));
-//        System.out.println(db.getCell("manga", "fruit", "105", "cf", "name"));
-//        db.addPeer("myPeer", "localhost:2181:/myPeer",
-//                "org.apache.hadoop.hbase.replication.TestReplicationEndpoint$ReplicationEndpointForTest");
-//        db.addPeer("dummy", "localhost:2181:/dummy",
-//                "org.apache.hadoop.hbase.replication.DummyReplicationEndpoint");
-//        db.removePeer("htest");
-//        db.listPeers();
+        switch (op) {
+            case "truncate":
+                db.truncateTable(space, name);
+                System.out.println(name + " truncated");
+                return;
+            case "put":
+                if ("manga".equals(space) && "fruit".equals(name)) {
+                    db.putRows(space, name, fruits());
+                    db.putRow(space, name, fruit(new Triple<>(107, "🍐", (float) 115)));
+                    System.out.println(name + " put");
+                } else {
+                    System.out.println("Can only put to \"manga:fruit\"");
+                }
+                return;
+            case "scan":
+                if ("manga".equals(space) && "fruit".equals(name)) {
+                    System.out.println(db.scanTable(space, name));
+                    System.out.println(name + " scanned");
+                } else {
+                    System.out.println("Can only scan \"manga:fruit\"");
+                }
+                return;
+            case "isEmpty":
+                System.out.println(name + (db.isTableEmpty(space, name) ? " is empty" : " is not empty"));
+                return;
+            case "count":
+                System.out.println(String.format("%s has %d rows", name, db.countTableRows(space, name)));
+                return;
+            default:
+                System.out.println("Unknown op: " + op);
+        }
         db.close();
+    }
+
+    public static void main(String[] args) throws IOException {
+        if (args.length > 2) {
+            run(args[0], args[1], args[2]);
+        } else if (args.length > 1) {
+            run(args[0], args[1], null);
+        } else if (args.length > 0) {
+            run(args[0], null, null);
+        } else {
+            System.out.println("Usage: HBase truncate|put|scan|isEmpty host(s) table");
+        }
     }
 }
