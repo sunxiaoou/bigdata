@@ -354,7 +354,7 @@ public class HBase {
         } else if (args.length > 0) {
             run(args[0], null, null);
         } else {
-            System.out.println("Usage: HBase truncate|put|scan|isEmpty host(s) table");
+            System.out.println("Usage: HBase truncate|put|delete|scan|isEmpty|count host(s) table");
         }
     }
 }
