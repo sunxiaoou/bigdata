@@ -259,6 +259,11 @@ public class HBase {
         admin.removeReplicationPeer(peerId);
     }
 
+    /**
+     * Convert triple of a fruit row to a pair
+     * @param triple <row_number, name_value, price_value>
+     * @return a Pair - (row_string, {"cf": {"name": name_string, "price": price_string}})
+     */
     public static Pair<String, Map<String, Map<String, String>>> fruit(Triple<Integer, String, Float> triple) {
         Map<String, Map<String, String>> families = new HashMap<>();
         Map<String, String> family = new TreeMap<>();
@@ -268,6 +273,10 @@ public class HBase {
         return new Pair<>(String.valueOf(triple.getFirst()), families);
     }
 
+    /**
+     * Convert a triple array to map
+     * @return a Map - {row_string: {"cf": {"name": name_string, "price": price_string}}}
+     */
     public static Map<String, Map<String, Map<String, String>>> fruits() {
         final Triple<Integer, String, Float>[] triples = new Triple[] {
                 new Triple<>(101, "🍉", (float) 800.0),
@@ -305,17 +314,20 @@ public class HBase {
             }
         }
         switch (op) {
-            case "truncate":
-                db.truncateTable(space, name);
-                System.out.println(name + " truncated");
-                return;
             case "put":
                 if ("manga".equals(space) && "fruit".equals(name)) {
                     db.putRows(space, name, fruits());
-                    db.putRow(space, name, fruit(new Triple<>(107, "🍐", (float) 115)));
                     System.out.println(name + " put");
                 } else {
                     System.out.println("Can only put to \"manga:fruit\"");
+                }
+                return;
+            case "add":
+                if ("manga".equals(space) && "fruit".equals(name)) {
+                    db.putRow(space, name, fruit(new Triple<>(107, "🍐", (float) 115)));
+                    System.out.println(name + " add");
+                } else {
+                    System.out.println("Can only add to \"manga:fruit\"");
                 }
                 return;
             case "delete":
@@ -325,6 +337,9 @@ public class HBase {
                 } else {
                     System.out.println("Can only delete from \"manga:fruit\"");
                 }
+                return;
+            case "count":
+                System.out.println(String.format("%s has %d rows", name, db.countTableRows(space, name)));
                 return;
             case "scan":
                 if ("manga".equals(space) && "fruit".equals(name)) {
@@ -337,8 +352,9 @@ public class HBase {
             case "isEmpty":
                 System.out.println(name + (db.isTableEmpty(space, name) ? " is empty" : " is not empty"));
                 return;
-            case "count":
-                System.out.println(String.format("%s has %d rows", name, db.countTableRows(space, name)));
+            case "truncate":
+                db.truncateTable(space, name);
+                System.out.println(name + " truncated");
                 return;
             default:
                 System.out.println("Unknown op: " + op);
@@ -354,7 +370,7 @@ public class HBase {
         } else if (args.length > 0) {
             run(args[0], null, null);
         } else {
-            System.out.println("Usage: HBase truncate|put|delete|scan|isEmpty|count host(s) table");
+            System.out.println("Usage: HBase put|add|delete|count|scan|isEmpty|truncate host[,host2,...] table");
         }
     }
 }
