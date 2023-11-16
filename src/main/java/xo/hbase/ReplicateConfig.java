@@ -21,6 +21,8 @@ public class ReplicateConfig {
     private static final String REPLICATE_SERVER_SINK_FACTORY = "replicate.server.sink.factory";
 
     private static final String SINK_FILE_NAME = "sink.file.name";
+    private static final String SINK_FILE_CAPACITY = "sink.file.capacity";
+    private static final String SINK_FILE_NUMBER = "sink.file.number";
     private static final String SINK_HBASE_QUORUM_HOST = "sink.hbase.quorum.host";
     private static final String SINK_HBASE_QUORUM_PORT = "sink.hbase.quorum.port";
     private static final String SINK_HBASE_QUORUM_PATH = "sink.hbase.quorum.path";
@@ -32,6 +34,7 @@ public class ReplicateConfig {
     private static final String SINK_KAFKA_TRANSACTION_TIMEOUT_MS = "sink.kafka.transaction.timeout.ms";
     private static final String SINK_KAFKA_SECURITY_PROTOCOL = "sink.kafka.security.protocol";
     private static final String SINK_KAFKA_TOPIC_TABLE_MAP = "sink.kafka.topic.table.map";
+    private static final String SINK_KAFKA_SERIALIZER = "sink.kafka.serializer";
 
     // kafka consumer
     private static final String KAFKA_BOOTSTRAP_SERVERS = "kafka.bootstrap.servers";
@@ -96,6 +99,14 @@ public class ReplicateConfig {
         return properties.getProperty(SINK_FILE_NAME);
     }
 
+    public int getSinkFileCapacity() {
+        return Integer.parseInt(properties.getProperty(SINK_FILE_CAPACITY));
+    }
+
+    public short getSinkFileNumber() {
+        return Short.parseShort(properties.getProperty(SINK_FILE_NUMBER));
+    }
+
     public String getSinkHBaseQuorumHost() {
         return properties.getProperty(SINK_HBASE_QUORUM_HOST);
     }
@@ -138,6 +149,10 @@ public class ReplicateConfig {
 
     public String getSinkKafkaTopicTableMap() {
         return properties.getProperty(SINK_KAFKA_TOPIC_TABLE_MAP);
+    }
+
+    public String getSinkKafkaSerializer() {
+        return properties.getProperty(SINK_KAFKA_SERIALIZER, "protobuf");
     }
 
     public String getKafkaBootstrapServers() {

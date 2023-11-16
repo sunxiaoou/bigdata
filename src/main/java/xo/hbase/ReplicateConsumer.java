@@ -1,5 +1,6 @@
 package xo.hbase;
 
+import xo.fastjson.JsonUtil;
 import xo.protobuf.EntryProto;
 import xo.protobuf.ProtoBuf;
 
@@ -31,7 +32,7 @@ public class ReplicateConsumer {
     private int count = 0;
 
     private final KafkaConsumer<byte[], byte[]> consumer;
-    private final List<String> topics;
+    private final boolean isJson;
 
     public ReplicateConsumer() {
         ReplicateConfig config = ReplicateConfig.getInstance();
@@ -43,9 +44,10 @@ public class ReplicateConsumer {
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
         this.consumer = new KafkaConsumer<>(props);
-        this.topics = Arrays.asList(StringUtils.getStrings(config.getKafkaTopics()));
+        List<String> topics = Arrays.asList(StringUtils.getStrings(config.getKafkaTopics()));
         LOG.info("topic list:" + topics);
         consumer.subscribe(topics);
+        this.isJson = "json".equals(config.getSinkKafkaSerializer());
     }
 
     private List<WAL.Entry> poll() throws IOException {
@@ -54,8 +56,10 @@ public class ReplicateConsumer {
         for (ConsumerRecord<byte[], byte[]> record : records) {
             Long offset = record.offset();
             LOG.debug("offset({})", offset);
-            WALKey key = ProtoBuf.proto2Key(EntryProto.Key.parseFrom(record.key()));
-            WALEdit edit = ProtoBuf.proto2Edit(EntryProto.Edit.parseFrom(record.value()));
+            WALKey key = isJson ? JsonUtil.json2Key(new String(record.key())):
+                    ProtoBuf.proto2Key(EntryProto.Key.parseFrom(record.key()));
+            WALEdit edit = isJson ? JsonUtil.json2Edit(new String(record.value())):
+                    ProtoBuf.proto2Edit(EntryProto.Edit.parseFrom(record.value()));
             WAL.Entry entry = new WAL.Entry((WALKeyImpl) key, edit);
             if (LOG.isDebugEnabled()) {
                 LOG.debug("entry: " + entry.toString());

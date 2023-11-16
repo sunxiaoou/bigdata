@@ -24,6 +24,12 @@ public abstract class AbstractSink {
         this.config = config;
     }
 
+    /**
+     * Merge keys and edits to a entry list
+     * @param entryProtos PB list of entry, contains key and count of cell
+     * @param scanner a scanner of cell
+     * @return the entry list
+     */
     protected List<WAL.Entry> merge(List<AdminProtos.WALEntry> entryProtos, CellScanner scanner) {
         List<WAL.Entry> list = new ArrayList<>();
         for (AdminProtos.WALEntry entryProto: entryProtos) {
@@ -58,6 +64,11 @@ public abstract class AbstractSink {
         return list;
     }
 
+    /**
+     * Put keys and edits as entry list to target sink
+     * @param entryProtos
+     * @param cellScanner
+     */
     public abstract void put(List<AdminProtos.WALEntry> entryProtos, CellScanner cellScanner);
 
     public abstract void flush();

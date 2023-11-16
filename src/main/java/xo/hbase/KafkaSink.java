@@ -1,5 +1,7 @@
 package xo.hbase;
 
+import org.apache.hadoop.hbase.util.Bytes;
+import xo.fastjson.JsonUtil;
 import xo.protobuf.EntryProto;
 import xo.protobuf.ProtoBuf;
 
@@ -22,9 +24,9 @@ import java.util.concurrent.Future;
 
 public class KafkaSink extends AbstractSink {
     private static final Logger LOG = LoggerFactory.getLogger(KafkaSink.class);
-    private static final String TABLE_MAP_DELIMITER = ":";
-
     private final Producer<byte[], byte[]> producer;
+    private final boolean isJson;
+    private static final String TABLE_MAP_DELIMITER = ":";
     private final Map<String, String> tableMap;
 
     public KafkaSink(ReplicateConfig config) {
@@ -40,7 +42,7 @@ public class KafkaSink extends AbstractSink {
         properties.put(ProducerConfig.RETRY_BACKOFF_MS_CONFIG, config.getSinkKafkaRetryBackoffMs());
         properties.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, config.getSinkKafkaSecurityProtocol());
         this.producer = new KafkaProducer<>(properties);
-
+        this.isJson = "json".equals(config.getSinkKafkaSerializer());
         this.tableMap = new HashMap<>();
         String[] mappings = StringUtils.getStrings(config.getSinkKafkaTopicTableMap());
         for (String mapping: mappings) {
@@ -57,10 +59,11 @@ public class KafkaSink extends AbstractSink {
             // use '.' to replace ':' as table with namespace
             String tableName = tableMap.get(entry.getKey().getTableName().getNameAsString()
                     .replace(TABLE_MAP_DELIMITER, "."));
-            EntryProto.Key keyProto = ProtoBuf.key2Proto(entry.getKey());
-            EntryProto.Edit editProto = ProtoBuf.edit2Proto(entry.getEdit());
-            ProducerRecord<byte[], byte[]> record =
-                    new ProducerRecord<>(tableName, keyProto.toByteArray(), editProto.toByteArray());
+            byte[] key = isJson ? Bytes.toBytes(JsonUtil.key2Json(entry.getKey())):
+                    ProtoBuf.key2Proto(entry.getKey()).toByteArray();
+            byte[] edit = isJson ? Bytes.toBytes(JsonUtil.edit2Json(entry.getEdit())):
+                    ProtoBuf.edit2Proto(entry.getEdit()).toByteArray();
+            ProducerRecord<byte[], byte[]> record = new ProducerRecord<>(tableName, key, edit);
             Future<RecordMetadata> result = producer.send(record);
             try {
                 RecordMetadata meta = result.get();

@@ -1,7 +1,6 @@
 package xo.fastjson;
 
 import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.serializer.SerializerFeature;
 import lombok.Data;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -9,6 +8,7 @@ import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
+import xo.protobuf.ProtoBuf;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -66,7 +66,7 @@ public class JsonUtil {
 
         Cell getCell() {
             return new KeyValue(Bytes.toBytes(row), Bytes.toBytes(family), Bytes.toBytes(qualifier),
-                    timestamp.getTime(), value);
+                    timestamp.getTime(), KeyValue.Type.valueOf(type), value);
         }
     }
 
@@ -112,7 +112,8 @@ public class JsonUtil {
 
     public static String key2Json(WALKey key) {
         Key4Json key4Json = new Key4Json(key);
-        return JSON.toJSONString(key4Json, SerializerFeature.WriteDateUseDateFormat);
+//        return JSON.toJSONString(key4Json, SerializerFeature.WriteDateUseDateFormat);
+        return JSON.toJSONString(key4Json);
     }
 
     public static WALKey json2Key(String json) {
@@ -122,7 +123,6 @@ public class JsonUtil {
 
     public static String cells2Json(List<Cell> cells) {
         List<Cell4Json> list = cells.stream().map(Cell4Json::new).collect(Collectors.toList());
-//        return JSON.toJSONString(list, SerializerFeature.WriteDateUseDateFormat);
         return JSON.toJSONString(list);
     }
 
@@ -133,7 +133,7 @@ public class JsonUtil {
 
     public static String edit2Json(WALEdit edit) {
         Edit4Json edit4Json = new Edit4Json(edit);
-        return JSON.toJSONString(edit4Json, SerializerFeature.WriteDateUseDateFormat);
+        return JSON.toJSONString(edit4Json);
     }
 
     public static WALEdit json2Edit(String json) {
@@ -143,7 +143,7 @@ public class JsonUtil {
 
     public static String entry2Json(WAL.Entry entry) {
         Entry4Json entry4Json = new Entry4Json(entry);
-        return JSON.toJSONString(entry4Json, SerializerFeature.WriteDateUseDateFormat);
+        return JSON.toJSONString(entry4Json);
     }
 
     public static WAL.Entry json2Entry(String json) {
@@ -181,11 +181,11 @@ public class JsonUtil {
 //        System.out.println(edit);
 //        json = edit2Json(edit);
 //        System.out.println(json);
-//        System.out.println(json2Edit(json));
+//        System.out.println(ProtoBuf.compareEdit(edit, json2Edit(json)));
 
         System.out.println(entry);
         json = entry2Json(entry);
         System.out.println(json);
-        System.out.println(json2Entry(json));
+        System.out.println(ProtoBuf.compareEntry(entry, json2Entry(json)));
     }
 }
