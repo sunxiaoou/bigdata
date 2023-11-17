@@ -2,7 +2,6 @@ package xo.hbase;
 
 import org.apache.hadoop.hbase.util.Bytes;
 import xo.fastjson.JsonUtil;
-import xo.protobuf.EntryProto;
 import xo.protobuf.ProtoBuf;
 
 import org.apache.hadoop.hbase.CellScanner;
@@ -43,6 +42,7 @@ public class KafkaSink extends AbstractSink {
         properties.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, config.getSinkKafkaSecurityProtocol());
         this.producer = new KafkaProducer<>(properties);
         this.isJson = "json".equals(config.getSinkKafkaSerializer());
+        LOG.info("serializer is " + (isJson ? "json": "protoBuf"));
         this.tableMap = new HashMap<>();
         String[] mappings = StringUtils.getStrings(config.getSinkKafkaTopicTableMap());
         for (String mapping: mappings) {

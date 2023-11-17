@@ -10,6 +10,12 @@ import java.io.IOException;
 
 public class MyVerifyReplication extends VerifyReplication {
 
+    /**
+     * To verify replication serialization from HBase clusterA to RPCServer, we put WAL Entries to
+     * another clusterB via Kafka, suppose both RPCServer and clusterB are on serverB, however the
+     * peer cluster key of RPCServer looks like "serverB:2181:/myPeer", it should be changed to
+     * "serverB:2181:/hbase" to point to clusterB so we can do verification
+     */
     @Override
     public Job createSubmittableJob(Configuration conf, String[] args) throws IOException {
         Job job = super.createSubmittableJob(conf, args);
