@@ -7,14 +7,12 @@ import xo.protobuf.ProtoBuf;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.wal.WAL;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.producer.*;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -25,7 +23,6 @@ public class KafkaSink extends AbstractSink {
     private static final Logger LOG = LoggerFactory.getLogger(KafkaSink.class);
     private final Producer<byte[], byte[]> producer;
     private final boolean isJson;
-    private static final String TABLE_MAP_DELIMITER = ":";
     private final Map<String, String> tableMap;
 
     public KafkaSink(ReplicateConfig config) {
@@ -43,12 +40,7 @@ public class KafkaSink extends AbstractSink {
         this.producer = new KafkaProducer<>(properties);
         this.isJson = "json".equals(config.getSinkKafkaSerializer());
         LOG.info("serializer is " + (isJson ? "json": "protoBuf"));
-        this.tableMap = new HashMap<>();
-        String[] mappings = StringUtils.getStrings(config.getSinkKafkaTopicTableMap());
-        for (String mapping: mappings) {
-            String[] s = mapping.split(TABLE_MAP_DELIMITER);
-            tableMap.put(s[0], s[1]);
-        }
+        this.tableMap = config.getSinkKafkaTopicTableMap();
         LOG.info("table map: " + tableMap.toString());
     }
 
@@ -56,9 +48,7 @@ public class KafkaSink extends AbstractSink {
     public void put(List<AdminProtos.WALEntry> entryProtos, CellScanner cellScanner) {
         List<WAL.Entry> entries = merge(entryProtos, cellScanner);
         for (WAL.Entry entry: entries) {
-            // use '.' to replace ':' as table with namespace
-            String tableName = tableMap.get(entry.getKey().getTableName().getNameAsString()
-                    .replace(TABLE_MAP_DELIMITER, "."));
+            String tableName = tableMap.get(entry.getKey().getTableName().getNameAsString());
             byte[] key = isJson ? Bytes.toBytes(JsonUtil.key2Json(entry.getKey())):
                     ProtoBuf.key2Proto(entry.getKey()).toByteArray();
             byte[] edit = isJson ? Bytes.toBytes(JsonUtil.edit2Json(entry.getEdit())):

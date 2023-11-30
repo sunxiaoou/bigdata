@@ -6,6 +6,7 @@ import org.apache.hadoop.hbase.ipc.FifoRpcScheduler;
 import org.apache.hadoop.hbase.ipc.NettyRpcServer;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
 import org.apache.zookeeper.*;
@@ -14,15 +15,19 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 
 
 public class ReplicateSvr {
     private static final Logger LOG = LoggerFactory.getLogger(ReplicateSvr.class);
+    private static final String TABLE_MAP_DELIMITER = ":";
 
     private final ReplicateConfig config;
     private final NettyRpcServer rpcServer;
+    private final int port;
 
     public ReplicateSvr() throws IOException {
         this.config = ReplicateConfig.getInstance();
@@ -38,17 +43,18 @@ public class ReplicateSvr {
         this.rpcServer = new NettyRpcServer(null,
                 config.getReplicateServerName(),
                 Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(service, null)),
-                new InetSocketAddress("0", config.getReplicateServerPort()),
+                new InetSocketAddress(0),
                 conf,
                 new FifoRpcScheduler(conf, 1),
                 true
         );
+        this.port = rpcServer.getListenerAddress().getPort();
     }
 
     private String register()
             throws IOException, KeeperException, InterruptedException {
         String connectString = String.format("%s:%d",
-                config.getReplicateServerQuorumHost(),
+                config.getReplicateServerHost(),
                 config.getReplicateServerQuorumPort());
         int sessionTimeout = 90000;
         CountDownLatch connSignal = new CountDownLatch(0);
@@ -75,9 +81,29 @@ public class ReplicateSvr {
         }
         path += String.format("/%s,%d,%d",
                 config.getReplicateServerHost(),
-                config.getReplicateServerPort(),
+                port,
                 System.currentTimeMillis());
         return zk.create(path, null, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
+    }
+
+    private void addPeer() throws IOException {
+        HBase db = new HBase(
+                config.getSourceHbaseQuorumHost(),
+                config.getSourceHbaseQuorumPort(),
+                config.getSourceHbaseQuorumPath());
+        String peer = config.getReplicateServerHost();
+        int state = db.peerState(peer);
+        if (state < 0) {
+            String key = String.format("%s:%d:%s",
+                    peer,
+                    config.getReplicateServerQuorumPort(),
+                    config.getReplicateServerQuorumPath());
+            db.addPeer(peer, key, new ArrayList<>(config.getSinkKafkaTopicTableMap().keySet()));
+            db.enablePeer(peer);
+        } else if (state == 0) {
+            db.enablePeer(peer);
+        }
+        db.close();
     }
 
     private void run() {
@@ -101,6 +127,7 @@ public class ReplicateSvr {
     public static void main(String[] args) throws IOException, KeeperException, InterruptedException {
         ReplicateSvr svr = new ReplicateSvr();
         LOG.info(svr.register());
+        svr.addPeer();
         svr.run();
     }
 }

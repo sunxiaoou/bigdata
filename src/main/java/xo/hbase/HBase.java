@@ -3,6 +3,7 @@ package xo.hbase;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.ReplicationPeerNotFoundException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -17,6 +18,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.regex.Pattern;
 
 // refer to org.apache.hadoop.hbase.client sample in https://hbase.apache.org/apidocs/index.html
 public class HBase {
@@ -253,6 +255,43 @@ public class HBase {
                 .setReplicationEndpointImpl(endpoint)
                 .build();
         admin.addReplicationPeer(peerId, peerConfig, false);
+    }
+
+    public void addPeer(String peerId, String clusterKey, List<String> tables) throws IOException {
+        Map<TableName, List<String>> map = new HashMap<>();
+        for (String table: tables) {
+            map.put(TableName.valueOf(table), new ArrayList<>());
+        }
+        ReplicationPeerConfig peerConfig = ReplicationPeerConfig.newBuilder()
+                .setClusterKey(clusterKey)
+                .setReplicateAllUserTables(false)
+                .setTableCFsMap(map)
+                .build();
+        admin.addReplicationPeer(peerId, peerConfig, false);
+    }
+
+    public void disablePeer(String peerId) throws IOException {
+        admin.disableReplicationPeer(peerId);
+    }
+
+    public void enablePeer(String peerId) throws IOException {
+        admin.enableReplicationPeer(peerId);
+    }
+
+    public int peerState(String peerId) throws IOException {
+        List<ReplicationPeerDescription> peers = admin.listReplicationPeers(Pattern.compile(peerId));
+        if (peers.isEmpty() || !peerId.equals(peers.get(0).getPeerId())) {
+            return -1;
+        }
+        return peers.get(0).isEnabled() ? 1 : 0;
+    }
+
+    public boolean isPeerEnabled(String peerId) throws IOException {
+        List<ReplicationPeerDescription> peers = admin.listReplicationPeers(Pattern.compile(peerId));
+        if (peers.isEmpty() || !peerId.equals(peers.get(0).getPeerId())) {
+            throw new ReplicationPeerNotFoundException(peerId);
+        }
+        return peers.get(0).isEnabled();
     }
 
     public void removePeer(String peerId) throws IOException {
