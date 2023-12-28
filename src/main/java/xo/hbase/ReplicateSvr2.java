@@ -1,16 +1,14 @@
 package xo.hbase;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.CellScanner;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.ipc.*;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
@@ -25,9 +23,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -36,9 +32,14 @@ import java.util.concurrent.LinkedBlockingQueue;
 class Service implements AdminProtos.AdminService.BlockingInterface {
     private static final Logger LOG = LoggerFactory.getLogger(Service.class);
 
-    private final BlockingQueue<WAL.Entry> queue ;
+//    private final BlockingQueue<WAL.Entry> queue;
+    private final BlockingQueue<Pair<List<AdminProtos.WALEntry>, CellScanner>> queue;
 
-    public Service(BlockingQueue<WAL.Entry> queue) {
+//    public Service(BlockingQueue<WAL.Entry> queue) {
+//        this.queue = queue;
+//    }
+
+    public Service(BlockingQueue<Pair<List<AdminProtos.WALEntry>, CellScanner>> queue) {
         this.queue = queue;
     }
 
@@ -100,37 +101,6 @@ class Service implements AdminProtos.AdminService.BlockingInterface {
         return null;
     }
 
-    protected void put(List<AdminProtos.WALEntry> entryProtos, CellScanner scanner) {
-        for (AdminProtos.WALEntry entryProto: entryProtos) {
-            WALProtos.WALKey keyProto = entryProto.getKey();
-            HBaseProtos.UUID id = keyProto.getClusterIdsList().get(0);
-            long sequence = keyProto.getLogSequenceNumber();
-            WALKeyImpl key = new WALKeyImpl(
-                    keyProto.getEncodedRegionName().toByteArray(),
-                    TableName.valueOf(keyProto.getTableName().toByteArray()),
-                    sequence,
-                    keyProto.getWriteTime(),
-                    new UUID(id.getMostSigBits(), id.getLeastSigBits()));
-            int count = entryProto.getAssociatedCellCount();
-            WALEdit edit = new WALEdit(count, false);
-            for (int i = 0; i < count; i ++) {
-                try {
-                    if (!scanner.advance())
-                        break;
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                edit.add(scanner.current());
-            }
-            WAL.Entry entry = new WAL.Entry(key, edit);
-            try {
-                queue.put(entry);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
     @Override
     public AdminProtos.ReplicateWALEntryResponse replicateWALEntry(RpcController controller, AdminProtos.ReplicateWALEntryRequest request) {
         String clusterId = request.getReplicationClusterId();
@@ -143,7 +113,12 @@ class Service implements AdminProtos.AdminService.BlockingInterface {
         LOG.debug("entryProtos: " + entryProtos.toString());
         CellScanner cellScanner = ((HBaseRpcController) controller).cellScanner();
         ((HBaseRpcController) controller).setCellScanner(null);
-        put(entryProtos, cellScanner);
+//        put(entryProtos, cellScanner);
+        try {
+            queue.put(new Pair<>(entryProtos, cellScanner));
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
         AdminProtos.ReplicateWALEntryResponse.Builder responseBuilder = AdminProtos.ReplicateWALEntryResponse.newBuilder();
         // Add any response data to the response builder
         return responseBuilder.build();
@@ -229,7 +204,8 @@ public class ReplicateSvr2 {
     private static final Logger LOG = LoggerFactory.getLogger(ReplicateSvr2.class);
 
     private final ReplicateConfig config;
-    private final BlockingQueue<WAL.Entry> queue;
+//    private final BlockingQueue<WAL.Entry> queue;
+    private final BlockingQueue<Pair<List<AdminProtos.WALEntry>, CellScanner>> queue;
     private final NettyRpcServer rpcServer;
     private final int port;
 
@@ -303,6 +279,34 @@ public class ReplicateSvr2 {
         db.close();
     }
 
+    protected List<WAL.Entry> getEntries(List<AdminProtos.WALEntry> entryProtos, CellScanner scanner) {
+        List<WAL.Entry> list = new ArrayList<>();
+        for (AdminProtos.WALEntry entryProto: entryProtos) {
+            WALProtos.WALKey keyProto = entryProto.getKey();
+            HBaseProtos.UUID id = keyProto.getClusterIdsList().get(0);
+            long sequence = keyProto.getLogSequenceNumber();
+            WALKeyImpl key = new WALKeyImpl(
+                    keyProto.getEncodedRegionName().toByteArray(),
+                    TableName.valueOf(keyProto.getTableName().toByteArray()),
+                    sequence,
+                    keyProto.getWriteTime(),
+                    new UUID(id.getMostSigBits(), id.getLeastSigBits()));
+            int count = entryProto.getAssociatedCellCount();
+            WALEdit edit = new WALEdit(count, false);
+            for (int i = 0; i < count; i ++) {
+                try {
+                    if (!scanner.advance())
+                        break;
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                edit.add(scanner.current());
+            }
+            list.add(new WAL.Entry(key, edit));
+        }
+        return list;
+    }
+
     private void run() {
         rpcServer.start();
         LOG.info("RPC server started on: " + rpcServer.getListenerAddress());
@@ -310,8 +314,12 @@ public class ReplicateSvr2 {
         // Keep the server running
         try {
             while (true) {
-                WAL.Entry entry = queue.take();
-                LOG.info(entry.toString());
+//                WAL.Entry entry = queue.take();
+                Pair<List<AdminProtos.WALEntry>, CellScanner> pair = queue.take();
+                for(WAL.Entry entry : getEntries(pair.getFirst(), pair.getSecond())) {
+                    LOG.info(entry.toString());
+//                    LOG.info(ChangeUtil.entry2OneRowChange(entry).toString());
+                }
             }
         } catch (InterruptedException e) {
             e.printStackTrace();
