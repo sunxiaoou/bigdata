@@ -1,10 +1,7 @@
 package xo.hbase;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.NamespaceDescriptor;
-import org.apache.hadoop.hbase.ReplicationPeerNotFoundException;
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.regionserver.BloomType;
@@ -267,11 +264,48 @@ public class HBase {
                 .setReplicateAllUserTables(false)
                 .setTableCFsMap(map)
                 .build();
+        try {
+            Map<TableName, List<String>> original = admin.getReplicationPeerConfig(peerId).getTableCFsMap();
+            if (original != null && original.keySet().equals(peerConfig.getTableCFsMap().keySet())) {
+                LOG.info("peer({}) already exists", peerId);
+                return;
+            }
+            disablePeer(peerId);
+            admin.removeReplicationPeer(peerId);
+            LOG.info("peer({}) exists but is different, it needs to be replaced", peerId);
+        } catch (ReplicationPeerNotFoundException e) {
+            LOG.info("to create new peer({})", peerId);
+        }
+        admin.addReplicationPeer(peerId, peerConfig, false);
+    }
+
+    public void addPeer(String peerId, String clusterKey, Set<String> spaces) throws IOException {
+        ReplicationPeerConfig peerConfig = ReplicationPeerConfig.newBuilder()
+                .setClusterKey(clusterKey)
+                .setReplicateAllUserTables(false)
+                .setNamespaces(spaces)
+                .build();
+        try {
+            Set<String> original = admin.getReplicationPeerConfig(peerId).getNamespaces();
+            if (original != null && original.equals(peerConfig.getNamespaces())) {
+                LOG.info("peer({}) already exists", peerId);
+                return;
+            }
+            disablePeer(peerId);
+            admin.removeReplicationPeer(peerId);
+            LOG.info("peer({}) exists but is different, it needs to be replaced", peerId);
+        } catch (ReplicationPeerNotFoundException e) {
+            LOG.info("to create new peer({})", peerId);
+        }
         admin.addReplicationPeer(peerId, peerConfig, false);
     }
 
     public void disablePeer(String peerId) throws IOException {
-        admin.disableReplicationPeer(peerId);
+        try {
+            admin.disableReplicationPeer(peerId);
+        } catch (DoNotRetryIOException e) {
+            LOG.info("peer({}) is already disabled", peerId);
+        }
     }
 
     public void enablePeer(String peerId) throws IOException {

@@ -18,7 +18,7 @@ public class ZkConnect {
 
     //host should be 127.0.0.1:3000,127.0.0.1:3001,127.0.0.1:3002
     public ZkConnect(String connectString) throws IOException, InterruptedException {
-        CountDownLatch connSignal = new CountDownLatch(0);
+        CountDownLatch connSignal = new CountDownLatch(1);
         zk = new ZooKeeper(connectString, 3000, new Watcher() {
             public void process(WatchedEvent event) {
                 if (event.getState() == KeeperState.SyncConnected) {

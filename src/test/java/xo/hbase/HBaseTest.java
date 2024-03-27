@@ -8,13 +8,15 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.HashSet;
 
 import static org.junit.Assert.*;
 
 public class HBaseTest {
     private static final Logger LOG = LoggerFactory.getLogger(HBaseTest.class);
     private static HBase db;
-    private static final String peer = "macos";
+    private static final String peer = "rpcSvr";
+    private static final String peerHost = "centos4";
 
     @BeforeClass
     public static void setupBeforeClass() throws IOException {
@@ -34,10 +36,15 @@ public class HBaseTest {
 
     @Test
     public void addPeer() throws IOException {
-        int port = 2181;
-        String znode = "/myPeer";
-        String key = String.format("%s:%d:%s", peer, port, znode);
+        String key = String.format("%s:2181:/%s", peerHost, peer);
         db.addPeer(peer, key, Arrays.asList("peTable", "manga:fruit"));
+        LOG.info("peers: {}", db.listPeers());
+    }
+
+    @Test
+    public void addPeer2() throws IOException {
+        String key = String.format("%s:2181:/%s", peerHost, peer);
+        db.addPeer(peer, key, new HashSet<>(Arrays.asList("default", "manga")));
         LOG.info("peers: {}", db.listPeers());
     }
 
