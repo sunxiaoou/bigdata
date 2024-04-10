@@ -13,7 +13,9 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 
@@ -56,10 +58,26 @@ public class RuleTest {
     }
 
     private void showZookeeper(Table<Integer, String, String> table) {
-        for (Table.Cell<Integer, String, String> cell : table.cellSet()) {
-//            LOG.info(cell.getRowKey() + ", " + cell.getColumnKey() + " -> " + cell.getValue());
-            LOG.info("{}->{}({})", cell.getRowKey(), cell.getColumnKey(), cell.getValue());
+//        for (Table.Cell<Integer, String, String> cell : table.cellSet()) {
+//            LOG.info("{}->{}({})", cell.getRowKey(), cell.getColumnKey(), cell.getValue());
+//        }
+        List<String> ips = new ArrayList<>();
+        String port = null, zk_node = null;
+        for (int rowKey : table.rowKeySet()) {
+            for (String columnKey : table.columnKeySet()) {
+                String value = table.get(rowKey, columnKey);
+                if ("ip".equals(columnKey)) {
+                    ips.add(value);
+                } else if (rowKey == 0) {
+                    if ("port".equals(columnKey)) {
+                        port = value;
+                    } else if ("zk_node".equals(columnKey)) {
+                        zk_node = value;
+                    }
+                }
+            }
         }
+        LOG.info("ips({}), port({}), zk_node({})", String.join(",", ips), port, zk_node);
     }
 
     private void showDb(Map<String, Object> db) {
@@ -74,8 +92,20 @@ public class RuleTest {
             LOG.info("user({}), pass({}), version({})", user, pass, version);
         }
         JSONObject zookeeper = (JSONObject) db.get("zookeeper");
-        Table<Integer, String, String> table = getZookeeperTable(zookeeper);
-        showZookeeper(table);
+//        Table<Integer, String, String> table = getZookeeperTable(zookeeper);
+//        showZookeeper(table);
+        JSONArray array = (JSONArray) (zookeeper.get("set"));
+        List<String> ips = new ArrayList<>();
+        String port = null, zk_node = null;
+        for (int i = 0; i < array.size(); i ++) {
+            JSONObject object = array.getJSONObject(i);
+            ips.add((String) object.get("ip"));
+            if (i == 0) {
+                port = String.valueOf(object.get("port"));
+                zk_node = (String) object.get("zk_node");
+            }
+        }
+        LOG.info("ips({}), port({}), zk_node({})", String.join(",", ips), port, zk_node);
     }
 
     @Test
@@ -105,24 +135,26 @@ public class RuleTest {
     @Test
     public void showTabMap() {
         LOG.info("\nshowTabMap");
-        Map<String, String> tabMap = new HashMap<>();
-        for (Map<String, Object> map: rule.getTabmap()) {
-            String u = null, u2 = null, t = null, t2 = null;
-            for (Map.Entry<String, Object> entry : map.entrySet()) {
-                String key = entry.getKey();
-                JSONObject value = (JSONObject) entry.getValue();
-                for (Map.Entry<String, Object> innerEntry : value.entrySet()) {
-                    if ("user".equals(key)) {
-                        u = innerEntry.getKey();
-                        u2 = (String) innerEntry.getValue();
-                    } else if ("tab".equals(key)) {
-                        t = innerEntry.getKey();
-                        t2 = (String) innerEntry.getValue();
+        if ("table".equals(rule.getMaptype())) {
+            Map<String, String> tabMap = new HashMap<>();
+            for (Map<String, Object> map : rule.getTabmap()) {
+                String u = null, u2 = null, t = null, t2 = null;
+                for (Map.Entry<String, Object> entry : map.entrySet()) {
+                    String key = entry.getKey();
+                    JSONObject value = (JSONObject) entry.getValue();
+                    for (Map.Entry<String, Object> innerEntry : value.entrySet()) {
+                        if ("user".equals(key)) {
+                            u = innerEntry.getKey();
+                            u2 = (String) innerEntry.getValue();
+                        } else if ("tab".equals(key)) {
+                            t = innerEntry.getKey();
+                            t2 = (String) innerEntry.getValue();
+                        }
                     }
                 }
+                tabMap.put(u + ":" + t, u2 + ":" + t2);
             }
-            tabMap.put(u + "." + t, u2 + "." + t2);
+            LOG.info(String.join(",", tabMap.keySet()));
         }
-        LOG.info(tabMap.toString());
     }
 }
