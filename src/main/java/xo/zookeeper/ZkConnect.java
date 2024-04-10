@@ -19,7 +19,7 @@ public class ZkConnect {
     //host should be 127.0.0.1:3000,127.0.0.1:3001,127.0.0.1:3002
     public ZkConnect(String connectString) throws IOException, InterruptedException {
         CountDownLatch connSignal = new CountDownLatch(1);
-        zk = new ZooKeeper(connectString, 3000, new Watcher() {
+        zk = new ZooKeeper(connectString, 90000, new Watcher() {
             public void process(WatchedEvent event) {
                 if (event.getState() == KeeperState.SyncConnected) {
                     connSignal.countDown();
@@ -37,21 +37,27 @@ public class ZkConnect {
         zk.close();
     }
 
-    public void createNode(String path, byte[] data) throws Exception
-    {
-//        zk.create(path, data, Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
-        String[] parts = path.split("/");
+    public String createNode(String path, byte[] data, boolean isEphemeral) throws KeeperException, InterruptedException {
+        String[] parts = path.replaceAll("^/", "").split("/");
+        int len = parts.length;
         String partialPath = "";
-
-        for (String part: parts) {
-            if (!part.isEmpty()) {
-                partialPath += "/" + part;
-                if (zk.exists(partialPath, false) == null) {
-                    zk.create(partialPath, data, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
-                    LOG.info("Created node: " + partialPath);
+        String node = null;
+        for (int i = 0; i < len; i ++) {
+            partialPath += "/" + parts[i];
+            if (zk.exists(partialPath, false) == null) {
+                byte[] bytes = null;
+                CreateMode mode = CreateMode.PERSISTENT;
+                if (i == len - 1) {
+                    bytes = data;
+                    if (isEphemeral) {
+                        mode = CreateMode.EPHEMERAL;
+                    }
                 }
+                node = zk.create(partialPath, bytes, ZooDefs.Ids.OPEN_ACL_UNSAFE, mode);
+                LOG.info("Created node: " + partialPath);
             }
         }
+        return node;
     }
 
     public void updateNode(String path, byte[] data) throws Exception
@@ -74,7 +80,7 @@ public class ZkConnect {
 
     public static void test(ZkConnect conn) throws Exception {
         String newNode = "/manga/" + System.currentTimeMillis();
-        conn.createNode(newNode, new Date().toString().getBytes());
+        conn.createNode(newNode, new Date().toString().getBytes(), false);
         List<String> zNodes = conn.getChildren("/");
         for (String zNode: zNodes) {
             LOG.info("ChildrenNode " + zNode);

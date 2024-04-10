@@ -20,24 +20,19 @@ import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 import org.apache.zookeeper.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import xo.zookeeper.ZkConnect;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 
 
 class Service implements AdminProtos.AdminService.BlockingInterface {
     private static final Logger LOG = LoggerFactory.getLogger(Service.class);
 
-//    private final BlockingQueue<WAL.Entry> queue;
     private final BlockingQueue<Pair<List<AdminProtos.WALEntry>, CellScanner>> queue;
-
-//    public Service(BlockingQueue<WAL.Entry> queue) {
-//        this.queue = queue;
-//    }
 
     public Service(BlockingQueue<Pair<List<AdminProtos.WALEntry>, CellScanner>> queue) {
         this.queue = queue;
@@ -113,7 +108,6 @@ class Service implements AdminProtos.AdminService.BlockingInterface {
         LOG.debug("entryProtos: " + entryProtos.toString());
         CellScanner cellScanner = ((HBaseRpcController) controller).cellScanner();
         ((HBaseRpcController) controller).setCellScanner(null);
-//        put(entryProtos, cellScanner);
         try {
             queue.put(new Pair<>(entryProtos, cellScanner));
         } catch (InterruptedException e) {
@@ -204,10 +198,11 @@ public class ReplicateSvr2 {
     private static final Logger LOG = LoggerFactory.getLogger(ReplicateSvr2.class);
 
     private final ReplicateConfig config;
-//    private final BlockingQueue<WAL.Entry> queue;
     private final BlockingQueue<Pair<List<AdminProtos.WALEntry>, CellScanner>> queue;
     private final NettyRpcServer rpcServer;
     private final int port;
+    private String ephemeral;
+    private ZkConnect zkConnect;
 
     public ReplicateSvr2() throws IOException {
         this.config = ReplicateConfig.getInstance();
@@ -225,38 +220,20 @@ public class ReplicateSvr2 {
         this.port = rpcServer.getListenerAddress().getPort();
     }
 
-    private String register() throws IOException, KeeperException, InterruptedException {
+    private void register() throws IOException, KeeperException, InterruptedException {
         String connectString = String.format("%s:%d",
                 config.getReplicateServerHost(),
                 config.getReplicateServerQuorumPort());
-        int sessionTimeout = 90000;
-        CountDownLatch connSignal = new CountDownLatch(0);
-        ZooKeeper zk = new ZooKeeper(connectString, sessionTimeout, new Watcher() {
-            @Override
-            public void process(WatchedEvent event) {
-                if (event.getState() == Event.KeeperState.SyncConnected) {
-                    connSignal.countDown();
-                }
-            }
-        });
-
-        String path = config.getReplicateServerQuorumPath();
-        if (zk.exists(path, false) == null) {
-            zk.create(path, null, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
-        }
-        if (zk.exists(path + "/hbaseid", false) == null) {
-            String uuid = UUID.randomUUID().toString();
-            zk.create(path + "/hbaseid", uuid.getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
-        }
-        path += "/rs";
-        if (zk.exists(path, false) == null) {
-            zk.create(path, null, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
-        }
-        path += String.format("/%s,%d,%d",
+        this.zkConnect = new ZkConnect(connectString);
+        String root = config.getReplicateServerQuorumPath();
+        zkConnect.createNode(root + "/hbaseid", UUID.randomUUID().toString().getBytes(), false);
+        String node = String.format("%s/rs/%s,%d,%d",
+                root,
                 config.getReplicateServerHost(),
                 port,
                 System.currentTimeMillis());
-        return zk.create(path, null, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
+        this.ephemeral = zkConnect.createNode(node, null, true);
+        LOG.info("register RPC server ephemeral({}) to zK({})", ephemeral, connectString);
     }
 
     private void addPeer() throws IOException {
@@ -307,18 +284,18 @@ public class ReplicateSvr2 {
         return list;
     }
 
-    private void run() {
+    private void run() throws InterruptedException, IOException, KeeperException {
+        register();
+        addPeer();
         rpcServer.start();
         LOG.info("RPC server started on: " + rpcServer.getListenerAddress());
 
         // Keep the server running
         try {
             while (true) {
-//                WAL.Entry entry = queue.take();
                 Pair<List<AdminProtos.WALEntry>, CellScanner> pair = queue.take();
                 for(WAL.Entry entry : getEntries(pair.getFirst(), pair.getSecond())) {
                     LOG.info(entry.toString());
-//                    LOG.info(ChangeUtil.entry2OneRowChange(entry).toString());
                 }
             }
         } catch (InterruptedException e) {
@@ -326,16 +303,13 @@ public class ReplicateSvr2 {
         } finally {
             rpcServer.stop();
             LOG.info("RPC server stopped.");
+            zkConnect.close();
+            LOG.info("unregistered RPC server ephemeral({})", ephemeral);
         }
     }
 
-    /**
-     * hbase> add_peer 'macos', CLUSTER_KEY => "macos:2181:/myPeer"
-     */
     public static void main(String[] args) throws IOException, KeeperException, InterruptedException {
         ReplicateSvr2 svr = new ReplicateSvr2();
-        LOG.info(svr.register());
-        svr.addPeer();
         svr.run();
     }
 }
