@@ -18,11 +18,23 @@
 
 <configuration>
     <property>
-        <name>fs.defaultFS</name>
-        <value>hdfs://ubuntu:8020</value>
+        <name>dfs.replication</name>
+        <value>1</value>
     </property>
     <property>
-        <name>hadoop.tmp.dir</name>
-        <value>/usr/local/hadoop-2.10.2/data/tmp</value>
+        <name>dfs.namenode.http-address</name>
+        <value>ubuntu:50070</value>
+    </property>
+    <property>
+        <name>dfs.datanode.address</name>
+        <value>ubuntu:50010</value>
+    </property>
+    <property>
+        <name>dfs.datanode.http.address</name>
+        <value>ubuntu:50075</value>
+    </property>
+    <property>
+        <name>dfs.datanode.ipc.address</name>
+        <value>ubuntu:50020</value>
     </property>
 </configuration>
