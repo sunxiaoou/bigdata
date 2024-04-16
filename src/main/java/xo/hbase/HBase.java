@@ -7,9 +7,12 @@ import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
+import org.apache.hadoop.hbase.snapshot.ExportSnapshot;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Triple;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.ToolRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,18 +23,29 @@ import java.util.regex.Pattern;
 // refer to org.apache.hadoop.hbase.client sample in https://hbase.apache.org/apidocs/index.html
 public class HBase {
     private static final Logger LOG = LoggerFactory.getLogger(HBase.class);
-
+    Configuration conf;
     Connection conn;
     Admin admin;
 
     public HBase() throws IOException {
+        conf = HBaseConfiguration.create();
+        conn = ConnectionFactory.createConnection(conf);
+        admin = conn.getAdmin();
+    }
+
+    public HBase(String user) throws IOException {
+        UserGroupInformation ugi = UserGroupInformation.createRemoteUser(user);
+        UserGroupInformation.setLoginUser(ugi);
+        conf = HBaseConfiguration.create();
+        conn = ConnectionFactory.createConnection(conf);
+        admin = conn.getAdmin();
         Configuration conf = HBaseConfiguration.create();
         conn = ConnectionFactory.createConnection(conf);
         admin = conn.getAdmin();
     }
 
     public HBase(String host, int port, String znode) throws IOException {
-        Configuration conf = HBaseConfiguration.create();
+        conf = HBaseConfiguration.create();
         conf.set("hbase.zookeeper.quorum", host);
         conf.set("hbase.zookeeper.property.clientPort", "" + port);
         conf.set("zookeeper.znode.parent", znode);
@@ -330,6 +344,42 @@ public class HBase {
 
     public void removePeer(String peerId) throws IOException {
         admin.removeReplicationPeer(peerId);
+    }
+
+    public List<String> listSnapshots() throws IOException {
+        List<String> snapshots = new ArrayList<>();
+        List<SnapshotDescription> descriptions = admin.listSnapshots();
+        for (SnapshotDescription descriptor : descriptions) {
+            snapshots.add(descriptor.getName());
+        }
+        LOG.debug("peers: {}", snapshots);
+        return snapshots;
+    }
+
+    public void deleteSnapshot(String snapshotName) throws IOException {
+        List<SnapshotDescription> descriptions = admin.listSnapshots(Pattern.compile(snapshotName));
+        if (descriptions.isEmpty()) {
+            LOG.info("snapshot({}) doesn't exists", snapshotName);
+        }
+        admin.deleteSnapshot(snapshotName);
+    }
+
+    public void createSnapshot(String tableName, String snapshotName) throws IOException {
+        List<SnapshotDescription> descriptions = admin.listSnapshots(Pattern.compile(snapshotName));
+        if (!descriptions.isEmpty()) {
+            admin.deleteSnapshot(snapshotName);
+            LOG.info("deleted old snapshot({})", snapshotName);
+        }
+        admin.snapshot(snapshotName, TableName.valueOf(tableName), new HashMap<>());
+    }
+
+    public int exportSnapshot(String snapshot, String copyTo) throws Exception {
+        List<String> opts = new ArrayList<>();
+        opts.add("--snapshot");
+        opts.add(snapshot);
+        opts.add("--copy-to");
+        opts.add(copyTo);
+        return ToolRunner.run(conf, new ExportSnapshot(), opts.toArray(new String[0]));
     }
 
     /**

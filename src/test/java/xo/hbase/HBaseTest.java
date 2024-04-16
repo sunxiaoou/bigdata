@@ -20,8 +20,9 @@ public class HBaseTest {
 
     @BeforeClass
     public static void setupBeforeClass() throws IOException {
-        String host = "ubuntu";
-        db = new HBase(host, 2181, "/hbase");
+//        String host = "ubuntu";
+//        db = new HBase(host, 2181, "/hbase");
+        db = new HBase();
     }
 
     @AfterClass
