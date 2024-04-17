@@ -31,8 +31,13 @@ public class SnapshotTest {
     }
 
     @Test
-    public void createSnapshots() throws IOException {
+    public void createSnapshot() throws IOException {
         db.createSnapshot("manga:student", "snap_student");
+    }
+
+    @Test
+    public void cloneSnapshot() throws IOException {
+        db.cloneSnapshot( "snap_student", "manga:student_bak");
     }
 
     @Test

@@ -356,14 +356,6 @@ public class HBase {
         return snapshots;
     }
 
-    public void deleteSnapshot(String snapshotName) throws IOException {
-        List<SnapshotDescription> descriptions = admin.listSnapshots(Pattern.compile(snapshotName));
-        if (descriptions.isEmpty()) {
-            LOG.info("snapshot({}) doesn't exists", snapshotName);
-        }
-        admin.deleteSnapshot(snapshotName);
-    }
-
     public void createSnapshot(String tableName, String snapshotName) throws IOException {
         List<SnapshotDescription> descriptions = admin.listSnapshots(Pattern.compile(snapshotName));
         if (!descriptions.isEmpty()) {
@@ -371,6 +363,27 @@ public class HBase {
             LOG.info("deleted old snapshot({})", snapshotName);
         }
         admin.snapshot(snapshotName, TableName.valueOf(tableName), new HashMap<>());
+    }
+
+    public void cloneSnapshot(String snapshotName, String tableName) throws IOException {
+        List<SnapshotDescription> descriptions = admin.listSnapshots(Pattern.compile(snapshotName));
+        if (descriptions.isEmpty()) {
+            LOG.info("snapshot({}) doesn't exist", snapshotName);
+        }
+        TableName table = TableName.valueOf(tableName);
+        if (admin.tableExists(table)) {
+            LOG.info("table({}) already exists", tableName);
+            return;
+        }
+        admin.cloneSnapshot(snapshotName, table);
+    }
+
+    public void deleteSnapshot(String snapshotName) throws IOException {
+        List<SnapshotDescription> descriptions = admin.listSnapshots(Pattern.compile(snapshotName));
+        if (descriptions.isEmpty()) {
+            LOG.info("snapshot({}) doesn't exist", snapshotName);
+        }
+        admin.deleteSnapshot(snapshotName);
     }
 
     public int exportSnapshot(String snapshot, String copyTo) throws Exception {
