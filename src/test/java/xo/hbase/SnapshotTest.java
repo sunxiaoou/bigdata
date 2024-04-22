@@ -7,41 +7,57 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 public class SnapshotTest {
     private static final Logger LOG = LoggerFactory.getLogger(SnapshotTest.class);
-    private static HBase db;
     private static final String user = "sunxo";
-    private static final String snapshot = "snap_student";
-    private static final String copyTo = "hdfs://hadoop2:8020/hbase";
+    private static final String tgtHost = "hadoop2";
+    private static final String table = "manga:student";
+    private static HBase src;
+    private static HBase tgt;
+    private static String snapshot;
 
     @BeforeClass
     public static void setupBeforeClass() throws IOException {
-        db = new HBase(user);
+        src = new HBase(user);
+        SimpleDateFormat sdf = new SimpleDateFormat("yyMMdd");
+        String dateStr = sdf.format(new Date());
+        snapshot = table.replaceFirst(":", "-") + "-" + dateStr;
+
+        tgt = new HBase(tgtHost, 2181, "/hbase");
     }
 
     @AfterClass
     public static void tearDownAfterClass() throws IOException {
-        db.close();
+        tgt.close();
+        src.close();
     }
 
     @Test
     public void listSnapshots() throws IOException {
-        LOG.info("snapshots: {}", db.listSnapshots());
+        LOG.info("snapshots: {}", src.listSnapshots());
     }
 
     @Test
     public void createSnapshot() throws IOException {
-        db.createSnapshot("manga:student", "snap_student");
+        src.createSnapshot(table, snapshot);
     }
 
     @Test
     public void cloneSnapshot() throws IOException {
-        db.cloneSnapshot( "snap_student", "manga:student_bak");
+        src.cloneSnapshot(snapshot, snapshot.replaceFirst("-", ":"));
     }
 
     @Test
     public void exportSnapshot() throws Exception {
-        LOG.info("{}", db.exportSnapshot(snapshot, copyTo));
+        String copyTo = String.format("hdfs://%s:8020/hbase", tgtHost);
+        LOG.info("{}", src.exportSnapshot(snapshot, copyTo));
+    }
+
+    @Test
+    public void cloneSnapshotTgt() throws IOException {
+        tgt.cloneSnapshot(snapshot, snapshot.replaceFirst("-", ":"));
     }
 }
