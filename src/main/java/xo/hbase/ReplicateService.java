@@ -1,16 +1,14 @@
 package xo.hbase;
 
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hbase.thirdparty.com.google.protobuf.BlockingRpcChannel;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.slf4j.Logger;
@@ -18,18 +16,17 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.BlockingQueue;
 
 
-public class ReplicateService implements AdminService.BlockingInterface {
+public class ReplicateService implements AdminProtos.AdminService.BlockingInterface {
     private static final Logger LOG = LoggerFactory.getLogger(ReplicateService.class);
-    private static final String CLIENT_NAME = "ReplicateClt";
 
-    private final AbstractSink sink;
+    private final BlockingQueue<Pair<List<AdminProtos.WALEntry>, CellScanner>> queue;
 
-    public ReplicateService(ReplicateConfig config) throws Exception {
-        this.sink = new SinkFactory.Builder().withConfiguration(config).build();
+    public ReplicateService(BlockingQueue<Pair<List<AdminProtos.WALEntry>, CellScanner>> queue) {
+        this.queue = queue;
     }
 
     public static AdminProtos.AdminService.BlockingInterface newBlockingStub(RpcClient client, InetSocketAddress addr)
@@ -90,42 +87,65 @@ public class ReplicateService implements AdminService.BlockingInterface {
         return null;
     }
 
-    private void logCells(CellScanner scanner) {
-        List<Cell> cells = new ArrayList<>();
-        while (true) {
-            try {
-                if (!scanner.advance())
-                    break;
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            cells.add(scanner.current());
-        }
-        LOG.info("cells: " + cells.toString());
-    }
-
     @Override
-    public ReplicateWALEntryResponse replicateWALEntry(RpcController controller, ReplicateWALEntryRequest request) {
+    public AdminProtos.ReplicateWALEntryResponse replicateWALEntry(RpcController controller, AdminProtos.ReplicateWALEntryRequest request) {
         String clusterId = request.getReplicationClusterId();
         LOG.info(clusterId);
         String sourceBaseNamespaceDirPath = request.getSourceBaseNamespaceDirPath();
         LOG.info(sourceBaseNamespaceDirPath);
         String sourceHFileArchiveDirPath = request.getSourceHFileArchiveDirPath();
         LOG.info(sourceHFileArchiveDirPath);
-        List<WALEntry> entryProtos = request.getEntryList();
+        List<AdminProtos.WALEntry> entryProtos = request.getEntryList();
         LOG.debug("entryProtos: " + entryProtos.toString());
         CellScanner cellScanner = ((HBaseRpcController) controller).cellScanner();
         ((HBaseRpcController) controller).setCellScanner(null);
-        if (sink != null) {
-            sink.put(entryProtos, cellScanner);
+        try {
+            queue.put(new Pair<>(entryProtos, cellScanner));
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
-        ReplicateWALEntryResponse.Builder responseBuilder = ReplicateWALEntryResponse.newBuilder();
+        AdminProtos.ReplicateWALEntryResponse.Builder responseBuilder = AdminProtos.ReplicateWALEntryResponse.newBuilder();
         // Add any response data to the response builder
         return responseBuilder.build();
     }
 
     @Override
-    public ReplicateWALEntryResponse replay(RpcController controller, ReplicateWALEntryRequest request) {
+    public AdminProtos.ReplicateWALEntryResponse replay(RpcController controller, AdminProtos.ReplicateWALEntryRequest request) {
+        return null;
+    }
+
+    @Override
+    public AdminProtos.RollWALWriterResponse rollWALWriter(RpcController controller, AdminProtos.RollWALWriterRequest request) {
+        return null;
+    }
+
+    @Override
+    public AdminProtos.GetServerInfoResponse getServerInfo(RpcController controller, AdminProtos.GetServerInfoRequest request) {
+        return null;
+    }
+
+    @Override
+    public AdminProtos.StopServerResponse stopServer(RpcController controller, AdminProtos.StopServerRequest request) {
+        return null;
+    }
+
+    @Override
+    public AdminProtos.UpdateFavoredNodesResponse updateFavoredNodes(RpcController controller, AdminProtos.UpdateFavoredNodesRequest request) {
+        return null;
+    }
+
+    @Override
+    public AdminProtos.UpdateConfigurationResponse updateConfiguration(RpcController controller, AdminProtos.UpdateConfigurationRequest request) {
+        return null;
+    }
+
+    @Override
+    public AdminProtos.GetRegionLoadResponse getRegionLoad(RpcController controller, AdminProtos.GetRegionLoadRequest request) {
+        return null;
+    }
+
+    @Override
+    public AdminProtos.ClearCompactionQueuesResponse clearCompactionQueues(RpcController controller, AdminProtos.ClearCompactionQueuesRequest request) {
         return null;
     }
 
@@ -163,41 +183,4 @@ public class ReplicateService implements AdminService.BlockingInterface {
     public HBaseProtos.LogEntry getLogEntries(RpcController controller, HBaseProtos.LogRequest request) {
         return null;
     }
-
-    @Override
-    public AdminProtos.StopServerResponse stopServer(RpcController controller, AdminProtos.StopServerRequest request) {
-        return null;
-    }
-
-    @Override
-    public AdminProtos.UpdateFavoredNodesResponse updateFavoredNodes(RpcController controller, AdminProtos.UpdateFavoredNodesRequest request) {
-        return null;
-    }
-
-    @Override
-    public AdminProtos.UpdateConfigurationResponse updateConfiguration(RpcController controller, AdminProtos.UpdateConfigurationRequest request) {
-        return null;
-    }
-
-    @Override
-    public AdminProtos.GetRegionLoadResponse getRegionLoad(RpcController controller, AdminProtos.GetRegionLoadRequest request) {
-        return null;
-    }
-
-    @Override
-    public AdminProtos.ClearCompactionQueuesResponse clearCompactionQueues(RpcController controller, AdminProtos.ClearCompactionQueuesRequest request) {
-        return null;
-    }
-
-    @Override
-    public AdminProtos.RollWALWriterResponse rollWALWriter(RpcController controller, AdminProtos.RollWALWriterRequest request) {
-        return null;
-    }
-
-    @Override
-    public AdminProtos.GetServerInfoResponse getServerInfo(RpcController controller, AdminProtos.GetServerInfoRequest request) {
-        return null;
-    }
 }
-
-

@@ -1,11 +1,11 @@
 package xo.hbase;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.ipc.FifoRpcScheduler;
-import org.apache.hadoop.hbase.ipc.NettyRpcServer;
-import org.apache.hadoop.hbase.ipc.RpcServer;
+import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.ipc.*;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
+import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
 import org.apache.zookeeper.*;
@@ -15,31 +15,27 @@ import xo.zookeeper.ZkConnect;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.UUID;
+import java.util.*;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 
 public class ReplicateSvr {
     private static final Logger LOG = LoggerFactory.getLogger(ReplicateSvr.class);
-    private static final String TABLE_MAP_DELIMITER = ":";
 
     private final ReplicateConfig config;
+    private final BlockingQueue<Pair<List<AdminProtos.WALEntry>, CellScanner>> queue;
     private final NettyRpcServer rpcServer;
+    private final AbstractSink sink;
     private final int port;
     private String ephemeral;
     private ZkConnect zkConnect;
 
     public ReplicateSvr() throws IOException {
         this.config = ReplicateConfig.getInstance();
+        this.queue = new LinkedBlockingQueue<>();
         Configuration conf = new Configuration(HBaseConfiguration.create());
-        BlockingService service = null;
-        try {
-            service = AdminProtos.AdminService.newReflectiveBlockingService(new ReplicateService(config));
-        } catch (Exception e) {
-            LOG.error("Unable to initialize dataSink. Make sure the sink implementation is in classpath"
-                    + e.getMessage(), e);
-            e.printStackTrace();
-        }
+        BlockingService service = AdminProtos.AdminService.newReflectiveBlockingService(new ReplicateService(queue));
         this.rpcServer = new NettyRpcServer(null,
                 config.getReplicateServerName(),
                 Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(service, null)),
@@ -49,6 +45,7 @@ public class ReplicateSvr {
                 true
         );
         this.port = rpcServer.getListenerAddress().getPort();
+        this.sink = new SinkFactory.Builder().withConfiguration(config).build();
     }
 
     private void register() throws IOException, KeeperException, InterruptedException {
@@ -72,19 +69,21 @@ public class ReplicateSvr {
                 config.getSourceHbaseQuorumHost(),
                 config.getSourceHbaseQuorumPort(),
                 config.getSourceHbaseQuorumPath());
-        String peer = config.getReplicateServerHost();
-        int state = db.peerState(peer);
-        if (state < 0) {
-            String key = String.format("%s:%d:%s",
-                    peer,
-                    config.getReplicateServerQuorumPort(),
-                    config.getReplicateServerQuorumPath());
-            db.addPeer(peer, key, new ArrayList<>(config.getSinkKafkaTopicTableMap().keySet()));
-            db.enablePeer(peer);
-        } else if (state == 0) {
-            db.enablePeer(peer);
+        String rpcSvrZNode = config.getReplicateServerQuorumPath();
+        String peer = rpcSvrZNode.substring(1);
+        String key = String.format("%s:%d:%s",
+                config.getReplicateServerQuorumHost(),
+                config.getReplicateServerQuorumPort(),
+                rpcSvrZNode);
+        if ("table".equals(config.getSourceHbaseMapType())) {
+            db.addPeer(peer, key, new ArrayList<>(config.getSourceHbaseMapTables().keySet()));
+        } else if ("user".equals(config.getSourceHbaseMapType())) {
+            db.addPeer(peer, key, config.getSourceHbaseMapNamespaces().keySet());
+        } else {
+            db.addPeer(peer, key);
         }
         db.close();
+        LOG.info("peer({}) is ready on HBase({})", peer, key);
     }
 
     private void run() throws InterruptedException, IOException, KeeperException {
@@ -95,7 +94,18 @@ public class ReplicateSvr {
 
         // Keep the server running
         try {
-            Thread.sleep(Long.MAX_VALUE);
+            while (true) {
+                Pair<List<AdminProtos.WALEntry>, CellScanner> pair = queue.take();
+                List<AdminProtos.WALEntry> entryProtos = pair.getFirst();
+                CellScanner cellScanner = pair.getSecond();
+                if (sink != null) {
+                    sink.put(entryProtos, cellScanner);
+                } else {
+                    for (WAL.Entry entry : AbstractSink.merge(entryProtos, cellScanner)) {
+                        LOG.info(entry.toString());
+                    }
+                }
+            }
         } catch (InterruptedException e) {
             e.printStackTrace();
         } finally {
