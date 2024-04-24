@@ -268,6 +268,26 @@ public class HBase {
         admin.addReplicationPeer(peerId, peerConfig, false);
     }
 
+    public void addPeer(String peerId, String clusterKey) throws IOException {
+        ReplicationPeerConfig peerConfig = ReplicationPeerConfig.newBuilder()
+                .setClusterKey(clusterKey)
+                .setReplicateAllUserTables(true)
+                .build();
+        try {
+            ReplicationPeerConfig original = admin.getReplicationPeerConfig(peerId);
+            if (original.getTableCFsMap() == null && original.getNamespaces() == null) {
+                LOG.info("peer({}) already exists", peerId);
+                return;
+            }
+            disablePeer(peerId);
+            admin.removeReplicationPeer(peerId);
+            LOG.info("peer({}) exists but is different, it needs to be replaced", peerId);
+        } catch (ReplicationPeerNotFoundException e) {
+            LOG.info("to create new peer({})", peerId);
+        }
+        admin.addReplicationPeer(peerId, peerConfig, false);
+    }
+
     public void addPeer(String peerId, String clusterKey, List<String> tables) throws IOException {
         Map<TableName, List<String>> map = new HashMap<>();
         for (String table: tables) {

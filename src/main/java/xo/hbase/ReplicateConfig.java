@@ -16,15 +16,17 @@ public class ReplicateConfig {
 
     private static final String REPLICATE_SERVER_NAME = "replicate.server.name";
     private static final String REPLICATE_SERVER_HOST = "replicate.server.host";
-    private static final String REPLICATE_SERVER_PORT = "replicate.server.port";
     private static final String REPLICATE_SERVER_QUORUM_HOST = "replicate.server.quorum.host";
     private static final String REPLICATE_SERVER_QUORUM_PORT = "replicate.server.quorum.port";
     private static final String REPLICATE_SERVER_QUORUM_PATH = "replicate.server.quorum.path";
-    private static final String REPLICATE_SERVER_SINK_FACTORY = "replicate.server.sink.factory";
+    private static final String REPLICATE_SERVER_SINK = "replicate.server.sink";
 
     private static final String SOURCE_HBASE_QUORUM_HOST = "source.hbase.quorum.host";
     private static final String SOURCE_HBASE_QUORUM_PORT = "source.hbase.quorum.port";
     private static final String SOURCE_HBASE_QUORUM_PATH = "source.hbase.quorum.path";
+    private static final String SOURCE_HBASE_MAP_TYPE = "source.hbase.map.type";
+    private static final String SOURCE_HBASE_MAP_NAMESPACES = "source.hbase.map.namespaces";
+    private static final String SOURCE_HBASE_MAP_TABLES = "source.hbase.map.tables";
 
     private static final String SINK_FILE_NAME = "sink.file.name";
     private static final String SINK_FILE_CAPACITY = "sink.file.capacity";
@@ -81,13 +83,9 @@ public class ReplicateConfig {
         return properties.getProperty(REPLICATE_SERVER_HOST);
     }
 
-//    public int getReplicateServerPort() {
-//        return Integer.parseInt(properties.getProperty(REPLICATE_SERVER_PORT));
-//    }
-
-//    public String getReplicateServerQuorumHost() {
-//        return properties.getProperty(REPLICATE_SERVER_QUORUM_HOST);
-//    }
+    public String getReplicateServerQuorumHost() {
+        return properties.getProperty(REPLICATE_SERVER_QUORUM_HOST);
+    }
 
     public int getReplicateServerQuorumPort() {
         return Integer.parseInt(properties.getProperty(REPLICATE_SERVER_QUORUM_PORT));
@@ -97,8 +95,8 @@ public class ReplicateConfig {
         return properties.getProperty(REPLICATE_SERVER_QUORUM_PATH);
     }
 
-    public String getReplicateServerSinkFactory() {
-        return properties.getProperty(REPLICATE_SERVER_SINK_FACTORY);
+    public String getReplicateServerSink() {
+        return properties.getProperty(REPLICATE_SERVER_SINK);
     }
 
     public String getSourceHbaseQuorumHost() {
@@ -111,6 +109,29 @@ public class ReplicateConfig {
 
     public String getSourceHbaseQuorumPath() {
         return properties.getProperty(SOURCE_HBASE_QUORUM_PATH);
+    }
+
+    public String getSourceHbaseMapType() {
+        return properties.getProperty(SOURCE_HBASE_MAP_TYPE);
+    }
+
+    public Map<String, String> getMap(String property) {
+        final String TABLE_MAP_DELIMITER = "=";
+        Map<String, String> tableMap = new HashMap<>();
+        String[] mappings = StringUtils.getStrings(properties.getProperty(property));
+        for (String mapping: mappings) {
+            String[] s = mapping.split(TABLE_MAP_DELIMITER);
+            tableMap.put(s[0], s[1]);
+        }
+        return tableMap;
+    }
+
+    public Map<String, String> getSourceHbaseMapNamespaces() {
+        return getMap(SOURCE_HBASE_MAP_NAMESPACES);
+    }
+
+    public Map<String, String> getSourceHbaseMapTables() {
+        return getMap(SOURCE_HBASE_MAP_TABLES);
     }
 
     public String getSinkFileName() {
@@ -166,15 +187,7 @@ public class ReplicateConfig {
     }
 
     public Map<String, String> getSinkKafkaTopicTableMap() {
-        final String TABLE_MAP_DELIMITER = ":";
-        Map<String, String> tableMap = new HashMap<>();
-        String[] mappings = StringUtils.getStrings(properties.getProperty(SINK_KAFKA_TOPIC_TABLE_MAP));
-        for (String mapping: mappings) {
-            String[] s = mapping.split(TABLE_MAP_DELIMITER);
-            // restore '.' to ':' in table with namespace
-            tableMap.put(s[0].replace(".", TABLE_MAP_DELIMITER), s[1]);
-        }
-        return tableMap;
+        return getMap(SINK_KAFKA_TOPIC_TABLE_MAP);
     }
 
     public String getSinkKafkaSerializer() {
@@ -199,14 +212,5 @@ public class ReplicateConfig {
 
     public String getKafkaTopics() {
         return properties.getProperty(KAFKA_TOPICS);
-    }
-
-    public static void main(String[] args) {
-        ReplicateConfig config = ReplicateConfig.getInstance();
-//        System.out.println(config.properties);
-
-        LOG.info("Server Name: " + config.getReplicateServerName());
-        LOG.info("Server Host: " + config.getReplicateServerHost());
-        LOG.info("Topic Table Map: " + config.getSinkKafkaTopicTableMap());
     }
 }

@@ -9,17 +9,18 @@ public class SinkFactory {
     public static class Builder {
         private ReplicateConfig config;
 
-        public AbstractSink build() throws Exception {
+        public AbstractSink build() {
             ClassLoader cLoader = this.getClass().getClassLoader();
             Class<?> cls;
             try {
-                String clsName = config.getReplicateServerSinkFactory();
+                String clsName = config.getReplicateServerSink();
                 LOG.info("Sink is " + clsName);
                 Class.forName(clsName);
                 cls = cLoader.loadClass(clsName);
                 return (AbstractSink) cls.getDeclaredConstructor(ReplicateConfig.class).newInstance(config);
-            } catch(ClassNotFoundException e) {
-                throw e;
+            } catch (Exception e) {
+                e.printStackTrace();
+                return null;
             }
         }
 

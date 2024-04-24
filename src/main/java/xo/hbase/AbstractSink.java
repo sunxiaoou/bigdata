@@ -30,7 +30,7 @@ public abstract class AbstractSink {
      * @param scanner a scanner of cell
      * @return the entry list
      */
-    protected List<WAL.Entry> merge(List<AdminProtos.WALEntry> entryProtos, CellScanner scanner) {
+    public static List<WAL.Entry> merge(List<AdminProtos.WALEntry> entryProtos, CellScanner scanner) {
         List<WAL.Entry> list = new ArrayList<>();
         for (AdminProtos.WALEntry entryProto: entryProtos) {
             WALProtos.WALKey keyProto = entryProto.getKey();
