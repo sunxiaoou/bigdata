@@ -15,8 +15,8 @@ import static org.junit.Assert.*;
 public class HBaseTest {
     private static final Logger LOG = LoggerFactory.getLogger(HBaseTest.class);
     private static HBase db;
-    private static final String peer = "rpcSvr";
-    private static final String peerHost = "centos4";
+    private static final String peer = "hb_c1";
+    private static final String peerHost = "centos1";
 
     @BeforeClass
     public static void setupBeforeClass() throws IOException {
@@ -38,14 +38,14 @@ public class HBaseTest {
     @Test
     public void addPeer() throws IOException {
         String key = String.format("%s:2181:/%s", peerHost, peer);
-        db.addPeer(peer, key, Arrays.asList("peTable", "manga:fruit"));
+        db.addPeer(peer, key, Arrays.asList("peTable", "manga:fruit"), true);
         LOG.info("peers: {}", db.listPeers());
     }
 
     @Test
     public void addPeer2() throws IOException {
         String key = String.format("%s:2181:/%s", peerHost, peer);
-        db.addPeer(peer, key, new HashSet<>(Arrays.asList("default", "manga")));
+        db.addPeer(peer, key, new HashSet<>(Arrays.asList("default", "manga")), true);
         LOG.info("peers: {}", db.listPeers());
     }
 
@@ -67,6 +67,6 @@ public class HBaseTest {
 
     @Test
     public void isPeerEnabled() throws IOException {
-        LOG.info(db.isPeerEnabled(peer) ? "enabled" : "disabled");
+        LOG.info("peer({}) {}", peer, db.isPeerEnabled(peer) ? "enabled" : "disabled");
     }
 }

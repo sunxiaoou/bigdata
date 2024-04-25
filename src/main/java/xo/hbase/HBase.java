@@ -62,9 +62,11 @@ public class HBase {
         List<String> spaces = new ArrayList<>();
         NamespaceDescriptor[] descriptors = admin.listNamespaceDescriptors();
         for (NamespaceDescriptor descriptor : descriptors) {
-            spaces.add(descriptor.getName());
+            String name = descriptor.getName();
+            if (!"hbase".equals(name)) {
+                spaces.add(name);
+            }
         }
-        LOG.debug("spaces: {}", spaces);
         return spaces;
     }
 
@@ -74,7 +76,6 @@ public class HBase {
         for (TableDescriptor descriptor : descriptors) {
             tables.add(descriptor.getTableName().getNameAsString());
         }
-        LOG.debug("tables: {}", tables);
         return tables;
     }
 
@@ -268,7 +269,15 @@ public class HBase {
         admin.addReplicationPeer(peerId, peerConfig, false);
     }
 
-    public void addPeer(String peerId, String clusterKey) throws IOException {
+    public void setPeerState(String peerId, boolean enabled) throws IOException {
+        if (enabled && !isPeerEnabled(peerId)) {
+            admin.enableReplicationPeer(peerId);
+        } else if (!enabled && isPeerEnabled(peerId)) {
+            admin.disableReplicationPeer(peerId);
+        }
+    }
+
+    public void addPeer(String peerId, String clusterKey, boolean enabled) throws IOException {
         ReplicationPeerConfig peerConfig = ReplicationPeerConfig.newBuilder()
                 .setClusterKey(clusterKey)
                 .setReplicateAllUserTables(true)
@@ -276,7 +285,8 @@ public class HBase {
         try {
             ReplicationPeerConfig original = admin.getReplicationPeerConfig(peerId);
             if (original.getTableCFsMap() == null && original.getNamespaces() == null) {
-                LOG.info("peer({}) already exists", peerId);
+                LOG.warn("peer({}) already exists", peerId);
+                setPeerState(peerId, enabled);
                 return;
             }
             disablePeer(peerId);
@@ -285,10 +295,10 @@ public class HBase {
         } catch (ReplicationPeerNotFoundException e) {
             LOG.info("to create new peer({})", peerId);
         }
-        admin.addReplicationPeer(peerId, peerConfig, false);
+        admin.addReplicationPeer(peerId, peerConfig, enabled);
     }
 
-    public void addPeer(String peerId, String clusterKey, List<String> tables) throws IOException {
+    public void addPeer(String peerId, String clusterKey, List<String> tables, boolean enabled) throws IOException {
         Map<TableName, List<String>> map = new HashMap<>();
         for (String table: tables) {
             map.put(TableName.valueOf(table), new ArrayList<>());
@@ -301,7 +311,8 @@ public class HBase {
         try {
             Map<TableName, List<String>> original = admin.getReplicationPeerConfig(peerId).getTableCFsMap();
             if (original != null && original.keySet().equals(peerConfig.getTableCFsMap().keySet())) {
-                LOG.info("peer({}) already exists", peerId);
+                LOG.warn("peer({}) already exists", peerId);
+                setPeerState(peerId, enabled);
                 return;
             }
             disablePeer(peerId);
@@ -310,10 +321,10 @@ public class HBase {
         } catch (ReplicationPeerNotFoundException e) {
             LOG.info("to create new peer({})", peerId);
         }
-        admin.addReplicationPeer(peerId, peerConfig, false);
+        admin.addReplicationPeer(peerId, peerConfig, enabled);
     }
 
-    public void addPeer(String peerId, String clusterKey, Set<String> spaces) throws IOException {
+    public void addPeer(String peerId, String clusterKey, Set<String> spaces, boolean enabled) throws IOException {
         ReplicationPeerConfig peerConfig = ReplicationPeerConfig.newBuilder()
                 .setClusterKey(clusterKey)
                 .setReplicateAllUserTables(false)
@@ -322,7 +333,8 @@ public class HBase {
         try {
             Set<String> original = admin.getReplicationPeerConfig(peerId).getNamespaces();
             if (original != null && original.equals(peerConfig.getNamespaces())) {
-                LOG.info("peer({}) already exists", peerId);
+                LOG.warn("peer({}) already exists", peerId);
+                setPeerState(peerId, enabled);
                 return;
             }
             disablePeer(peerId);
@@ -331,7 +343,7 @@ public class HBase {
         } catch (ReplicationPeerNotFoundException e) {
             LOG.info("to create new peer({})", peerId);
         }
-        admin.addReplicationPeer(peerId, peerConfig, false);
+        admin.addReplicationPeer(peerId, peerConfig, enabled);
     }
 
     public void disablePeer(String peerId) throws IOException {

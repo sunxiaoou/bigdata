@@ -66,21 +66,21 @@ public class ReplicateSvr {
 
     private void addPeer() throws IOException {
         HBase db = new HBase(
-                config.getSourceHbaseQuorumHost(),
-                config.getSourceHbaseQuorumPort(),
-                config.getSourceHbaseQuorumPath());
+                config.getSourceHBaseQuorumHost(),
+                config.getSourceHBaseQuorumPort(),
+                config.getSourceHBaseQuorumPath());
         String rpcSvrZNode = config.getReplicateServerQuorumPath();
         String peer = rpcSvrZNode.substring(1);
         String key = String.format("%s:%d:%s",
                 config.getReplicateServerQuorumHost(),
                 config.getReplicateServerQuorumPort(),
                 rpcSvrZNode);
-        if ("table".equals(config.getSourceHbaseMapType())) {
-            db.addPeer(peer, key, new ArrayList<>(config.getSourceHbaseMapTables().keySet()));
-        } else if ("user".equals(config.getSourceHbaseMapType())) {
-            db.addPeer(peer, key, config.getSourceHbaseMapNamespaces().keySet());
+        if ("table".equals(config.getSourceHBaseMapType())) {
+            db.addPeer(peer, key, new ArrayList<>(config.getSourceHBaseMapTables().keySet()), true);
+        } else if ("user".equals(config.getSourceHBaseMapType())) {
+            db.addPeer(peer, key, config.getSourceHBaseMapNamespaces().keySet(), true);
         } else {
-            db.addPeer(peer, key);
+            db.addPeer(peer, key, true);
         }
         db.close();
         LOG.info("peer({}) is ready on HBase({})", peer, key);

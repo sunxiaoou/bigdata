@@ -18,9 +18,9 @@ public class HBaseSink extends AbstractSink {
         super(config);
         Configuration conf = HBaseConfiguration.create();
         // resources/hbase-site.xml can be used alternatively
-        conf.set(HConstants.ZOOKEEPER_QUORUM, config.getSinkHBaseQuorumHost());
-        conf.set(HConstants.ZOOKEEPER_CLIENT_PORT, String.valueOf(config.getSinkHBaseQuorumPort()));
-        conf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, config.getSinkHBaseQuorumPath());
+        conf.set(HConstants.ZOOKEEPER_QUORUM, config.getTargetHBaseQuorumHost());
+        conf.set(HConstants.ZOOKEEPER_CLIENT_PORT, String.valueOf(config.getTargetHBaseQuorumPort()));
+        conf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, config.getTargetHBaseQuorumPath());
         this.sink = new ReplicationSink(conf, null);
     }
 

@@ -31,9 +31,13 @@ public class ReplicateConfig {
     private static final String SINK_FILE_NAME = "sink.file.name";
     private static final String SINK_FILE_CAPACITY = "sink.file.capacity";
     private static final String SINK_FILE_NUMBER = "sink.file.number";
-    private static final String SINK_HBASE_QUORUM_HOST = "sink.hbase.quorum.host";
-    private static final String SINK_HBASE_QUORUM_PORT = "sink.hbase.quorum.port";
-    private static final String SINK_HBASE_QUORUM_PATH = "sink.hbase.quorum.path";
+
+    private static final String TARGET_HADOOP_HDFS_HOST = "target.hadoop.hdfs.host";
+    private static final String TARGET_HADOOP_HDFS_PORT = "target.hadoop.hdfs.port";
+    private static final String TARGET_HBASE_QUORUM_HOST = "target.hbase.quorum.host";
+    private static final String TARGET_HBASE_QUORUM_PORT = "target.hbase.quorum.port";
+    private static final String TARGET_HBASE_QUORUM_PATH = "target.hbase.quorum.path";
+
     private static final String SINK_KAFKA_BOOTSTRAP_SERVERS = "sink.kafka.bootstrap.servers";
     private static final String SINK_KAFKA_BATCH_SIZE = "sink.kafka.batch.size";
     private static final String SINK_KAFKA_REQUEST_TIMEOUT_MS = "sink.kafka.request.timeout.ms";
@@ -99,19 +103,27 @@ public class ReplicateConfig {
         return properties.getProperty(REPLICATE_SERVER_SINK);
     }
 
-    public String getSourceHbaseQuorumHost() {
+    public String getTargetHadoopHdfsHost() {
+        return properties.getProperty(TARGET_HADOOP_HDFS_HOST);
+    }
+
+    public int getTargetHadoopHdfsPort() {
+        return Integer.parseInt(properties.getProperty(TARGET_HADOOP_HDFS_PORT));
+    }
+
+    public String getSourceHBaseQuorumHost() {
         return properties.getProperty(SOURCE_HBASE_QUORUM_HOST);
     }
 
-    public int getSourceHbaseQuorumPort() {
+    public int getSourceHBaseQuorumPort() {
         return Integer.parseInt(properties.getProperty(SOURCE_HBASE_QUORUM_PORT));
     }
 
-    public String getSourceHbaseQuorumPath() {
+    public String getSourceHBaseQuorumPath() {
         return properties.getProperty(SOURCE_HBASE_QUORUM_PATH);
     }
 
-    public String getSourceHbaseMapType() {
+    public String getSourceHBaseMapType() {
         return properties.getProperty(SOURCE_HBASE_MAP_TYPE);
     }
 
@@ -126,11 +138,11 @@ public class ReplicateConfig {
         return tableMap;
     }
 
-    public Map<String, String> getSourceHbaseMapNamespaces() {
+    public Map<String, String> getSourceHBaseMapNamespaces() {
         return getMap(SOURCE_HBASE_MAP_NAMESPACES);
     }
 
-    public Map<String, String> getSourceHbaseMapTables() {
+    public Map<String, String> getSourceHBaseMapTables() {
         return getMap(SOURCE_HBASE_MAP_TABLES);
     }
 
@@ -146,16 +158,16 @@ public class ReplicateConfig {
         return Short.parseShort(properties.getProperty(SINK_FILE_NUMBER));
     }
 
-    public String getSinkHBaseQuorumHost() {
-        return properties.getProperty(SINK_HBASE_QUORUM_HOST);
+    public String getTargetHBaseQuorumHost() {
+        return properties.getProperty(TARGET_HBASE_QUORUM_HOST);
     }
 
-    public int getSinkHBaseQuorumPort() {
-        return Integer.parseInt(properties.getProperty(SINK_HBASE_QUORUM_PORT));
+    public int getTargetHBaseQuorumPort() {
+        return Integer.parseInt(properties.getProperty(TARGET_HBASE_QUORUM_PORT));
     }
 
-    public String getSinkHBaseQuorumPath() {
-        return properties.getProperty(SINK_HBASE_QUORUM_PATH);
+    public String getTargetHBaseQuorumPath() {
+        return properties.getProperty(TARGET_HBASE_QUORUM_PATH);
     }
 
     public String getSinkKafkaBootstrapServers() {
