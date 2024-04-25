@@ -12,8 +12,8 @@ import java.util.HashSet;
 
 import static org.junit.Assert.*;
 
-public class HBaseTest {
-    private static final Logger LOG = LoggerFactory.getLogger(HBaseTest.class);
+public class PeerTest {
+    private static final Logger LOG = LoggerFactory.getLogger(PeerTest.class);
     private static HBase db;
     private static final String peer = "hb_c1";
     private static final String peerHost = "centos1";
