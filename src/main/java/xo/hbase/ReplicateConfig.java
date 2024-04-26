@@ -16,9 +16,10 @@ public class ReplicateConfig {
 
     private static final String REPLICATE_SERVER_NAME = "replicate.server.name";
     private static final String REPLICATE_SERVER_HOST = "replicate.server.host";
+    private static final String REPLICATE_SERVER_PEER = "replicate.server.peer";
+    private static final String REPLICATE_SERVER_RPCSVR_ZNODE = "replicate.server.rpcSvr.zNode";
     private static final String REPLICATE_SERVER_QUORUM_HOST = "replicate.server.quorum.host";
     private static final String REPLICATE_SERVER_QUORUM_PORT = "replicate.server.quorum.port";
-    private static final String REPLICATE_SERVER_QUORUM_PATH = "replicate.server.quorum.path";
     private static final String REPLICATE_SERVER_SINK = "replicate.server.sink";
 
     private static final String SOURCE_HBASE_QUORUM_HOST = "source.hbase.quorum.host";
@@ -96,8 +97,12 @@ public class ReplicateConfig {
         return Integer.parseInt(properties.getProperty(REPLICATE_SERVER_QUORUM_PORT));
     }
 
-    public String getReplicateServerQuorumPath() {
-        return properties.getProperty(REPLICATE_SERVER_QUORUM_PATH);
+    public String getReplicateServerPeer() {
+        return properties.getProperty(REPLICATE_SERVER_PEER);
+    }
+
+    public String getReplicateServerRpcSvrZNode() {
+        return properties.getProperty(REPLICATE_SERVER_RPCSVR_ZNODE);
     }
 
     public String getReplicateServerSink() {

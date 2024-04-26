@@ -51,12 +51,12 @@ public class PeerTest {
 
     @Test
     public void disablePeer() throws IOException {
-        db.disablePeer(peer);
+        db.setPeerState(peer, false);
     }
 
     @Test
     public void enablePeer() throws IOException {
-        db.enablePeer(peer);
+        db.setPeerState(peer, true);
     }
 
     @Test

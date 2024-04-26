@@ -53,10 +53,10 @@ public class ReplicateSvr {
                 config.getReplicateServerHost(),
                 config.getReplicateServerQuorumPort());
         this.zkConnect = new ZkConnect(connectString);
-        String root = config.getReplicateServerQuorumPath();
-        zkConnect.createNode(root + "/hbaseid", UUID.randomUUID().toString().getBytes(), false);
+        String rpcSvrZNode = config.getReplicateServerRpcSvrZNode();
+        zkConnect.createNode(rpcSvrZNode + "/hbaseid", UUID.randomUUID().toString().getBytes(), false);
         String node = String.format("%s/rs/%s,%d,%d",
-                root,
+                rpcSvrZNode,
                 config.getReplicateServerHost(),
                 port,
                 System.currentTimeMillis());
@@ -69,8 +69,8 @@ public class ReplicateSvr {
                 config.getSourceHBaseQuorumHost(),
                 config.getSourceHBaseQuorumPort(),
                 config.getSourceHBaseQuorumPath());
-        String rpcSvrZNode = config.getReplicateServerQuorumPath();
-        String peer = rpcSvrZNode.substring(1);
+        String rpcSvrZNode = config.getReplicateServerRpcSvrZNode();
+        String peer = config.getReplicateServerPeer();
         String key = String.format("%s:%d:%s",
                 config.getReplicateServerQuorumHost(),
                 config.getReplicateServerQuorumPort(),

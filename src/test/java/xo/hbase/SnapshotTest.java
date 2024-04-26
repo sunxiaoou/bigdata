@@ -24,7 +24,7 @@ public class SnapshotTest {
         src = new HBase();
         SimpleDateFormat sdf = new SimpleDateFormat("yyMMdd");
         String dateStr = sdf.format(new Date());
-        snapshot = table.replaceFirst(":", "-") + "-" + dateStr;
+        snapshot = table.replaceFirst(":", "-") + "_" + dateStr;
 
         tgt = new HBase(tgtHost, 2181, "/hbase");
     }
@@ -38,6 +38,13 @@ public class SnapshotTest {
     @Test
     public void listSnapshots() throws IOException {
         LOG.info("snapshots: {}", src.listSnapshots());
+    }
+
+    @Test
+    public void deleteSnapshots() throws IOException {
+        for (String snapshot: src.listSnapshots()) {
+            src.deleteSnapshot(snapshot);
+        }
     }
 
     @Test
@@ -58,7 +65,16 @@ public class SnapshotTest {
     }
 
     @Test
-    public void cloneSnapshotTgt() throws IOException {
-        tgt.cloneSnapshot(snapshot, snapshot.replaceFirst("-", ":"));
+    public void cloneSnapshotsTgt() throws IOException {
+        for (String snapshot: tgt.listSnapshots()) {
+            tgt.cloneSnapshot(snapshot, snapshot.replaceFirst("-", ":"));
+        }
+    }
+
+    @Test
+    public void deleteSnapshotsTgt() throws IOException {
+        for (String snapshot: tgt.listSnapshots()) {
+            tgt.deleteSnapshot(snapshot);
+        }
     }
 }

@@ -72,7 +72,16 @@ public class HBase {
     public List<String> listTables(String space) throws IOException {
         List<String> tables = new ArrayList<>();
         List<TableDescriptor> descriptors = admin.listTableDescriptorsByNamespace(Bytes.toBytes(space));
-        for (TableDescriptor descriptor : descriptors) {
+        for (TableDescriptor descriptor: descriptors) {
+            tables.add(descriptor.getTableName().getNameAsString());
+        }
+        return tables;
+    }
+
+    public List<String> listTables(Pattern pattern) throws IOException {
+        List<String> tables = new ArrayList<>();
+        List<TableDescriptor> descriptors = admin.listTableDescriptors(pattern);
+        for (TableDescriptor descriptor: descriptors) {
             tables.add(descriptor.getTableName().getNameAsString());
         }
         return tables;
@@ -87,6 +96,18 @@ public class HBase {
                             .setCompressionType(Compression.Algorithm.GZ).build())
                     .build();
             admin.createTable(tableDescriptor);
+        }
+    }
+
+    public void dropTable(String table) throws IOException {
+        TableName name = TableName.valueOf(table);
+        try {
+            admin.disableTable(name);
+            admin.deleteTable(name);
+        } catch (TableNotFoundException e) {
+            LOG.info("table({}) doesn't exist", table);
+        } catch (TableNotEnabledException e) {
+            admin.deleteTable(name);
         }
     }
 
@@ -269,10 +290,18 @@ public class HBase {
     }
 
     public void setPeerState(String peerId, boolean enabled) throws IOException {
-        if (enabled && !isPeerEnabled(peerId)) {
-            admin.enableReplicationPeer(peerId);
-        } else if (!enabled && isPeerEnabled(peerId)) {
-            admin.disableReplicationPeer(peerId);
+        if (enabled) {
+            try {
+                admin.enableReplicationPeer(peerId);
+            } catch (DoNotRetryIOException e) {
+                LOG.info("peer({}) is already enabled", peerId);
+            }
+        } else {
+            try {
+                admin.disableReplicationPeer(peerId);
+            } catch (DoNotRetryIOException e) {
+                LOG.info("peer({}) is already disabled", peerId);
+            }
         }
     }
 
@@ -288,7 +317,7 @@ public class HBase {
                 setPeerState(peerId, enabled);
                 return;
             }
-            disablePeer(peerId);
+            setPeerState(peerId, false);
             admin.removeReplicationPeer(peerId);
             LOG.info("peer({}) exists but is different, it needs to be replaced", peerId);
         } catch (ReplicationPeerNotFoundException e) {
@@ -314,7 +343,7 @@ public class HBase {
                 setPeerState(peerId, enabled);
                 return;
             }
-            disablePeer(peerId);
+            setPeerState(peerId, false);;
             admin.removeReplicationPeer(peerId);
             LOG.info("peer({}) exists but is different, it needs to be replaced", peerId);
         } catch (ReplicationPeerNotFoundException e) {
@@ -336,25 +365,13 @@ public class HBase {
                 setPeerState(peerId, enabled);
                 return;
             }
-            disablePeer(peerId);
+            setPeerState(peerId, false);;
             admin.removeReplicationPeer(peerId);
             LOG.info("peer({}) exists but is different, it needs to be replaced", peerId);
         } catch (ReplicationPeerNotFoundException e) {
             LOG.info("to create new peer({})", peerId);
         }
         admin.addReplicationPeer(peerId, peerConfig, enabled);
-    }
-
-    public void disablePeer(String peerId) throws IOException {
-        try {
-            admin.disableReplicationPeer(peerId);
-        } catch (DoNotRetryIOException e) {
-            LOG.info("peer({}) is already disabled", peerId);
-        }
-    }
-
-    public void enablePeer(String peerId) throws IOException {
-        admin.enableReplicationPeer(peerId);
     }
 
     public int peerState(String peerId) throws IOException {

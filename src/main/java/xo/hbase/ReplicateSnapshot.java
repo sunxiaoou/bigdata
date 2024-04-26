@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.regex.Pattern;
 
 public class ReplicateSnapshot {
     private static final Logger LOG = LoggerFactory.getLogger(ReplicateSnapshot.class);
@@ -13,6 +14,7 @@ public class ReplicateSnapshot {
     private final ReplicateConfig config;
     private final HBase srcDb;
     private final HBase tgtDb;
+    private final String peer;
 
     public ReplicateSnapshot() throws IOException {
         this.config = ReplicateConfig.getInstance();
@@ -24,15 +26,14 @@ public class ReplicateSnapshot {
                 config.getTargetHBaseQuorumHost(),
                 config.getTargetHBaseQuorumPort(),
                 config.getTargetHBaseQuorumPath());
+        this.peer = config.getReplicateServerPeer();
     }
 
-    private void addPeer() throws IOException {
-        String rpcSvrZNode = config.getReplicateServerQuorumPath();
-        String peer = rpcSvrZNode.substring(1);
+    public void addPeer() throws IOException {
         String clusterKey = String.format("%s:%d:%s",
                 config.getReplicateServerQuorumHost(),
                 config.getReplicateServerQuorumPort(),
-                rpcSvrZNode);
+                config.getReplicateServerRpcSvrZNode());
         if ("table".equals(config.getSourceHBaseMapType())) {
             srcDb.addPeer(peer, clusterKey, new ArrayList<>(config.getSourceHBaseMapTables().keySet()), false);
         } else if ("user".equals(config.getSourceHBaseMapType())) {
@@ -42,10 +43,14 @@ public class ReplicateSnapshot {
         }
     }
 
+    public void enablePeer() throws IOException {
+        srcDb.setPeerState(peer, true);
+    }
+
     public int doSnapshot(String table, String copyTo) throws Exception {
         SimpleDateFormat sdf = new SimpleDateFormat("yyMMdd");
         String dateStr = sdf.format(new Date());
-        String snapshot = table.replaceFirst(":", "-") + "-" + dateStr;
+        String snapshot = table.replaceFirst(":", "-") + "_" + dateStr;
         srcDb.createSnapshot(table, snapshot);
         LOG.debug("snapshot({}) from table({}) created", snapshot, table);
 
@@ -53,7 +58,7 @@ public class ReplicateSnapshot {
         LOG.debug("export snapshot({}) to {} return {}", rc, copyTo, rc);
 
         if (rc == 0) {
-            String table2 = table + "-" + dateStr;
+            String table2 = table + "_" + dateStr;
             tgtDb.cloneSnapshot(snapshot, table2);
             LOG.debug("snapshot({}) cloned to table({})", snapshot, table2);
         }
@@ -70,9 +75,7 @@ public class ReplicateSnapshot {
                 tables.addAll(srcDb.listTables(space));
             }
         } else {
-            for (String space: srcDb.listNameSpaces()) {
-                tables.addAll(srcDb.listTables(space));
-            }
+            tables = srcDb.listTables(Pattern.compile(".*"));
         }
         String copyTo = String.format("hdfs://%s:%d/hbase",
                 config.getTargetHadoopHdfsHost(),
@@ -93,6 +96,7 @@ public class ReplicateSnapshot {
         ReplicateSnapshot replicateSnapshot = new ReplicateSnapshot();
         replicateSnapshot.addPeer();
         replicateSnapshot.doSnapshots();
+        replicateSnapshot.enablePeer();
         replicateSnapshot.close();
     }
 }
