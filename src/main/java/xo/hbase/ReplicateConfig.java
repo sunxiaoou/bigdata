@@ -32,6 +32,7 @@ public class ReplicateConfig {
     private static final String SINK_FILE_CAPACITY = "sink.file.capacity";
     private static final String SINK_FILE_NUMBER = "sink.file.number";
 
+    private static final String TARGET_HADOOP_USER = "target.hadoop.user";
     private static final String TARGET_HADOOP_HDFS_HOST = "target.hadoop.hdfs.host";
     private static final String TARGET_HADOOP_HDFS_PORT = "target.hadoop.hdfs.port";
     private static final String TARGET_HBASE_QUORUM_HOST = "target.hbase.quorum.host";
@@ -101,6 +102,10 @@ public class ReplicateConfig {
 
     public String getReplicateServerSink() {
         return properties.getProperty(REPLICATE_SERVER_SINK);
+    }
+
+    public String getTargetHadoopUser() {
+        return properties.getProperty(TARGET_HADOOP_USER);
     }
 
     public String getTargetHadoopHdfsHost() {

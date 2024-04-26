@@ -6,7 +6,7 @@ import org.slf4j.LoggerFactory;
 
 
 public class ReplicateConfigTest {
-    private static final Logger LOG = LoggerFactory.getLogger(HBaseTest.class);
+    private static final Logger LOG = LoggerFactory.getLogger(ReplicateConfigTest.class);
 
     ReplicateConfig config = ReplicateConfig.getInstance();
 

@@ -23,23 +23,22 @@ import java.util.regex.Pattern;
 // refer to org.apache.hadoop.hbase.client sample in https://hbase.apache.org/apidocs/index.html
 public class HBase {
     private static final Logger LOG = LoggerFactory.getLogger(HBase.class);
-    Configuration conf;
-    Connection conn;
-    Admin admin;
+
+    private final Configuration conf;
+    private final Connection conn;
+    private final Admin admin;
+
+    static public void changeUser(String user) throws IOException {
+        String current = UserGroupInformation.getCurrentUser().getShortUserName();
+        LOG.info("current user is ({})", current);
+        if (!current.equals(user)) {
+            UserGroupInformation ugi = UserGroupInformation.createRemoteUser(user);
+            UserGroupInformation.setLoginUser(ugi);
+        }
+    }
 
     public HBase() throws IOException {
         conf = HBaseConfiguration.create();
-        conn = ConnectionFactory.createConnection(conf);
-        admin = conn.getAdmin();
-    }
-
-    public HBase(String user) throws IOException {
-        UserGroupInformation ugi = UserGroupInformation.createRemoteUser(user);
-        UserGroupInformation.setLoginUser(ugi);
-        conf = HBaseConfiguration.create();
-        conn = ConnectionFactory.createConnection(conf);
-        admin = conn.getAdmin();
-        Configuration conf = HBaseConfiguration.create();
         conn = ConnectionFactory.createConnection(conf);
         admin = conn.getAdmin();
     }

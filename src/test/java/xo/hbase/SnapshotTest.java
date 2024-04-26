@@ -21,7 +21,7 @@ public class SnapshotTest {
 
     @BeforeClass
     public static void setupBeforeClass() throws IOException {
-        src = new HBase(user);
+        src = new HBase();
         SimpleDateFormat sdf = new SimpleDateFormat("yyMMdd");
         String dateStr = sdf.format(new Date());
         snapshot = table.replaceFirst(":", "-") + "-" + dateStr;
@@ -52,6 +52,7 @@ public class SnapshotTest {
 
     @Test
     public void exportSnapshot() throws Exception {
+        HBase.changeUser(user);
         String copyTo = String.format("hdfs://%s:8020/hbase", tgtHost);
         LOG.info("{}", src.exportSnapshot(snapshot, copyTo));
     }

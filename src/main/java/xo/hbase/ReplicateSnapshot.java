@@ -53,8 +53,9 @@ public class ReplicateSnapshot {
         LOG.debug("export snapshot({}) to {} return {}", rc, copyTo, rc);
 
         if (rc == 0) {
-            tgtDb.cloneSnapshot(snapshot, table);
-            LOG.debug("snapshot({}) cloned to table({})", snapshot, table);
+            String table2 = table + "-" + dateStr;
+            tgtDb.cloneSnapshot(snapshot, table2);
+            LOG.debug("snapshot({}) cloned to table({})", snapshot, table2);
         }
 
         return rc;
@@ -76,6 +77,7 @@ public class ReplicateSnapshot {
         String copyTo = String.format("hdfs://%s:%d/hbase",
                 config.getTargetHadoopHdfsHost(),
                 config.getTargetHadoopHdfsPort());
+        HBase.changeUser(config.getTargetHadoopUser());
 
         for (String table: tables) {
             int rc = doSnapshot(table, copyTo);
