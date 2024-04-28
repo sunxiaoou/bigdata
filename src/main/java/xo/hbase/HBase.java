@@ -8,6 +8,8 @@ import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.snapshot.ExportSnapshot;
+import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
+import org.apache.hadoop.hbase.snapshot.SnapshotExistsException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Triple;
@@ -49,6 +51,18 @@ public class HBase {
         conf.set("hbase.zookeeper.property.clientPort", "" + port);
         conf.set("zookeeper.znode.parent", znode);
         conn = ConnectionFactory.createConnection(conf);
+        admin = conn.getAdmin();
+    }
+
+    public HBase(String path) throws IOException {
+        conf = HBaseConfiguration.create();
+        conf.addResource(path + "/core-site.xml");
+        conf.addResource(path + "/hdfs-site.xml");
+        conf.addResource(path + "/mapred-site.xml");
+        conf.addResource(path + "/yarn-site.xml");
+        conf.addResource(path + "/hbase-site.xml");
+        conn = ConnectionFactory.createConnection(conf);
+//        conf.forEach(entry -> LOG.debug(entry.getKey() + "=" + entry.getValue()));
         admin = conn.getAdmin();
     }
 
@@ -410,7 +424,11 @@ public class HBase {
             admin.deleteSnapshot(snapshotName);
             LOG.info("deleted old snapshot({})", snapshotName);
         }
-        admin.snapshot(snapshotName, TableName.valueOf(tableName), new HashMap<>());
+        try {
+            admin.snapshot(snapshotName, TableName.valueOf(tableName), new HashMap<>());
+        } catch (SnapshotCreationException e) {
+            LOG.info("table({}) doesnt existed", tableName);
+        }
     }
 
     public void cloneSnapshot(String snapshotName, String tableName) throws IOException {

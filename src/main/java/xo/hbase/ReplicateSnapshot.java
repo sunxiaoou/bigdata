@@ -18,10 +18,11 @@ public class ReplicateSnapshot {
 
     public ReplicateSnapshot() throws IOException {
         this.config = ReplicateConfig.getInstance();
-        this.srcDb = new HBase(
-                config.getSourceHBaseQuorumHost(),
-                config.getSourceHBaseQuorumPort(),
-                config.getSourceHBaseQuorumPath());
+//        this.srcDb = new HBase(
+//                config.getSourceHBaseQuorumHost(),
+//                config.getSourceHBaseQuorumPort(),
+//                config.getSourceHBaseQuorumPath());
+        this.srcDb = new HBase(config.getSourceHBaseQuorumHost());  // read hadoop/hbase config files directly
         this.tgtDb = new HBase(
                 config.getTargetHBaseQuorumHost(),
                 config.getTargetHBaseQuorumPort(),

@@ -20,7 +20,8 @@ public class TableTest {
     @BeforeClass
     public static void setupBeforeClass() throws IOException {
 //        db = new HBase();
-        db = new HBase(host, 2181, "/hbase");
+//        db = new HBase(host, 2181, "/hbase");
+        db = new HBase(host);
     }
 
     @AfterClass

@@ -13,15 +13,16 @@ import java.util.Date;
 public class SnapshotTest {
     private static final Logger LOG = LoggerFactory.getLogger(SnapshotTest.class);
     private static final String user = "sunxo";
+    private static final String srcHost = "ubuntu";
     private static final String tgtHost = "hadoop2";
-    private static final String table = "manga:student";
+    private static final String table = "manga:fruit";
     private static HBase src;
     private static HBase tgt;
     private static String snapshot;
 
     @BeforeClass
     public static void setupBeforeClass() throws IOException {
-        src = new HBase();
+        src = new HBase(srcHost);
         SimpleDateFormat sdf = new SimpleDateFormat("yyMMdd");
         String dateStr = sdf.format(new Date());
         snapshot = table.replaceFirst(":", "-") + "_" + dateStr;
