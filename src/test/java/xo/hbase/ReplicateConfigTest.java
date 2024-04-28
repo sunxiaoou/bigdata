@@ -15,6 +15,7 @@ public class ReplicateConfigTest {
         LOG.info("Server Name: " + config.getReplicateServerName());
         LOG.info("Server Host: " + config.getReplicateServerHost());
         LOG.info("Tables Map Type: " + config.getSourceHBaseMapType());
+        LOG.info("Server HBase Host: " + config.getSourceHBaseQuorumHost().split(",")[0]);
         LOG.info("Tables Map: " + config.getSourceHBaseMapTables());
         LOG.info("Namespaces Map: " + config.getSourceHBaseMapNamespaces());
         LOG.info("Replicate Sink: " + config.getReplicateServerSink());
