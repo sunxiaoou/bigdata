@@ -27,9 +27,26 @@ public class MyVerifyReplication extends VerifyReplication {
         return job;
     }
 
-    // java -cp ".:lib/*:target/bigdata-1.0-SNAPSHOT.jar" xo.hbase.MyVerifyReplication macos manga:fruit
+    public static Configuration createConfig(String path) {
+        Configuration conf = HBaseConfiguration.create();
+        conf.addResource(path + "/core-site.xml");
+        conf.addResource(path + "/hdfs-site.xml");
+        conf.addResource(path + "/mapred-site.xml");
+        conf.addResource(path + "/yarn-site.xml");
+        conf.addResource(path + "/hbase-site.xml");
+        return conf;
+    }
+
+    // java -cp ".:lib/*:target/bigdata-1.0-SNAPSHOT.jar" xo.hbase.MyVerifyReplication hadoop3 hb_h2 manga:fruit
     public static void main(String[] args) throws Exception {
-        int res = ToolRunner.run(HBaseConfiguration.create(), new MyVerifyReplication(), args);
+        if (args.length < 3) {
+            System.out.println("Usage: MyVerifyReplication confPath peerName tableName");
+            System.exit(1);
+        }
+        String[] newArgs = new String[args.length - 1];
+        System.arraycopy(args, 1, newArgs, 0, newArgs.length);
+        int res = ToolRunner.run(createConfig(args[0]), new MyVerifyReplication(), newArgs);
+        System.out.println("MyVerifyReplication return " + res);
         System.exit(res);
     }
 }
