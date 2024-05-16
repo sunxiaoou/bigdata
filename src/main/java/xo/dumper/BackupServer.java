@@ -1,4 +1,4 @@
-package xo.netty.backup;
+package xo.dumper;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
@@ -20,15 +20,6 @@ public class BackupServer {
 
     public BackupServer(int port) {
         this.port = port;
-    }
-
-    public static void main(String[] args) throws Exception {
-        if (args.length != 1) {
-            System.err.println("Usage: " + BackupServer.class.getSimpleName() + " <port>");
-            return;
-        }
-        int port = Integer.parseInt(args[0]);
-        new BackupServer(port).start();
     }
 
     public void start() throws Exception {
@@ -54,5 +45,14 @@ public class BackupServer {
         } finally {
             group.shutdownGracefully().sync();
         }
+    }
+
+    public static void main(String[] args) throws Exception {
+        if (args.length != 1) {
+            System.err.println("Usage: " + BackupServer.class.getSimpleName() + " <port>");
+            return;
+        }
+        int port = Integer.parseInt(args[0]);
+        new BackupServer(port).start();
     }
 }

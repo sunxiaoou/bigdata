@@ -1,4 +1,4 @@
-package xo.netty.backup;
+package xo.dumper;
 
 public class RuleExceptionNumber {
     public static final int RULE_EXIST = 1001;

@@ -1,4 +1,4 @@
-package xo.netty.backup;
+package xo.dumper;
 
 public class RuleException extends RuntimeException {
     private int code;

@@ -22,6 +22,7 @@ public class ReplicateConfig {
     private static final String REPLICATE_SERVER_QUORUM_PORT = "replicate.server.quorum.port";
     private static final String REPLICATE_SERVER_SINK = "replicate.server.sink";
 
+    private static final String SOURCE_HBASE_CONFPATH = "source.hbase.confPath";
     private static final String SOURCE_HBASE_QUORUM_HOST = "source.hbase.quorum.host";
     private static final String SOURCE_HBASE_QUORUM_PORT = "source.hbase.quorum.port";
     private static final String SOURCE_HBASE_QUORUM_PATH = "source.hbase.quorum.path";
@@ -119,6 +120,10 @@ public class ReplicateConfig {
 
     public int getTargetHadoopHdfsPort() {
         return Integer.parseInt(properties.getProperty(TARGET_HADOOP_HDFS_PORT));
+    }
+
+    public String getSourceHBaseConfPath() {
+        return properties.getProperty(SOURCE_HBASE_CONFPATH);
     }
 
     public String getSourceHBaseQuorumHost() {

@@ -1,4 +1,4 @@
-package xo.netty.backup;
+package xo.dumper;
 
 public class RuleCommand {
     public static final String IPC_GET_VER = "I2.IPC_GET_VER";

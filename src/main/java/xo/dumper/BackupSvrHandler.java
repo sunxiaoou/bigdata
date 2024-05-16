@@ -1,4 +1,4 @@
-package xo.netty.backup;
+package xo.dumper;
 
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONException;
@@ -22,8 +22,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static xo.netty.backup.RuleCommand.*;
-import static xo.netty.backup.RuleExceptionNumber.*;
+import static xo.dumper.RuleCommand.*;
+import static xo.dumper.RuleExceptionNumber.*;
 
 @ChannelHandler.Sharable
 public class BackupSvrHandler extends ChannelInboundHandlerAdapter {
@@ -155,6 +155,10 @@ public class BackupSvrHandler extends ChannelInboundHandlerAdapter {
         LOG.info("startRule({}})", body);
     }
 
+    private void resumeRule(String body) {
+        LOG.info("RuleManager.resumeRule({}})", body);
+    }
+
     private void stopRule(String body) {
         LOG.info("RuleManager.stopRule({}})", body);
     }
@@ -214,6 +218,10 @@ public class BackupSvrHandler extends ChannelInboundHandlerAdapter {
                     break;
                 case IPC_RULE_START:
                     startRule(body);
+                    send(sent, ctx, 0, 0, cmd.getBytes(StandardCharsets.UTF_8));
+                    break;
+                case IPC_RULE_RESUME:
+                    resumeRule(body);
                     send(sent, ctx, 0, 0, cmd.getBytes(StandardCharsets.UTF_8));
                     break;
                 case IPC_RULE_STOP:
