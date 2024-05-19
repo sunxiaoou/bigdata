@@ -14,14 +14,17 @@ import java.util.regex.Pattern;
 public class TableTest {
     private static final Logger LOG = LoggerFactory.getLogger(TableTest.class);
 
-    private static final String host = "hadoop2";
+//    private static final String host = "hadoop2";
+    private static final String host = "ubuntu";
+    private static final String confPath = System.getProperty("user.dir") + "/src/main/resources/" + host;
     private static HBase db;
 
     @BeforeClass
     public static void setupBeforeClass() throws IOException {
 //        db = new HBase();
 //        db = new HBase(host, 2181, "/hbase");
-        db = new HBase(host);
+//        db = new HBase(host);
+        db = new HBase(HBase.getPath(confPath));
     }
 
     @AfterClass

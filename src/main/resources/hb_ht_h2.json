@@ -6,7 +6,7 @@
 		"set":[
 			{
 				"port":9000,
-				"ip":"192.168.55.250",
+				"ip":"10.1.125.203",
 				"id":1
 			}
 		],
@@ -14,21 +14,33 @@
 			"set":[
 				{
 					"port":"2181",
-					"ip":"192.168.55.250",
+					"ip":"10.1.125.203",
 					"id":1,
+					"zk_node":"/hbase"
+				},
+				{
+					"port":"2181",
+					"ip":"10.1.125.204",
+					"id":2,
+					"zk_node":"/hbase"
+				},
+				{
+					"port":"2181",
+					"ip":"10.1.125.205",
+					"id":3,
 					"zk_node":"/hbase"
 				}
 			]
 		},
 		"auth":"none",
-		"name":"hb_u",
+		"name":"hb_triple",
 		"model":"",
 		"type":"hbase",
 		"login":[],
 		"version":3,
-		"uuid":"C820A6C9-ACA9-494A-A275-DEE32EAF429A"
+		"uuid":"E9A86EC3-FD09-4F31-BF02-7BF15F3A84FE"
 	},
-	"uuid":"7DE43092-825E-41BA-92C2-5E210269AF09",
+	"uuid":"B4BCEEAF-5BBC-411A-90D5-92EFF8725A4C",
 	"ldConflict":{
 		"urp":"toirp",
 		"drp":"ignore",
@@ -45,7 +57,7 @@
 	"keepDynData":0,
 	"tgtType":"hbase",
 	"dbmap_topic":"",
-	"node_uuid":"A230C1E6-C68E-4F4E-A2AB-8E81C3D3288D",
+	"node_uuid":"C492BD83-E5AE-4051-95D2-35C020255D63",
 	"saveJsonText":false,
 	"splitTabs":[],
 	"partLoadBalance":"by_table",
@@ -90,7 +102,7 @@
 	"version":2,
 	"srcType":"hbase",
 	"dynThd":1,
-	"name":"hb_u_c1",
+	"name":"hb_ht_h2",
 	"advance_setup":{
 		"dmltrack":{
 			"time_column":"",
@@ -121,8 +133,8 @@
 		"tok":"",
 		"cache":"/var/iadata/cache/",
 		"port":"26804",
-		"ip":"192.168.55.11",
-		"uuid":"A230C1E6-C68E-4F4E-A2AB-8E81C3D3288D"
+		"ip":"10.1.125.202",
+		"uuid":"C492BD83-E5AE-4051-95D2-35C020255D63"
 	},
 	"lsn":"",
 	"dmltrack":{
@@ -166,8 +178,8 @@
 		"tok":"",
 		"cache":"/var/iadata/cache/",
 		"port":"26804",
-		"ip":"192.168.55.11",
-		"uuid":"A230C1E6-C68E-4F4E-A2AB-8E81C3D3288D"
+		"ip":"10.1.125.202",
+		"uuid":"C492BD83-E5AE-4051-95D2-35C020255D63"
 	},
 	"model_type":"1:0",
 	"primary_db_two":"",
@@ -176,7 +188,7 @@
 		"set":[
 			{
 				"port":9000,
-				"ip":"192.168.55.11",
+				"ip":"10.1.125.202",
 				"id":1
 			}
 		],
@@ -184,19 +196,19 @@
 			"set":[
 				{
 					"port":"2181",
-					"ip":"192.168.55.11",
+					"ip":"10.1.125.202",
 					"id":1,
 					"zk_node":"/hbase"
 				}
 			]
 		},
 		"auth":"none",
-		"name":"hb_c1",
+		"name":"hb_h2",
 		"model":"",
 		"type":"hbase",
 		"login":[],
 		"version":3,
-		"uuid":"5F61E110-3EA8-49DF-9B90-00028C0F25B3"
+		"uuid":"06D04C85-B4F9-42BC-B9B1-11F3F95CAB96"
 	},
 	"full_sync_mode":"logic",
 	"try_split_part_table":1,
@@ -205,13 +217,13 @@
 			"set":[
 				{
 					"port":2181,
-					"ip":"centos1",
+					"ip":"hadoop2",
 					"id":1,
-					"zk_node":"/hb_c1"
+					"zk_node":"/hb_h2"
 				}
 			]
 		},
-		"peer":"hb_c1"
+		"peer":"hb_h2"
 	},
 	"existing_table":"drop_to_recycle",
 	"maptype":"table",

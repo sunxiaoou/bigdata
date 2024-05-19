@@ -1,6 +1,7 @@
 package xo.hbase;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -9,7 +10,6 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.snapshot.ExportSnapshot;
 import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
-import org.apache.hadoop.hbase.snapshot.SnapshotExistsException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Triple;
@@ -29,6 +29,10 @@ public class HBase {
     private final Configuration conf;
     private final Connection conn;
     private final Admin admin;
+
+    static public Path getPath(String pathStr) {
+        return new Path(pathStr);
+    }
 
     static public void changeUser(String user) throws IOException {
         String current = UserGroupInformation.getCurrentUser().getShortUserName();
@@ -54,15 +58,27 @@ public class HBase {
         admin = conn.getAdmin();
     }
 
-    public HBase(String path) throws IOException {
+    public HBase(String pathStr) throws IOException {
         conf = HBaseConfiguration.create();
-        conf.addResource(path + "/core-site.xml");
-        conf.addResource(path + "/hdfs-site.xml");
-        conf.addResource(path + "/mapred-site.xml");
-        conf.addResource(path + "/yarn-site.xml");
-        conf.addResource(path + "/hbase-site.xml");
+        conf.addResource(pathStr + "/core-site.xml");
+        conf.addResource(pathStr + "/hdfs-site.xml");
+        conf.addResource(pathStr + "/mapred-site.xml");
+        conf.addResource(pathStr + "/yarn-site.xml");
+        conf.addResource(pathStr + "/hbase-site.xml");
+//        conf.forEach(entry -> System.out.println(entry.getKey() + "=" + entry.getValue()));
         conn = ConnectionFactory.createConnection(conf);
-//        conf.forEach(entry -> LOG.debug(entry.getKey() + "=" + entry.getValue()));
+        admin = conn.getAdmin();
+    }
+
+    public HBase(Path path) throws IOException {
+        conf = HBaseConfiguration.create();
+        conf.addResource(new Path(path, "core-site.xml"));
+        conf.addResource(new Path(path, "hdfs-site.xml"));
+        conf.addResource(new Path(path, "mapred-site.xml"));
+        conf.addResource(new Path(path, "yarn-site.xml"));
+        conf.addResource(new Path(path, "hbase-site.xml"));
+//        conf.forEach(entry -> System.out.println(entry.getKey() + "=" + entry.getValue()));
+        conn = ConnectionFactory.createConnection(conf);
         admin = conn.getAdmin();
     }
 
