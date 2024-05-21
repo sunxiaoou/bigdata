@@ -1,6 +1,8 @@
 package xo.hbase;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.*;
@@ -85,6 +87,21 @@ public class HBase {
     public void close() throws IOException {
         admin.close();
         conn.close();
+    }
+
+    public String getProperty(String name) {
+        return conf.get(name);
+    }
+
+    public String getUser() throws IOException {
+        String root = conf.get("hbase.rootdir");
+        if (root == null) {
+            LOG.error("HBase root is not set in the configuration");
+            return null;
+        }
+        FileSystem fs = FileSystem.get(conf);
+        FileStatus fileStatus = fs.getFileStatus(new Path(root));
+        return fileStatus.getOwner();
     }
 
     public List<String> listNameSpaces() throws IOException {

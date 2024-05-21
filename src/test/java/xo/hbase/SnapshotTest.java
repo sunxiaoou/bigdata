@@ -12,70 +12,72 @@ import java.util.Date;
 
 public class SnapshotTest {
     private static final Logger LOG = LoggerFactory.getLogger(SnapshotTest.class);
-    private static final String user = "sunxo";
+//    private static final String user = "sunxo";
     private static final String srcHost = "ubuntu";
     private static final String tgtHost = "hadoop2";
     private static final String table = "manga:fruit";
-    private static HBase src;
-    private static HBase tgt;
+    private static HBase srcDb;
+    private static HBase tgtDb;
     private static String snapshot;
 
     @BeforeClass
     public static void setupBeforeClass() throws IOException {
-        src = new HBase(srcHost);
+        srcDb = new HBase(srcHost);
         SimpleDateFormat sdf = new SimpleDateFormat("yyMMdd");
         String dateStr = sdf.format(new Date());
         snapshot = table.replaceFirst(":", "-") + "_" + dateStr;
 
-        tgt = new HBase(tgtHost, 2181, "/hbase");
+//        tgtDb = new HBase(tgtHost, 2181, "/hbase");
+        tgtDb = new HBase(tgtHost);
     }
 
     @AfterClass
     public static void tearDownAfterClass() throws IOException {
-        tgt.close();
-        src.close();
+        tgtDb.close();
+        srcDb.close();
     }
 
     @Test
     public void listSnapshots() throws IOException {
-        LOG.info("snapshots: {}", src.listSnapshots());
+        LOG.info("snapshots: {}", srcDb.listSnapshots());
     }
 
     @Test
     public void deleteSnapshots() throws IOException {
-        for (String snapshot: src.listSnapshots()) {
-            src.deleteSnapshot(snapshot);
+        for (String snapshot: srcDb.listSnapshots()) {
+            srcDb.deleteSnapshot(snapshot);
         }
     }
 
     @Test
     public void createSnapshot() throws IOException {
-        src.createSnapshot(table, snapshot);
+        srcDb.createSnapshot(table, snapshot);
     }
 
     @Test
     public void cloneSnapshot() throws IOException {
-        src.cloneSnapshot(snapshot, snapshot.replaceFirst("-", ":"));
+        srcDb.cloneSnapshot(snapshot, snapshot.replaceFirst("-", ":"));
     }
 
     @Test
     public void exportSnapshot() throws Exception {
-        HBase.changeUser(user);
-        String copyTo = String.format("hdfs://%s:8020/hbase", tgtHost);
-        LOG.info("{}", src.exportSnapshot(snapshot, copyTo));
+//        String fs = tgtDb.getProperty("fs.defaultFS");
+        HBase.changeUser(tgtDb.getUser());
+        String copyTo = tgtDb.getProperty("hbase.rootdir");
+        LOG.info("{}", srcDb.exportSnapshot(snapshot, copyTo));
     }
 
     @Test
     public void cloneSnapshotsTgt() throws IOException {
-        for (String snapshot: tgt.listSnapshots()) {
-            tgt.cloneSnapshot(snapshot, snapshot.replaceFirst("-", ":"));
+        for (String snapshot: tgtDb.listSnapshots()) {
+            tgtDb.cloneSnapshot(snapshot, snapshot.replaceFirst("-", ":"));
         }
     }
 
     @Test
     public void deleteSnapshotsTgt() throws IOException {
-        for (String snapshot: tgt.listSnapshots()) {
-            tgt.deleteSnapshot(snapshot);
+        for (String snapshot: tgtDb.listSnapshots()) {
+            tgtDb.deleteSnapshot(snapshot);
         }
     }
 }
