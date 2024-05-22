@@ -491,7 +491,11 @@ public class HBase {
         opts.add(snapshot);
         opts.add("--copy-to");
         opts.add(copyTo);
-        return ToolRunner.run(conf, new ExportSnapshot(), opts.toArray(new String[0]));
+        opts.add("--overwrite");
+        LOG.info("export --snapshot {} --copy-to {} --overwrite", snapshot, copyTo);
+        int rc = ToolRunner.run(conf, new ExportSnapshot(), opts.toArray(new String[0]));
+        LOG.info("exported rc({})", rc);
+        return rc;
     }
 
     /**

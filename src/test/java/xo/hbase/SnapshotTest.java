@@ -13,7 +13,9 @@ import java.util.Date;
 public class SnapshotTest {
     private static final Logger LOG = LoggerFactory.getLogger(SnapshotTest.class);
 //    private static final String user = "sunxo";
-    private static final String srcHost = "ubuntu";
+//    private static final String srcHost = "ubuntu";
+    private static final String srcHost = "hadoop3";
+    private static final String srcPath = System.getProperty("user.dir") + "/src/main/resources/" + srcHost;
     private static final String tgtHost = "hadoop2";
     private static final String table = "manga:fruit";
     private static HBase srcDb;
@@ -22,7 +24,9 @@ public class SnapshotTest {
 
     @BeforeClass
     public static void setupBeforeClass() throws IOException {
-        srcDb = new HBase(srcHost);
+//        srcDb = new HBase(srcHost);
+        srcDb = new HBase(HBase.getPath(srcPath));
+
         SimpleDateFormat sdf = new SimpleDateFormat("yyMMdd");
         String dateStr = sdf.format(new Date());
         snapshot = table.replaceFirst(":", "-") + "_" + dateStr;
