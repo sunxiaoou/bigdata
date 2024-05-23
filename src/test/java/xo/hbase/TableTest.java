@@ -14,8 +14,8 @@ import java.util.regex.Pattern;
 public class TableTest {
     private static final Logger LOG = LoggerFactory.getLogger(TableTest.class);
 
-//    private static final String host = "hadoop2";
-    private static final String host = "ubuntu";
+    private static final String host = "hadoop2";
+//    private static final String host = "ubuntu";
     private static final String confPath = System.getProperty("user.dir") + "/src/main/resources/" + host;
     private static HBase db;
 
@@ -59,5 +59,18 @@ public class TableTest {
         for (String table: tables) {
             db.dropTable(table);
         }
+    }
+
+    @Test
+    public void countTableRows() throws IOException {
+        String name = "peTable";
+        LOG.info("row({})", db.countTableRows(name));
+    }
+
+    @Test
+    public void renameTable() throws IOException {
+        String name = "manga:student";
+        String newName = "manga:student2";
+        db.renameTable(name, newName);
     }
 }

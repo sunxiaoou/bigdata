@@ -12,7 +12,6 @@ import java.util.Date;
 
 public class SnapshotTest {
     private static final Logger LOG = LoggerFactory.getLogger(SnapshotTest.class);
-//    private static final String user = "sunxo";
 //    private static final String srcHost = "ubuntu";
     private static final String srcHost = "hadoop3";
     private static final String srcPath = System.getProperty("user.dir") + "/src/main/resources/" + srcHost;
@@ -44,6 +43,11 @@ public class SnapshotTest {
     @Test
     public void listSnapshots() throws IOException {
         LOG.info("snapshots: {}", srcDb.listSnapshots());
+    }
+
+    @Test
+    public void snapshotExists() throws IOException {
+        LOG.info("snapshotExists: {}", srcDb.snapshotExists("manga-fruit_240521"));
     }
 
     @Test

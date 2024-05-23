@@ -18,6 +18,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ToolRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import sun.tools.jconsole.Tab;
 
 import java.io.IOException;
 import java.util.*;
@@ -445,54 +446,94 @@ public class HBase {
         for (SnapshotDescription descriptor : descriptions) {
             snapshots.add(descriptor.getName());
         }
-        LOG.debug("peers: {}", snapshots);
+        LOG.debug("snapshots: {}", snapshots);
         return snapshots;
     }
 
-    public void createSnapshot(String tableName, String snapshotName) throws IOException {
-        List<SnapshotDescription> descriptions = admin.listSnapshots(Pattern.compile(snapshotName));
-        if (!descriptions.isEmpty()) {
+    public boolean snapshotExists(String snapshotName) throws IOException {
+        List<SnapshotDescription> snapshots = admin.listSnapshots();
+        return snapshots.stream().anyMatch(snapshot -> snapshot.getName().equals(snapshotName));
+    }
+
+   public void createSnapshot(String tableName, String snapshotName) throws IOException {
+        TableName table = TableName.valueOf(tableName);
+        if (!admin.tableExists(table)) {
+            LOG.error("table({}) doesn't exist", tableName);
+            return;
+        }
+        if (snapshotExists(snapshotName)) {
             admin.deleteSnapshot(snapshotName);
-            LOG.info("deleted old snapshot({})", snapshotName);
+            LOG.warn("deleted old snapshot({})", snapshotName);
         }
-        try {
-            admin.snapshot(snapshotName, TableName.valueOf(tableName), new HashMap<>());
-        } catch (SnapshotCreationException e) {
-            LOG.info("table({}) doesnt existed", tableName);
-        }
+        admin.snapshot(snapshotName, table, new HashMap<>());
     }
 
     public void cloneSnapshot(String snapshotName, String tableName) throws IOException {
-        List<SnapshotDescription> descriptions = admin.listSnapshots(Pattern.compile(snapshotName));
-        if (descriptions.isEmpty()) {
-            LOG.info("snapshot({}) doesn't exist", snapshotName);
+        if (!snapshotExists(snapshotName)) {
+            LOG.error("snapshot({}) doesn't exist", snapshotName);
+            return;
         }
         TableName table = TableName.valueOf(tableName);
         if (admin.tableExists(table)) {
-            LOG.info("table({}) already exists", tableName);
-            return;
+            if (admin.isTableEnabled(table)) {
+                admin.disableTable(table);
+            }
+            admin.deleteTable(table);
+            LOG.warn("deleted old table({})", table);
         }
         admin.cloneSnapshot(snapshotName, table);
     }
 
     public void deleteSnapshot(String snapshotName) throws IOException {
-        List<SnapshotDescription> descriptions = admin.listSnapshots(Pattern.compile(snapshotName));
-        if (descriptions.isEmpty()) {
-            LOG.info("snapshot({}) doesn't exist", snapshotName);
+        if (!snapshotExists(snapshotName)) {
+            LOG.error("snapshot({}) doesn't exist", snapshotName);
+            return;
         }
         admin.deleteSnapshot(snapshotName);
     }
 
-    public int exportSnapshot(String snapshot, String copyTo) throws Exception {
+    public int exportSnapshot(String snapshotName, String copyTo) throws Exception {
+        if (!snapshotExists(snapshotName)) {
+            LOG.error("snapshot({}) doesn't exist", snapshotName);
+            return -1;
+        }
         List<String> opts = new ArrayList<>();
         opts.add("--snapshot");
-        opts.add(snapshot);
+        opts.add(snapshotName);
         opts.add("--copy-to");
         opts.add(copyTo);
         opts.add("--overwrite");
-        LOG.info("export --snapshot {} --copy-to {} --overwrite", snapshot, copyTo);
+        LOG.info("export --snapshot {} --copy-to {} --overwrite", snapshotName, copyTo);
         int rc = ToolRunner.run(conf, new ExportSnapshot(), opts.toArray(new String[0]));
         LOG.info("exported rc({})", rc);
         return rc;
+    }
+
+    public void renameTable(String name, String newName) throws IOException {
+        String snapshotName = name.replaceFirst(":", "-") + "_" + "snapshot";
+        TableName table = TableName.valueOf(name);
+        TableName newTable = TableName.valueOf(newName);
+        if (!admin.tableExists(table)) {
+            LOG.error("table({}) doesn't exist", name);
+            return;
+        }
+        if (admin.isTableEnabled(table)) {
+            admin.disableTable(table);
+        }
+        if (snapshotExists(snapshotName)) {
+            admin.deleteSnapshot(snapshotName);
+            LOG.warn("deleted old snapshot({})", snapshotName);
+        }
+        admin.snapshot(snapshotName, table, new HashMap<>());
+        if (admin.tableExists(newTable)) {
+            if (admin.isTableEnabled(newTable)) {
+                admin.disableTable(newTable);
+            }
+            admin.deleteTable(newTable);
+            LOG.warn("deleted old table({})", newTable);
+        }
+        admin.cloneSnapshot(snapshotName, newTable);
+        admin.deleteSnapshot(snapshotName);
+        admin.deleteTable(table);
     }
 }
