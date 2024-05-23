@@ -14,7 +14,6 @@ import org.apache.hadoop.hbase.snapshot.ExportSnapshot;
 import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.util.Triple;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ToolRunner;
 import org.slf4j.Logger;
@@ -38,10 +37,10 @@ public class HBase {
 
     static public void changeUser(String user) throws IOException {
         String current = UserGroupInformation.getCurrentUser().getShortUserName();
-        LOG.info("current user is ({})", current);
         if (!current.equals(user)) {
             UserGroupInformation ugi = UserGroupInformation.createRemoteUser(user);
             UserGroupInformation.setLoginUser(ugi);
+            LOG.info("changed user from {} to {}", current, user);
         }
     }
 
@@ -166,8 +165,8 @@ public class HBase {
         }
     }
 
-    public void truncateTable(String space, String name) throws IOException {
-        TableName tableName = TableName.valueOf(space == null ? name : space + ':' + name);    // qualified name
+    public void truncateTable(String name) throws IOException {
+        TableName tableName = TableName.valueOf(name);
         if (admin.tableExists(tableName)) {
             if (admin.isTableEnabled(tableName)) {
                 admin.disableTable(tableName);
@@ -186,9 +185,9 @@ public class HBase {
         }
     }
 
-    public void putRow(String space, String name, Pair<String, Map<String, Map<String, String>>> row)
+    public void putRow(String name, Pair<String, Map<String, Map<String, String>>> row)
             throws IOException {
-        TableName tableName = TableName.valueOf(space == null ? name : space + ':' + name);    // qualified name
+        TableName tableName = TableName.valueOf(name);
         try (Table table = conn.getTable(tableName)) {
                 String key = row.getFirst();
                 Put put = new Put(Bytes.toBytes(key));
@@ -208,9 +207,8 @@ public class HBase {
         }
     }
 
-    public void putRows(String space, String name, Map<String, Map<String, Map<String, String>>> rows)
-            throws IOException {
-        TableName tableName = TableName.valueOf(space == null ? name : space + ':' + name);    // qualified name
+    public void putRows(String name, Map<String, Map<String, Map<String, String>>> rows) throws IOException {
+        TableName tableName = TableName.valueOf(name);
         try (Table table = conn.getTable(tableName)) {
             for (Map.Entry<String, Map<String, Map<String, String>>> rowEntry : rows.entrySet()) {
                 String row = rowEntry.getKey();
@@ -241,15 +239,15 @@ public class HBase {
         }
     }
 
-    public void deleteRow(String space, String name, String key) throws IOException {
-        TableName tableName = TableName.valueOf(space == null ? name : space + ':' + name);    // qualified name
+    public void deleteRow(String name, String key) throws IOException {
+        TableName tableName = TableName.valueOf(name);
         try (Table table = conn.getTable(tableName)) {
             table.delete(new Delete(Bytes.toBytes(key)));
         }
     }
 
-    public Map<String, Map<String, Map<String, String>>> scanTable(String space, String name) throws IOException {
-        TableName tableName = TableName.valueOf(space == null ? name : space + ':' + name);    // qualified name
+    public Map<String, Map<String, Map<String, String>>> scanTable(String name) throws IOException {
+        TableName tableName = TableName.valueOf(name);
         if (! admin.tableExists(tableName)) {
             return null;
         }
@@ -275,8 +273,8 @@ public class HBase {
         return tableData;
     }
 
-    public boolean isTableEmpty(String space, String name) throws IOException {
-        TableName tableName = TableName.valueOf(space == null ? name : space + ':' + name);    // qualified name
+    public boolean isTableEmpty(String name) throws IOException {
+        TableName tableName = TableName.valueOf(name);
         if (!admin.tableExists(tableName)) {
             return false;
         }
@@ -290,8 +288,8 @@ public class HBase {
         }
     }
 
-    public long countTableRows(String space, String name) throws IOException {
-        TableName tableName = TableName.valueOf(space == null ? name : space + ':' + name);    // qualified name
+    public long countTableRows(String name) throws IOException {
+        TableName tableName = TableName.valueOf(name);
         if (!admin.tableExists(tableName)) {
             return 0;
         }
@@ -496,120 +494,5 @@ public class HBase {
         int rc = ToolRunner.run(conf, new ExportSnapshot(), opts.toArray(new String[0]));
         LOG.info("exported rc({})", rc);
         return rc;
-    }
-
-    /**
-     * Convert triple of a fruit row to a pair
-     * @param triple <row_number, name_value, price_value>
-     * @return a Pair - (row_string, {"cf": {"name": name_string, "price": price_string}})
-     */
-    public static Pair<String, Map<String, Map<String, String>>> fruit(Triple<Integer, String, Float> triple) {
-        Map<String, Map<String, String>> families = new HashMap<>();
-        Map<String, String> family = new TreeMap<>();
-        family.put("name", triple.getSecond());
-        family.put("price", String.valueOf(triple.getThird()));
-        families.put("cf", family);
-        return new Pair<>(String.valueOf(triple.getFirst()), families);
-    }
-
-    /**
-     * Convert a triple array to map
-     * @return a Map - {row_string: {"cf": {"name": name_string, "price": price_string}}}
-     */
-    public static Map<String, Map<String, Map<String, String>>> fruits() {
-        final Triple<Integer, String, Float>[] triples = new Triple[] {
-                new Triple<>(101, "🍉", (float) 800.0),
-                new Triple<>(102, "🍓", (float) 150.0),
-                new Triple<>(103, "🍎", (float) 120.0),
-                new Triple<>(104, "🍋", (float) 200.0),
-                new Triple<>(105, "🍊", (float) 115.0),
-                new Triple<>(106, "🍌", (float) 110.0)
-        };
-        Map<String, Map<String, Map<String, String>>> rows = new HashMap<>();
-        for (Triple<Integer, String, Float> triple : triples) {
-            Pair<String, Map<String, Map<String, String>>> pair = fruit(triple);
-            rows.put(pair.getFirst(), pair.getSecond());
-        }
-        LOG.debug("fruits: {}", rows);
-        return rows;
-    }
-
-    private static void run(String op, String host, String table) throws IOException {
-        // use resources/hbase-site.xml as host is null
-        HBase db = host == null ? new HBase(): new HBase(host, 2181, "/hbase");
-        String space = "manga";
-        String name = "fruit";
-        if (table == null) {
-            System.out.println(db.listNameSpaces());
-            System.out.println(db.listTables("manga"));
-        } else {
-            if (table.contains(":")) {
-                String[] ss = table.split(":");
-                space = ss[0];
-                name = ss[1];
-            } else {
-                space = null;
-                name = table;
-            }
-        }
-        switch (op) {
-            case "put":
-                if ("manga".equals(space) && "fruit".equals(name)) {
-                    db.putRows(space, name, fruits());
-                    System.out.println(name + " put");
-                } else {
-                    System.out.println("Can only put to \"manga:fruit\"");
-                }
-                return;
-            case "add":
-                if ("manga".equals(space) && "fruit".equals(name)) {
-                    db.putRow(space, name, fruit(new Triple<>(107, "🍐", (float) 115)));
-                    System.out.println(name + " add");
-                } else {
-                    System.out.println("Can only add to \"manga:fruit\"");
-                }
-                return;
-            case "delete":
-                if ("manga".equals(space) && "fruit".equals(name)) {
-                    db.deleteRow(space, name, "107");
-                    System.out.println(name + " deleted");
-                } else {
-                    System.out.println("Can only delete from \"manga:fruit\"");
-                }
-                return;
-            case "count":
-                System.out.println(String.format("%s has %d rows", name, db.countTableRows(space, name)));
-                return;
-            case "scan":
-                if ("manga".equals(space) && "fruit".equals(name)) {
-                    System.out.println(db.scanTable(space, name));
-                    System.out.println(name + " scanned");
-                } else {
-                    System.out.println("Can only scan \"manga:fruit\"");
-                }
-                return;
-            case "isEmpty":
-                System.out.println(name + (db.isTableEmpty(space, name) ? " is empty" : " is not empty"));
-                return;
-            case "truncate":
-                db.truncateTable(space, name);
-                System.out.println(name + " truncated");
-                return;
-            default:
-                System.out.println("Unknown op: " + op);
-        }
-        db.close();
-    }
-
-    public static void main(String[] args) throws IOException {
-        if (args.length > 2) {
-            run(args[0], args[1], args[2]);
-        } else if (args.length > 1) {
-            run(args[0], args[1], null);
-        } else if (args.length > 0) {
-            run(args[0], null, null);
-        } else {
-            System.out.println("Usage: HBase put|add|delete|count|scan|isEmpty|truncate host[,host2,...] table");
-        }
     }
 }

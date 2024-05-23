@@ -64,13 +64,13 @@ public class ReplicateClt {
     static private WAL.Entry[] createEntries() {
         WALKeyImpl key = new WALKeyImpl(Bytes.toBytes("encode_region_name"), TableName.valueOf("manga:fruit"),
                 42, System.currentTimeMillis(), HConstants.DEFAULT_CLUSTER_ID);
-        WALEdit edit = createEdit(HBase.fruits());
+        WALEdit edit = createEdit(Fruit.fruits());
 
         WALKeyImpl key2 = new WALKeyImpl(Bytes.toBytes("encode_region_name"), TableName.valueOf("manga:fruit"),
                 43, System.currentTimeMillis(), HConstants.DEFAULT_CLUSTER_ID);
         Map<String, Map<String, Map<String, String>>> map = new HashMap<>();
         Pair<String, Map<String, Map<String, String>>> p =
-                HBase.fruit(new Triple<>(107, "🍐", (float) 115));
+                Fruit.fruit(new Triple<>(107, "🍐", (float) 115));
         map.put(p.getFirst(), p.getSecond());
         WALEdit edit2 = createEdit(map);
 
