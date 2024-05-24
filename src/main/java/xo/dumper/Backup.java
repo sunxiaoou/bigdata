@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
@@ -17,28 +18,35 @@ class SnapshotThread implements Runnable {
     private static final Logger LOG = LoggerFactory.getLogger(SnapshotThread.class);
 
     private final int threadCount;
+    private final RuleState ruleState;
     private final BlockingQueue<String> snapshotQueue;
     private final BlockingQueue<String> exportQueue;
     private final AtomicBoolean stopFlag;
     private final Consumer<Boolean> stopFn;
 
     public SnapshotThread(int threadCount,
+                          RuleState ruleState,
                           BlockingQueue<String> snapshotQueue,
                           BlockingQueue<String> exportQueue,
                           AtomicBoolean stopFlag,
                           Consumer<Boolean> stopFn) {
         this.threadCount = threadCount;
+        this.ruleState = ruleState;
         this.snapshotQueue = snapshotQueue;
         this.exportQueue = exportQueue;
         this.stopFlag = stopFlag;
         this.stopFn = stopFn;
     }
 
-    private String snapshot(String table) throws InterruptedException {
+    private String snapshot(String table) throws InterruptedException, RuleException {
         SimpleDateFormat sdf = new SimpleDateFormat("yyMMdd");
         String dateStr = sdf.format(new Date());
         String snapshot = table + "_" + dateStr;
+        ruleState.addRunningTable(table);
         Thread.sleep(100);
+        if ("table2".equals(table)) {
+            throw new RuleException(String.format("snapshot %s failed", table), 1000);
+        }
         LOG.info("Generated snapshot: " + snapshot);
         return snapshot;
     }
@@ -58,8 +66,13 @@ class SnapshotThread implements Runnable {
                     }
                     break;
                 }
-                String snapshot = snapshot(table);
-                exportQueue.put(snapshot);
+                try {
+                    String snapshot = snapshot(table);
+                    exportQueue.put(snapshot);
+                } catch (RuleException e) {
+                    ruleState.addDoneTable(table, false);
+                    LOG.error(e.getMessage());
+                }
             }
         } catch (Exception e) {
             if (!stopFlag.get()) {
@@ -75,17 +88,20 @@ class SnapshotThread implements Runnable {
 class ExportThread implements Runnable {
     private static final Logger LOG = LoggerFactory.getLogger(ExportThread.class);
 
+    private final RuleState ruleState;
     private final BlockingQueue<String> exportQueue;
     private final BlockingQueue<String> restoreQueue;
     private final AtomicBoolean stopFlag;
     private final Consumer<Boolean> stopFn;
     private final CountDownLatch countDownLatch;
 
-    public ExportThread(BlockingQueue<String> exportQueue,
+    public ExportThread(RuleState ruleState,
+                        BlockingQueue<String> exportQueue,
                         BlockingQueue<String> restoreQueue,
                         AtomicBoolean stopFlag,
                         Consumer<Boolean> stopFn,
                         CountDownLatch countDownLatch) {
+        this.ruleState = ruleState;
         this.exportQueue = exportQueue;
         this.restoreQueue = restoreQueue;
         this.stopFlag = stopFlag;
@@ -93,9 +109,12 @@ class ExportThread implements Runnable {
         this.countDownLatch = countDownLatch;
     }
 
-    private void export(String snapshot) throws InterruptedException {
+    private void export(String table, String snapshot) throws RuleException, InterruptedException {
         Thread.sleep(2000);
-        LOG.info("Export snapshot: " + snapshot);
+        if ("table3".equals(table)) {
+            throw new RuleException(String.format("export %s failed", table), 1000);
+        }
+        LOG.info("Exported snapshot: " + snapshot);
     }
 
     private boolean checkStopFlag() {
@@ -111,8 +130,14 @@ class ExportThread implements Runnable {
                 if ("".equals(snapshot)) {
                     break;
                 }
-                export(snapshot);
-                restoreQueue.put(snapshot);
+                String table = snapshot.substring(0, snapshot.length() - 7);
+                try {
+                    export(table, snapshot);
+                    restoreQueue.put(snapshot);
+                } catch (RuleException e) {
+                    ruleState.addDoneTable(table, false);
+                    LOG.error(e.getMessage());
+                }
             }
         } catch (Exception e) {
             if (!stopFlag.get()) {
@@ -130,6 +155,7 @@ class ExportThreadManager {
     private static final Logger LOG = LoggerFactory.getLogger(ExportThreadManager.class);
 
     private final int threadCount;
+    private final RuleState ruleState;
     private final BlockingQueue<String> exportQueue;
     private final BlockingQueue<String> restoreQueue;
     private final AtomicBoolean stopFlag;
@@ -138,11 +164,13 @@ class ExportThreadManager {
     private final ExecutorService pool;
 
     public ExportThreadManager(int threadCount,
+                               RuleState ruleState,
                                BlockingQueue<String> exportQueue,
                                BlockingQueue<String> restoreQueue,
                                AtomicBoolean stopFlag,
                                Consumer<Boolean> stopFn) {
         this.threadCount = threadCount;
+        this.ruleState = ruleState;
         this.exportQueue = exportQueue;
         this.restoreQueue = restoreQueue;
         this.stopFlag = stopFlag;
@@ -167,7 +195,7 @@ class ExportThreadManager {
 
     public void start() {
         for (int i = 0; i < threadCount; i ++) {
-            pool.execute(new ExportThread(exportQueue, restoreQueue, stopFlag, stopFn, countDownLatch));
+            pool.execute(new ExportThread(ruleState, exportQueue, restoreQueue, stopFlag, stopFn, countDownLatch));
         }
     }
 
@@ -191,20 +219,26 @@ class ExportThreadManager {
 class RestoreThread implements Runnable {
     private static final Logger LOG = LoggerFactory.getLogger(RestoreThread.class);
 
+    private final RuleState ruleState;
     private final BlockingQueue<String> restoreQueue;
     private final AtomicBoolean stopFlag;
     private final Consumer<Boolean> stopFn;
 
-    public RestoreThread(BlockingQueue<String> restoreQueue,
+    public RestoreThread(RuleState ruleState,
+                         BlockingQueue<String> restoreQueue,
                          AtomicBoolean stopFlag,
                          Consumer<Boolean> stopFn) {
+        this.ruleState = ruleState;
         this.restoreQueue = restoreQueue;
         this.stopFlag = stopFlag;
         this.stopFn = stopFn;
     }
 
-    private void restore(String snapshot) throws InterruptedException {
+    private void restore(String table, String snapshot) throws RuleException, InterruptedException {
         Thread.sleep(100);
+        if ("table5".equals(table)) {
+            throw new RuleException(String.format("restore %s failed", table), 1000);
+        }
         LOG.info("restore snapshot: " + snapshot);
     }
 
@@ -220,7 +254,14 @@ class RestoreThread implements Runnable {
                 if ("".equals(snapshot)) {
                     break;
                 }
-                restore(snapshot);
+                String table = snapshot.substring(0, snapshot.length() - 7);
+                try {
+                    restore(table, snapshot);
+                    ruleState.addDoneTable(table, true);
+                } catch (RuleException e) {
+                    ruleState.addDoneTable(table, false);
+                    LOG.error(e.getMessage());
+                }
             }
         } catch (Exception e) {
             if (!stopFlag.get()) {
@@ -237,6 +278,7 @@ public class Backup {
     private static final Logger LOG = LoggerFactory.getLogger(Backup.class);
 
     private final int threadCount = 3;
+    private volatile RuleState ruleState = new RuleState(null, "HBase", 0);
     private final BlockingQueue<String> snapshotQueue = new LinkedBlockingQueue<>();
     private final BlockingQueue<String> exportQueue = new LinkedBlockingQueue<>();
     private final BlockingQueue<String> restoreQueue = new LinkedBlockingQueue<>();
@@ -261,6 +303,7 @@ public class Backup {
     }
 
     public void start() throws InterruptedException {
+        ruleState.setStart(LocalDateTime.now());
         List<String> tables = Arrays.asList("table1", "table2", "table3", "table4", "table5", "table6", "table7");
         for (String table: tables) {
             try {
@@ -270,12 +313,14 @@ public class Backup {
             }
         }
         try {
-            SnapshotThread snapshot = new SnapshotThread(threadCount, snapshotQueue, exportQueue, stopFlag, this::stop);
+            SnapshotThread snapshot = new SnapshotThread(threadCount, ruleState, snapshotQueue, exportQueue, stopFlag,
+                    this::stop);
             this.generator = new Thread(snapshot, "generator");
             generator.start();
-            this.exportMgr = new ExportThreadManager(threadCount, exportQueue, restoreQueue, stopFlag, this::stop);
+            this.exportMgr = new ExportThreadManager(threadCount, ruleState, exportQueue, restoreQueue, stopFlag,
+                    this::stop);
             exportMgr.start();
-            RestoreThread restoreThread = new RestoreThread(restoreQueue, stopFlag, this::stop);
+            RestoreThread restoreThread = new RestoreThread(ruleState, restoreQueue, stopFlag, this::stop);
             this.restorer = new Thread(restoreThread, "restorer");
             restorer.start();
         } finally {
@@ -288,6 +333,9 @@ public class Backup {
             if (restorer != null) {
                 restorer.join();
             }
+            ruleState.setEnd(LocalDateTime.now());
+            ruleState.setStage1(ruleState.getErrTables().isEmpty() ? 0: 1);
+            LOG.info(ruleState.toString());
         }
     }
 
