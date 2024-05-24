@@ -80,9 +80,6 @@ class ExportThread implements Runnable {
     private final AtomicBoolean stopFlag;
     private final Consumer<Boolean> stopFn;
     private final CountDownLatch countDownLatch;
-//    private final JobStatusCounter statusCounter;
-//    private final RuleState ruleState;
-//    private final RuleConfig ruleConfig;
 
     public ExportThread(BlockingQueue<String> exportQueue,
                         BlockingQueue<String> restoreQueue,
@@ -135,9 +132,6 @@ class ExportThreadManager {
     private final int threadCount;
     private final BlockingQueue<String> exportQueue;
     private final BlockingQueue<String> restoreQueue;
-//    private final RuleConfig ruleConfig;
-//    private final RuleState ruleState;
-//    private final JobStatusCounter jobStatusCounter;
     private final AtomicBoolean stopFlag;
     private final Consumer<Boolean> stopFn;
     private final CountDownLatch countDownLatch;
@@ -151,8 +145,6 @@ class ExportThreadManager {
         this.threadCount = threadCount;
         this.exportQueue = exportQueue;
         this.restoreQueue = restoreQueue;
-//        this.ruleState = ruleState;
-//        this.jobStatusCounter = jobStatusCounter;
         this.stopFlag = stopFlag;
         this.countDownLatch = new CountDownLatch(threadCount);
 
@@ -202,9 +194,6 @@ class RestoreThread implements Runnable {
     private final BlockingQueue<String> restoreQueue;
     private final AtomicBoolean stopFlag;
     private final Consumer<Boolean> stopFn;
-//    private final JobStatusCounter statusCounter;
-//    private final RuleState ruleState;
-//    private final RuleConfig ruleConfig;
 
     public RestoreThread(BlockingQueue<String> restoreQueue,
                          AtomicBoolean stopFlag,
@@ -252,7 +241,9 @@ public class Backup {
     private final BlockingQueue<String> exportQueue = new LinkedBlockingQueue<>();
     private final BlockingQueue<String> restoreQueue = new LinkedBlockingQueue<>();
     private AtomicBoolean stopFlag = new AtomicBoolean(false);
-    private volatile ExportThreadManager exportMgr;
+    private Thread generator = null;
+    private Thread restorer = null;
+    private volatile ExportThreadManager exportMgr = null;
 
 
     public Backup() {
@@ -265,9 +256,11 @@ public class Backup {
             exportMgr.stop();
         }
         exportMgr = null;
+        generator = null;
+        restorer = null;
     }
 
-    public void start() {
+    public void start() throws InterruptedException {
         List<String> tables = Arrays.asList("table1", "table2", "table3", "table4", "table5", "table6", "table7");
         for (String table: tables) {
             try {
@@ -276,17 +269,29 @@ public class Backup {
                 e.printStackTrace();
             }
         }
-
-        this.exportMgr = new ExportThreadManager(threadCount, exportQueue, restoreQueue, stopFlag, this::stop);
-        exportMgr.start();
-        SnapshotThread snapshot = new SnapshotThread(threadCount, snapshotQueue, exportQueue, stopFlag, this::stop);
-        new Thread(snapshot, "generator").start();
-        RestoreThread restoreThread = new RestoreThread(restoreQueue, stopFlag, this::stop);
-        new Thread(restoreThread, "restorer").start();
-        exportMgr.waitForComplete();
+        try {
+            SnapshotThread snapshot = new SnapshotThread(threadCount, snapshotQueue, exportQueue, stopFlag, this::stop);
+            this.generator = new Thread(snapshot, "generator");
+            generator.start();
+            this.exportMgr = new ExportThreadManager(threadCount, exportQueue, restoreQueue, stopFlag, this::stop);
+            exportMgr.start();
+            RestoreThread restoreThread = new RestoreThread(restoreQueue, stopFlag, this::stop);
+            this.restorer = new Thread(restoreThread, "restorer");
+            restorer.start();
+        } finally {
+            if (generator != null) {
+                generator.join();
+            }
+            if (exportMgr != null) {
+                exportMgr.waitForComplete();
+            }
+            if (restorer != null) {
+                restorer.join();
+            }
+        }
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws InterruptedException {
         Backup backup = new Backup();
         backup.start();
         backup.stop(true);
