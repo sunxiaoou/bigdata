@@ -19,6 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.regex.Pattern;
 
@@ -29,6 +30,29 @@ public class HBase {
     private final Configuration conf;
     private final Connection conn;
     private final Admin admin;
+
+    static public Pair<String, String> tableName(String fullName) {
+        String namespace, name;
+        if (fullName.contains(":")) {
+            String[] s = fullName.split(":");
+            namespace = s[0];
+            name = s[1];
+        } else {
+            namespace = "default";
+            name = fullName;
+        }
+        return new Pair<>(namespace, name);
+    }
+
+    static public String tableSnapshot(String table) {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyMMdd");
+        String dateStr = sdf.format(new Date());
+        return table.replaceFirst(":", "-") + "_" + dateStr;
+    }
+
+    static public String snapshotTable(String snapshot) {
+        return snapshot.substring(0, snapshot.length() - 7).replaceFirst("-", ":");
+    }
 
     static public Path getPath(String pathStr) {
         return new Path(pathStr);

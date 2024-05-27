@@ -1,5 +1,6 @@
 package xo.hbase;
 
+import org.apache.hadoop.hbase.util.Pair;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -30,6 +31,17 @@ public class TableTest {
     @AfterClass
     public static void tearDownAfterClass() throws IOException {
         db.close();
+    }
+
+    @Test
+    public void table() throws IOException {
+//        String table = "manga:fruit";
+        String table = "peTable";
+        Pair<String, String> pair = HBase.tableName(table);
+        LOG.info("table: {} {}", pair.getFirst(), pair.getSecond());
+        String snapshot = HBase.tableSnapshot(table);
+        LOG.info("snapshot({})", snapshot);
+        LOG.info("table({})", HBase.snapshotTable(snapshot));
     }
 
     @Test
