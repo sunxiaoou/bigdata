@@ -30,8 +30,10 @@ public class BackupSvrHandler extends ChannelInboundHandlerAdapter {
     private static final Logger LOG = LoggerFactory.getLogger(BackupSvrHandler.class);
 
     private final boolean receiveCmdFromHelper;
+    private final Backup backup;
 
     public BackupSvrHandler(boolean receiveCmdFromHelper) {
+        this.backup = new Backup();
         this.receiveCmdFromHelper = receiveCmdFromHelper;
         LOG.info("receiveCmdFromHelper({})", receiveCmdFromHelper);
     }
@@ -151,8 +153,10 @@ public class BackupSvrHandler extends ChannelInboundHandlerAdapter {
         LOG.info("RuleManager.deleteRule({}})", body);
     }
 
-    private void startRule(String body) {
+    private void startRule(String body) throws InterruptedException {
         LOG.info("startRule({}})", body);
+        backup.resetRuleState();
+        backup.start();
     }
 
     private void resumeRule(String body) {
@@ -161,6 +165,7 @@ public class BackupSvrHandler extends ChannelInboundHandlerAdapter {
 
     private void stopRule(String body) {
         LOG.info("RuleManager.stopRule({}})", body);
+        backup.stop(true);
     }
 
     private List<String> checkRule(String body) {

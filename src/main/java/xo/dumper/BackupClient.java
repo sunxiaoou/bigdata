@@ -55,7 +55,7 @@ public class BackupClient {
 
     public static void main(String[] args) throws Exception {
         if (args.length < 4) {
-            System.out.println(
+            System.err.println(
                     String.format("Usage: %s host port command jsonFile", BackupClient.class.getSimpleName()));
             System.exit(1);
         }
