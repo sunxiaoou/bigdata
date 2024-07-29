@@ -13,18 +13,21 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.snapshot.ExportSnapshot;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.Triple;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ToolRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.regex.Pattern;
 
 // refer to org.apache.hadoop.hbase.client sample in https://hbase.apache.org/apidocs/index.html
-public class HBase {
+public class HBase implements AutoCloseable {
     private static final Logger LOG = LoggerFactory.getLogger(HBase.class);
 
     private final Configuration conf;
@@ -115,6 +118,24 @@ public class HBase {
         return conf.get(name);
     }
 
+    public Triple<String, Integer, String> getZookeeper() throws UnknownHostException {
+        String hosts = conf.get("hbase.zookeeper.quorum");
+        String[] hostArray = hosts.split(",");
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < hostArray.length; i ++) {
+            InetAddress inetAddress = InetAddress.getByName(hostArray[i]);
+            String ip = inetAddress.getHostAddress();
+            sb.append(ip);
+            if (i < hostArray.length - 1) {
+                sb.append(",");
+            }
+        }
+        String ips = sb.toString();
+        int port = Integer.parseInt(conf.get("hbase.zookeeper.property.clientPort"));
+        String zNode = conf.get("zookeeper.znode.parent");
+        return new Triple<>(ips, port, zNode);
+    }
+
     public String getUser() throws IOException {
         String root = conf.get("hbase.rootdir");
         if (root == null) {
@@ -142,7 +163,11 @@ public class HBase {
         List<String> tables = new ArrayList<>();
         List<TableDescriptor> descriptors = admin.listTableDescriptorsByNamespace(Bytes.toBytes(space));
         for (TableDescriptor descriptor: descriptors) {
-            tables.add(descriptor.getTableName().getNameAsString());
+            String name = descriptor.getTableName().getNameAsString();
+            if (name.contains(":")) {
+                name = name.split(":")[1];
+            }
+            tables.add(name);
         }
         return tables;
     }

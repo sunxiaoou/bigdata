@@ -22,7 +22,7 @@ import java.util.Map;
 public class RuleTest {
     private static final Logger LOG = LoggerFactory.getLogger(RuleTest.class);
 
-    private static final String json = "target/classes/hb_u_c1.json";
+    private static final String json = "target/classes/hb_ht_h2.json";
     private static JsonRule rule = null;
 
     @BeforeClass
