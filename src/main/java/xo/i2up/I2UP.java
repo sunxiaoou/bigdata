@@ -34,7 +34,7 @@ public class I2UP {
                     this.headers.put("ACCESS-KEY", br.readLine().trim());
                 }
             }
-        } else if (user != null && pwd != null) {
+        } else if (pwd != null) {
             String url = String.format("%s/auth/token", this.baseUrl);
             JSONObject payload = new JSONObject();
             payload.put("username", user);
@@ -121,10 +121,47 @@ public class I2UP {
     }
 
     public static void main(String[] args) {
+        String ip = null, user = "admin", pwd = null, caPath = "ca.crt", akPath = null;
+        int port = 58086;
+        boolean versionFlag = false;
+
+        // Parse command-line arguments
+        for (int i = 0; i < args.length; i++) {
+            switch (args[i]) {
+                case "--ip":
+                    ip = args[++i];
+                    break;
+                case "--user":
+                    user = args[++i];
+                    break;
+                case "--pwd":
+                    pwd = args[++i];
+                    break;
+                case "--version":
+                    versionFlag = true;
+                    break;
+                case "--ca":
+                    caPath = args[++i];
+                    break;
+                case "--ak":
+                    akPath = args[++i];
+                    break;
+                default:
+                    System.err.println("Unknown argument: " + args[i]);
+            }
+        }
+
+        if (ip == null || (pwd == null && akPath == null)) {
+            System.err.println("Usage: java I2UP --ip <ip> [--port <port>] [--user <username> --pwd <password>]" +
+                    " [--ca <ca_path>] [--ak <access_key_path>] [--version]");
+            return;
+        }
+
         try {
-            I2UP client = new I2UP("centos1", 58086, "ca.crt", "access.key", null,
-                    null);
-            System.out.println("Version: " + client.getVersion());
+            I2UP client = new I2UP(ip, port, caPath, akPath, user, pwd);
+            if (versionFlag) {
+                System.out.println("Version: " + client.getVersion());
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
