@@ -1,6 +1,9 @@
 package xo.hbase;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.mapreduce.replication.VerifyReplication;
 import org.apache.hadoop.mapreduce.Job;
@@ -18,6 +21,12 @@ public class MyVerifyReplication extends VerifyReplication {
      */
     @Override
     public Job createSubmittableJob(Configuration conf, String[] args) throws IOException {
+        String root = conf.get("hbase.rootdir");
+        assert root != null;
+        FileSystem fs = FileSystem.get(conf);
+        FileStatus fileStatus = fs.getFileStatus(new Path(root));
+        HBase.changeUser(fileStatus.getOwner());
+
         Job job = super.createSubmittableJob(conf, args);
         if (job != null) {
             String peer = job.getConfiguration().get("verifyrep.peerQuorumAddress");
