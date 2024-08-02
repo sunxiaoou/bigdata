@@ -18,6 +18,7 @@ public class MyVerifyReplication extends VerifyReplication {
      * another clusterB via Kafka, suppose both RPCServer and clusterB are on serverB, however the
      * peer cluster key of RPCServer looks like "serverB:2181:/myPeer", it should be changed to
      * "serverB:2181:/hbase" to point to clusterB so we can do verification
+     * Alternatively, use peerQuorumAddress instead of peerID
      */
     @Override
     public Job createSubmittableJob(Configuration conf, String[] args) throws IOException {
@@ -28,11 +29,12 @@ public class MyVerifyReplication extends VerifyReplication {
         HBase.changeUser(fileStatus.getOwner());
 
         Job job = super.createSubmittableJob(conf, args);
-        if (job != null) {
-            String peer = job.getConfiguration().get("verifyrep.peerQuorumAddress");
-            String[] s = peer.split(":");
-            job.getConfiguration().set("verifyrep.peerQuorumAddress", String.format("%s:%s:/hbase", s[0], s[1]));
-        }
+//        if (job != null) {
+//            String peer = job.getConfiguration().get("verifyrep.peerQuorumAddress");
+//            String[] s = peer.split(":");
+//            job.getConfiguration().set("verifyrep.peerQuorumAddress", String.format("%s:%s:/hbase", s[0], s[1]));
+//        }
+        assert job != null;
         return job;
     }
 
@@ -46,10 +48,10 @@ public class MyVerifyReplication extends VerifyReplication {
         return conf;
     }
 
-    // java -cp ".:lib/*:target/bigdata-1.0-SNAPSHOT.jar" xo.hbase.MyVerifyReplication hadoop3 hb_h2 manga:fruit
+    // java -cp ".:lib/*:target/bigdata-1.0-SNAPSHOT.jar" xo.hbase.MyVerifyReplication hadoop2:2181:/hbase manga:fruit
     public static void main(String[] args) throws Exception {
         if (args.length < 3) {
-            System.out.println("Usage: MyVerifyReplication confPath peerName tableName");
+            System.out.println("Usage: MyVerifyReplication confPath peerQuorumAddress tableName");
             System.exit(1);
         }
         String[] newArgs = new String[args.length - 1];
