@@ -24,8 +24,7 @@ public class I2UP {
         this.caPath = caPath;
         this.baseUrl = String.format("https://%s:%d/api", host2Ip(ip), port);
         this.headers.put("Content-Type", "application/json");
-
-        this.httpClient = getHttpClient();
+        this.httpClient = this.caPath != null ? getHttpClient() : getHttpClient2();
 
         if (akPath != null) {
             try (InputStream is = getClass().getClassLoader().getResourceAsStream(akPath)) {
@@ -76,6 +75,47 @@ public class I2UP {
                 .build();
     }
 
+    private OkHttpClient getHttpClient2() throws Exception {
+        final TrustManager[] trustAllCerts = new TrustManager[] {
+            new X509TrustManager() {
+                @Override
+                public void checkClientTrusted(java.security.cert.X509Certificate[] chain, String authType) {
+                }
+
+                @Override
+                public void checkServerTrusted(java.security.cert.X509Certificate[] chain, String authType) {
+                }
+
+                @Override
+                public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+                    return new java.security.cert.X509Certificate[]{};
+                }
+            }
+        };
+
+        X509TrustManager x509TrustManager = new X509TrustManager() {
+            @Override
+            public void checkClientTrusted(java.security.cert.X509Certificate[] chain, String authType) {
+            }
+
+            @Override
+            public void checkServerTrusted(java.security.cert.X509Certificate[] chain, String authType) {
+            }
+
+            @Override
+            public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+                return new java.security.cert.X509Certificate[]{};
+            }
+        };
+
+        SSLContext sslContext = SSLContext.getInstance("TLS");
+        sslContext.init(null, trustAllCerts, null);
+
+        return new OkHttpClient.Builder()
+                .sslSocketFactory(sslContext.getSocketFactory(), x509TrustManager)
+                .build();
+    }
+
     private String post(String urlString, String payload) throws Exception {
         RequestBody body = RequestBody.create(MediaType.get("application/json; charset=utf-8"), payload);
         Request.Builder requestBuilder = new Request.Builder()
@@ -121,7 +161,7 @@ public class I2UP {
     }
 
     public static void main(String[] args) {
-        String ip = null, user = "admin", pwd = null, caPath = "ca.crt", akPath = null;
+        String ip = null, user = "admin", pwd = null, caPath = null, akPath = null;
         int port = 58086;
         boolean versionFlag = false;
 
