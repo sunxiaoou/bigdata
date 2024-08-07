@@ -24,7 +24,7 @@ public class ReplicateSvr {
     private static final Logger LOG = LoggerFactory.getLogger(ReplicateSvr.class);
 
     private final ReplicateConfig config;
-    private final BlockingQueue<Pair<List<AdminProtos.WALEntry>, CellScanner>> queue;
+    private final BlockingQueue<Pair<List<AdminProtos.WALEntry>, List<Cell>>> queue;
     private final NettyRpcServer rpcServer;
     private final AbstractSink sink;
     private final int port;
@@ -86,27 +86,45 @@ public class ReplicateSvr {
         LOG.info("peer({}) is ready on HBase({})", peer, key);
     }
 
+    private void processCache(List<Pair<List<AdminProtos.WALEntry>, List<Cell>>> cache) {
+        Iterator<Pair<List<AdminProtos.WALEntry>, List<Cell>>> iterator = cache.iterator();
+        while (iterator.hasNext()) {
+            Pair<List<AdminProtos.WALEntry>, List<Cell>> pair = iterator.next();
+            List<AdminProtos.WALEntry> entryProtos = pair.getFirst();
+            List<Cell> cells = pair.getSecond();
+            CellScanner scanner = CellUtil.createCellScanner(cells.iterator());
+            if (sink != null) {
+                if (!sink.put(entryProtos, scanner)) {
+                    break;
+                }
+                iterator.remove();
+            } else {
+                for (WAL.Entry entry : AbstractSink.merge(entryProtos, scanner)) {
+                    LOG.info(entry.toString());
+                }
+            }
+        }
+
+        long count = cache.size();
+        if (count > 0) {
+            LOG.warn("There are {} item(s) in cache", count);
+        }
+    }
+
     private void run() throws InterruptedException, IOException, KeeperException {
         register();
         addPeer();
         rpcServer.start();
         LOG.info("RPC server started on: " + rpcServer.getListenerAddress());
 
-        // Keep the server running
+        List<Pair<List<AdminProtos.WALEntry>, List<Cell>>> cache = new ArrayList<>();
         try {
             while (true) {
-                Pair<List<AdminProtos.WALEntry>, CellScanner> pair = queue.take();
-                List<AdminProtos.WALEntry> entryProtos = pair.getFirst();
-                CellScanner cellScanner = pair.getSecond();
-                if (sink != null) {
-                    sink.put(entryProtos, cellScanner);
-                } else {
-                    for (WAL.Entry entry : AbstractSink.merge(entryProtos, cellScanner)) {
-                        LOG.info(entry.toString());
-                    }
-                }
+                cache.add(queue.take());
+                processCache(cache);
             }
         } catch (InterruptedException e) {
+            LOG.error("Failed to take entries from queue - {}", e.getMessage());
             e.printStackTrace();
         } finally {
             rpcServer.stop();

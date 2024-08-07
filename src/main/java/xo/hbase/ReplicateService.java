@@ -1,5 +1,6 @@
 package xo.hbase;
 
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
@@ -16,6 +17,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 
@@ -23,9 +25,9 @@ import java.util.concurrent.BlockingQueue;
 public class ReplicateService implements AdminProtos.AdminService.BlockingInterface {
     private static final Logger LOG = LoggerFactory.getLogger(ReplicateService.class);
 
-    private final BlockingQueue<Pair<List<AdminProtos.WALEntry>, CellScanner>> queue;
+    private final BlockingQueue<Pair<List<AdminProtos.WALEntry>, List<Cell>>> queue;
 
-    public ReplicateService(BlockingQueue<Pair<List<AdminProtos.WALEntry>, CellScanner>> queue) {
+    public ReplicateService(BlockingQueue<Pair<List<AdminProtos.WALEntry>, List<Cell>>> queue) {
         this.queue = queue;
     }
 
@@ -34,7 +36,8 @@ public class ReplicateService implements AdminProtos.AdminService.BlockingInterf
         return newBlockingStub(client, addr, User.getCurrent());
     }
 
-    public static AdminProtos.AdminService.BlockingInterface newBlockingStub(RpcClient client, InetSocketAddress addr, User user)
+    public static AdminProtos.AdminService.BlockingInterface
+    newBlockingStub(RpcClient client, InetSocketAddress addr, User user)
             throws IOException {
         BlockingRpcChannel channel = client.createBlockingRpcChannel(
                 ServerName.valueOf(addr.getHostName(), addr.getPort(), System.currentTimeMillis()),
@@ -87,8 +90,23 @@ public class ReplicateService implements AdminProtos.AdminService.BlockingInterf
         return null;
     }
 
+    private List<Cell> getCells(CellScanner scanner) {
+        List<Cell> cells = new ArrayList<>();
+        while (true) {
+            try {
+                if (!scanner.advance()) break;
+            } catch (IOException e) {
+                LOG.error("Failed to get cells - {}", e.getMessage());
+                e.printStackTrace();
+            }
+            cells.add(scanner.current());
+        }
+        return cells;
+    }
+
     @Override
-    public AdminProtos.ReplicateWALEntryResponse replicateWALEntry(RpcController controller, AdminProtos.ReplicateWALEntryRequest request) {
+    public AdminProtos.ReplicateWALEntryResponse
+    replicateWALEntry(RpcController controller, AdminProtos.ReplicateWALEntryRequest request) {
         String clusterId = request.getReplicationClusterId();
         LOG.info(clusterId);
         String sourceBaseNamespaceDirPath = request.getSourceBaseNamespaceDirPath();
@@ -100,8 +118,10 @@ public class ReplicateService implements AdminProtos.AdminService.BlockingInterf
         CellScanner cellScanner = ((HBaseRpcController) controller).cellScanner();
         ((HBaseRpcController) controller).setCellScanner(null);
         try {
-            queue.put(new Pair<>(entryProtos, cellScanner));
+            queue.put(new Pair<>(entryProtos, getCells(cellScanner)));
+            LOG.info("got {} entryProto(s)", entryProtos.size());
         } catch (InterruptedException e) {
+            LOG.error("Failed to put entries to queue - {}", e.getMessage());
             e.printStackTrace();
         }
         AdminProtos.ReplicateWALEntryResponse.Builder responseBuilder = AdminProtos.ReplicateWALEntryResponse.newBuilder();

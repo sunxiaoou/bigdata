@@ -7,11 +7,14 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSink;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.wal.WAL;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.List;
 
 public class HBaseSink extends AbstractSink {
+    private static final Logger LOG = LoggerFactory.getLogger(HBaseSink.class);
     private final ReplicationSink sink;
 
     public HBaseSink(ReplicateConfig config) throws IOException {
@@ -25,16 +28,19 @@ public class HBaseSink extends AbstractSink {
     }
 
     @Override
-    public void put(List<AdminProtos.WALEntry> entries, CellScanner cellScanner) {
+    public boolean put(List<AdminProtos.WALEntry> entryProtos, CellScanner cellScanner) {
         try {
-            sink.replicateEntries(entries,
-                    cellScanner,
-                    null,
-                    null,
-                    null);
+            sink.replicateEntries(entryProtos,
+                cellScanner,
+                null,
+                null,
+                null);
+            LOG.info("put {} entryProto(s) already", entryProtos.size());
         } catch (IOException e) {
-            e.printStackTrace();
+            LOG.error("Failed to replicate entryProto(s) - {}", e.getMessage());
+            return false;
         }
+        return true;
     }
 
     @Override

@@ -17,7 +17,6 @@ import java.util.List;
 import java.util.UUID;
 
 public abstract class AbstractSink {
-    private static final Logger LOG = LoggerFactory.getLogger(AbstractSink.class);
     protected final ReplicateConfig config;
 
     public AbstractSink(ReplicateConfig config) {
@@ -69,7 +68,7 @@ public abstract class AbstractSink {
      * @param entryProtos
      * @param cellScanner
      */
-    public abstract void put(List<AdminProtos.WALEntry> entryProtos, CellScanner cellScanner);
+    public abstract boolean put(List<AdminProtos.WALEntry> entryProtos, CellScanner cellScanner);
 
     public abstract void flush();
 

@@ -45,7 +45,7 @@ public class KafkaSink extends AbstractSink {
     }
 
     @Override
-    public void put(List<AdminProtos.WALEntry> entryProtos, CellScanner cellScanner) {
+    public boolean put(List<AdminProtos.WALEntry> entryProtos, CellScanner cellScanner) {
         List<WAL.Entry> entries = merge(entryProtos, cellScanner);
         for (WAL.Entry entry: entries) {
             String tableName = tableMap.get(entry.getKey().getTableName().getNameAsString());
@@ -66,6 +66,7 @@ public class KafkaSink extends AbstractSink {
                 e.printStackTrace();
             }
         }
+        return true;
     }
 
     @Override

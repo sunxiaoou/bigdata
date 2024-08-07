@@ -13,20 +13,22 @@ import org.slf4j.LoggerFactory;
 @Sharable
 public class CltHandler extends SimpleChannelInboundHandler<ByteBuf> {
     private static final Logger LOG = LoggerFactory.getLogger(CltHandler.class);
+    private long startTime;
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
+        startTime = System.currentTimeMillis();
         ctx.writeAndFlush(Unpooled.copiedBuffer("Netty rocks!", CharsetUtil.UTF_8));
     }
 
     @Override
     public void channelRead0(ChannelHandlerContext ctx, ByteBuf in) {
-        LOG.info("Client received: {}", in.toString(CharsetUtil.UTF_8));
+        LOG.info("Client received \"{}\" after {}ms", in.toString(CharsetUtil.UTF_8),
+                System.currentTimeMillis() - startTime);
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx,
-                                Throwable cause) {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         cause.printStackTrace();
         ctx.close();
     }
