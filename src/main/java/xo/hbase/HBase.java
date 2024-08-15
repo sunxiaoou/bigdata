@@ -114,6 +114,10 @@ public class HBase implements AutoCloseable {
         conn.close();
     }
 
+    public boolean isClosed() {
+        return conn.isClosed();
+    }
+
     public String getProperty(String name) {
         return conf.get(name);
     }

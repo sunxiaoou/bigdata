@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 
 public class ZkConnect {
@@ -30,14 +31,30 @@ public class ZkConnect {
     }
 
     public ZkConnect(String host, int port) throws IOException, InterruptedException {
-        this(String.format("%s:%d", host, port));
+        final CountDownLatch connSignal = new CountDownLatch(1);
+        zk = new ZooKeeper(String.format("%s:%d", host, port), 90000, event -> {
+            KeeperState state = event.getState();
+            if (state == KeeperState.SyncConnected) {
+                connSignal.countDown();
+                LOG.info("Connected to zk({}:{})", host, port);
+            } else if (state == KeeperState.Disconnected) {
+                LOG.info("Disconnected from zk({}:{})", host, port);
+            } else if (state == KeeperState.Expired) {
+                LOG.info("Expired from zk({}:{})", host, port);
+            }
+        });
+        boolean connected = connSignal.await(10, TimeUnit.SECONDS);
+        if (!connected) {
+            throw new IOException("Unable to connect to ZooKeeper within the timeout period.");
+        }
     }
 
     public void close() throws InterruptedException {
         zk.close();
     }
 
-    public String createNode(String path, byte[] data, boolean isEphemeral) throws KeeperException, InterruptedException {
+    public String createNode(String path, byte[] data, boolean isEphemeral)
+            throws KeeperException, InterruptedException {
         String[] parts = path.replaceAll("^/", "").split("/");
         int len = parts.length;
         String partialPath = "";
@@ -54,8 +71,13 @@ public class ZkConnect {
                     }
                 }
                 node = zk.create(partialPath, bytes, ZooDefs.Ids.OPEN_ACL_UNSAFE, mode);
-                LOG.info("Created node: " + partialPath);
+//                LOG.info("Created node: " + partialPath);
             }
+        }
+        if (node != null) {
+            LOG.info("Created node ({})", partialPath);
+        } else {
+            LOG.info("Node ({}) has been existed", path);
         }
         return node;
     }
