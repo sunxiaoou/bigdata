@@ -1,6 +1,7 @@
 package xo.hdfs;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -11,14 +12,16 @@ import java.io.*;
 
 public class Hdfs {
     private static final Logger LOG = LoggerFactory.getLogger(Hdfs.class);
-    FileSystem fileSystem;
 
-    public Hdfs(Configuration conf) throws IOException {
-        fileSystem = FileSystem.get(conf);
-    }
+    private final Configuration conf;
+    private final FileSystem fileSystem;
+
+//    public Hdfs(Configuration conf) throws IOException {
+//        fileSystem = FileSystem.get(conf);
+//    }
 
     public Hdfs(String host, int port) throws IOException {
-        Configuration conf = new Configuration();
+        conf = new Configuration();
         conf.set("fs.defaultFS", String.format("hdfs://%s:%d", host, port));
         fileSystem = FileSystem.get(conf);
     }
@@ -26,13 +29,44 @@ public class Hdfs {
     public Hdfs(String host, int port, String user) throws IOException {
         UserGroupInformation ugi = UserGroupInformation.createRemoteUser(user);
         UserGroupInformation.setLoginUser(ugi);
-        Configuration conf = new Configuration();
+        conf = new Configuration();
         conf.set("fs.defaultFS", String.format("hdfs://%s:%d", host, port));
+        fileSystem = FileSystem.get(conf);
+    }
+
+    public Hdfs(String pathStr, String user) throws IOException {
+        changeUser(user);
+        conf = new Configuration();
+        conf.addResource(pathStr + "/core-site.xml");
+        conf.addResource(pathStr + "/hdfs-site.xml");
+        conf.addResource(pathStr + "/mapred-site.xml");
+        conf.addResource(pathStr + "/yarn-site.xml");
         fileSystem = FileSystem.get(conf);
     }
 
     public void close() throws IOException {
         fileSystem.close();
+    }
+
+    public Configuration getConf() {
+        return conf;
+    }
+
+    public String getUser() throws IOException {
+        FileSystem fs = FileSystem.get(conf);
+        String root = conf.get("fs.defaultFS");
+        assert root != null;
+        FileStatus fileStatus = fs.getFileStatus(new Path(root + conf.get("dfs.user.home.dir.prefix")));
+        return fileStatus.getOwner();
+    }
+
+    public void changeUser(String user) throws IOException {
+        String current = UserGroupInformation.getCurrentUser().getShortUserName();
+        if (!current.equals(user)) {
+            UserGroupInformation ugi = UserGroupInformation.createRemoteUser(user);
+            UserGroupInformation.setLoginUser(ugi);
+            LOG.info("changed user from {} to {}", current, user);
+        }
     }
 
     public void createFile(String filePath, String text) throws IOException {
@@ -67,7 +101,8 @@ public class Hdfs {
     }
 
     public static void main(String[] args) throws IOException {
-        Hdfs fs = new Hdfs("192.168.55.250", 8020, "sunxo");
+//        Hdfs fs = new Hdfs("192.168.55.250", 8020, "sunxo");
+        Hdfs fs = new Hdfs("ubuntu", "sunxo");
 //        fs.createFile("/tmp/output/hello.txt", "Hello Hadoop");
 //        LOG.info(fs.readFile("/tmp/output/hello.txt"));
 //        LOG.debug("delete - {}", fs.delFile("/tmp/output/myfile.txt"));

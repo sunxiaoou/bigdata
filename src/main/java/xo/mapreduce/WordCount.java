@@ -26,7 +26,7 @@ import java.nio.file.Paths;
 public class WordCount extends Configured implements Tool {
     private static final Logger LOG = LoggerFactory.getLogger(WordCount.class);
 
-    static class MyMapper extends Mapper<LongWritable, Text, Text, LongWritable> {
+    static public class MyMapper extends Mapper<LongWritable, Text, Text, LongWritable> {
         @Override
         protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
             Text text = new Text();
@@ -56,7 +56,8 @@ public class WordCount extends Configured implements Tool {
     @Override
     public int run(String[] args) throws Exception {
         Job job = Job.getInstance(super.getConf(), "WordCount");
-        job.setJarByClass(WordCount.class);
+//        job.setJarByClass(WordCount.class);
+        job.setJar(System.getProperty("user.dir") + "/target/bigdata-1.0-SNAPSHOT.jar"); // for intellij idea
 
         job.setInputFormatClass(TextInputFormat.class);
         TextInputFormat.addInputPath(job, new Path(args[0]));
@@ -97,43 +98,19 @@ public class WordCount extends Configured implements Tool {
         return new String(fileBytes);
     }
 
-    private static int mr() throws Exception {
-        String base = System.getProperty("user.dir");
-        String input = base + "/mapreduce/wordcount/input";
-        String output = base + "/mapreduce/wordcount/output";
-        delDir(output);
-        Configuration conf = new Configuration();
-        int rc = ToolRunner.run(conf, new WordCount(), new String[]{"file:///" + input, "file:///" + output});
-        LOG.info(readFile(output + "/part-r-00000"));
-        return rc;
-    }
-
-    // Cannot run in IDE
-    // $ mvn clean package
-    // $ hadoop jar target/bigdata-1.0-SNAPSHOT.jar xo.mapreduce.WordCount
     private static int mr(String host, int port, String user) throws Exception {
         String input = "wordcount/input";
         String output = "wordcount/output";
 
-        UserGroupInformation ugi = UserGroupInformation.createRemoteUser(user);
-        UserGroupInformation.setLoginUser(ugi);
-        Configuration conf = new Configuration();
-        conf.set("fs.defaultFS", String.format("hdfs://%s:%d", host, port));
-        conf.set("yarn.resourcemanager.hostname", host);
-
-        Hdfs hdfs = new Hdfs(conf);
+        Hdfs hdfs = new Hdfs(host, user);
         hdfs.delFile(output);
-        int rc = ToolRunner.run(conf, new WordCount(), new String[]{input, output});
+        int rc = ToolRunner.run(hdfs.getConf(), new WordCount(), new String[]{input, output});
         LOG.info(hdfs.readFile(output + "/part-r-00000"));
         hdfs.close();
         return rc;
     }
 
     public static void main(String[] args) throws Exception {
-        if (args.length > 0) {
-            LOG.info(String.valueOf(mr()));
-        } else {
-            LOG.info(String.valueOf(mr("ubuntu", 8020, "sunxo")));
-        }
+        LOG.info(String.valueOf(mr("ubuntu", 8020, "sunxo")));
     }
 }
