@@ -26,7 +26,7 @@ import java.nio.file.Paths;
 public class WordCount extends Configured implements Tool {
     private static final Logger LOG = LoggerFactory.getLogger(WordCount.class);
 
-    static public class MyMapper extends Mapper<LongWritable, Text, Text, LongWritable> {
+    static class MyMapper extends Mapper<LongWritable, Text, Text, LongWritable> {
         @Override
         protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
             Text text = new Text();

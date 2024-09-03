@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 
 
 public class CronTab {
+    private static final Logger LOG = LoggerFactory.getLogger(CronTab.class);
     private final Scheduler scheduler;
 
     public static class MyJob implements Job {
@@ -18,25 +19,25 @@ public class CronTab {
         }
     }
 
-    public CronTab(String cronExpr, Class<? extends Job> jobClass) throws SchedulerException {
+    public CronTab(String cronExpr, String jobName, Class<? extends Job> jobClass) throws SchedulerException {
         scheduler = StdSchedulerFactory.getDefaultScheduler();
         JobDetail job = JobBuilder.newJob(jobClass)
-                .withIdentity(jobClass.getSimpleName(), "group1")
+                .withIdentity(jobName, "group1")
                 .build();
+        String quartzExpr = toQuartz(cronExpr);
+        LOG.info("Convert expression({}) to ({})", cronExpr, quartzExpr);
         CronTrigger trigger = TriggerBuilder.newTrigger()
-                .withIdentity("cronTrigger", "group1")
-                .withSchedule(CronScheduleBuilder.cronSchedule(toQuartz(cronExpr)))
+                .withIdentity(jobName + "Trigger", "group1")
+                .withSchedule(CronScheduleBuilder.cronSchedule(quartzExpr))
                 .build();
         scheduler.scheduleJob(job, trigger);
     }
 
-    private static String toQuartz(String cronExpr) {
-        String[] fields = cronExpr.trim().split("\\s+");
-        if (fields.length == 6) {       // a quartz expression
-            return cronExpr;
+    private static String dowToQuartz(String dayOfMonth, String dayOfWeek) {
+        if ("*".equals(dayOfMonth) && "*".equals(dayOfWeek)) {
+            return "?";
         }
-        assert fields.length == 5;
-        String dayOfWeek = fields[4]
+        return dayOfWeek
                 .replaceAll("7", "0")       // Sunday
                 .replaceAll("6", "7")       // Saturday
                 .replaceAll("5", "6")       // Friday
@@ -45,7 +46,23 @@ public class CronTab {
                 .replaceAll("2", "3")       // Tuesday
                 .replaceAll("1", "2")       // Monday
                 .replaceAll("0", "1");      // Sunday
-        return String.join(" ", "0", fields[0], fields[1], fields[2], fields[3], dayOfWeek);
+    }
+
+    private static String toQuartz(String cronExpr) {
+        // quartz - second, minute, hour, dayOfMonth, month, dayOfWeek
+        String[] fields = cronExpr.trim().split("\\s+");
+        if (fields.length == 6) {       // a quartz expression
+            return cronExpr;
+        }
+        // cronTab - minute, hour, dayOfMonth, month, dayOfWeek
+        if (fields.length == 5) {
+            return String.join(" ", "0", fields[0], fields[1], fields[2], fields[3],
+                    dowToQuartz(fields[2], fields[4]));
+        }
+        // offline - second, minute, hour, dayOfWeek, dayOfMonth, month, year
+        assert fields.length == 7;
+        return String.join(" ", fields[0], fields[1], fields[2], fields[4], fields[5],
+                dowToQuartz(fields[4], fields[3]));
     }
 
     public void start() throws SchedulerException {
@@ -59,7 +76,7 @@ public class CronTab {
     public static void main(String[] args) {
         try {
 //            CronTab cronTab = new CronTab("0 * * ? * MON-FRI", MyJob.class);
-            CronTab cronTab = new CronTab("* * ? * 1-5", MyJob.class);
+            CronTab cronTab = new CronTab("* * ? * 1-5", "myJob", MyJob.class);
             cronTab.start();
             Thread.sleep(120000);
             cronTab.stop();
