@@ -32,12 +32,20 @@
         <name>hbase.zookeeper.quorum</name>
         <value>hadoop3,hadoop4,hadoop5</value>
     </property>
-    <!--property>
-        <name>hbase.zookeeper.property.clientPort</name>
-        <value>2181</value>
+    <property>
+        <name>hbase.replication.cluster.id</name>
+        <value>hb_triple</value>
     </property>
     <property>
-        <name>zookeeper.znode.parent</name>
-        <value>/hbase</value>
+        <name>hbase.replication.bulkload.enabled</name>
+        <value>true</value>
+    </property>
+    <!--property>
+        <name>phoenix.schema.isNamespaceMappingEnabled</name>
+        <value>true</value>
+    </property>
+    <property>
+        <name>phoenix.schema.mapSystemTablesToNamespace</name>
+        <value>true</value>
     </property-->
 </configuration>

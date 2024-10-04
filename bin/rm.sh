@@ -3,6 +3,7 @@
 if [ $# -lt 2 ]
 then
     echo "Usage: `basename $0` path host [host ...]"
+    echo "       `basename $0` \"logs/*\" hadoop3 hadoop4 hadoop5"
     exit 1
 fi
 
@@ -24,4 +25,5 @@ for host in $hosts
 do
     echo "ssh $user@$host rm -rf $parent/$child" 
     ssh $user@$host rm -rf $parent/$child
+    ssh $user@$host mkdir -p $parent
 done

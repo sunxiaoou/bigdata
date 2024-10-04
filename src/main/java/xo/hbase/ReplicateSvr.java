@@ -93,16 +93,10 @@ public class ReplicateSvr {
             List<AdminProtos.WALEntry> entryProtos = pair.getFirst();
             List<Cell> cells = pair.getSecond();
             CellScanner scanner = CellUtil.createCellScanner(cells.iterator());
-            if (sink != null) {
-                if (!sink.put(entryProtos, scanner)) {
-                    break;
-                }
-                iterator.remove();
-            } else {
-                for (WAL.Entry entry : AbstractSink.merge(entryProtos, scanner)) {
-                    LOG.info(entry.toString());
-                }
+            if (!sink.put(entryProtos, scanner)) {
+                break;
             }
+            iterator.remove();
         }
 
         long count = cache.size();
@@ -120,8 +114,18 @@ public class ReplicateSvr {
         List<Pair<List<AdminProtos.WALEntry>, List<Cell>>> cache = new ArrayList<>();
         try {
             while (true) {
-                cache.add(queue.take());
-                processCache(cache);
+                Pair<List<AdminProtos.WALEntry>, List<Cell>> pair = queue.take();
+                if (null != sink) {
+                    cache.add(pair);
+                    processCache(cache);
+                } else {    // just log entries
+                    List<AdminProtos.WALEntry> entryProtos = pair.getFirst();
+                    List<Cell> cells = pair.getSecond();
+                    CellScanner scanner = CellUtil.createCellScanner(cells.iterator());
+                    for (WAL.Entry entry: AbstractSink.merge(entryProtos, scanner)) {
+                        LOG.info(entry.toString());
+                    }
+                }
             }
         } catch (InterruptedException e) {
             LOG.error("Failed to take entries from queue - {}", e.getMessage());

@@ -15,8 +15,10 @@ public class SnapshotTest {
 //    private static final String srcHost = "ubuntu";
     private static final String srcHost = "hadoop3";
     private static final String srcPath = System.getProperty("user.dir") + "/src/main/resources/" + srcHost;
+//    private static final String tgtHost = "centos2";
     private static final String tgtHost = "hadoop2";
-    private static final String table = "manga:fruit";
+//    private static final String table = "manga:fruit";
+    private static final String table = "bulk";
     private static HBase srcDb;
     private static HBase tgtDb;
     private static String snapshot;
@@ -76,10 +78,10 @@ public class SnapshotTest {
     }
 
     @Test
-    public void cloneSnapshotsTgt() throws IOException {
-        for (String snapshot: tgtDb.listSnapshots()) {
-            tgtDb.cloneSnapshot(snapshot, snapshot.replaceFirst("-", ":"));
-        }
+    public void cloneSnapshotTgt() throws IOException {
+        int idx = snapshot.lastIndexOf('_');
+        String s = idx == -1 ? snapshot: snapshot.substring(0, idx);
+        tgtDb.cloneSnapshot(snapshot, s.replaceFirst("-", ":"));
     }
 
     @Test

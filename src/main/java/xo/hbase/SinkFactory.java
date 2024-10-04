@@ -15,6 +15,8 @@ public class SinkFactory {
             try {
                 String clsName = config.getReplicateServerSink();
                 LOG.info("Sink is " + clsName);
+                if (clsName == null)
+                    return null;
                 Class.forName(clsName);
                 cls = cLoader.loadClass(clsName);
                 return (AbstractSink) cls.getDeclaredConstructor(ReplicateConfig.class).newInstance(config);
