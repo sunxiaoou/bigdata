@@ -10,6 +10,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.Triple;
 import org.apache.hbase.thirdparty.com.google.protobuf.BlockingRpcChannel;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.slf4j.Logger;
@@ -18,6 +19,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 
@@ -25,9 +27,9 @@ import java.util.concurrent.BlockingQueue;
 public class ReplicateService implements AdminProtos.AdminService.BlockingInterface {
     private static final Logger LOG = LoggerFactory.getLogger(ReplicateService.class);
 
-    private final BlockingQueue<Pair<List<AdminProtos.WALEntry>, List<Cell>>> queue;
+    private final BlockingQueue<Triple<List<String>, List<AdminProtos.WALEntry>, List<Cell>>> queue;
 
-    public ReplicateService(BlockingQueue<Pair<List<AdminProtos.WALEntry>, List<Cell>>> queue) {
+    public ReplicateService(BlockingQueue<Triple<List<String>, List<AdminProtos.WALEntry>, List<Cell>>> queue) {
         this.queue = queue;
     }
 
@@ -108,17 +110,18 @@ public class ReplicateService implements AdminProtos.AdminService.BlockingInterf
     public AdminProtos.ReplicateWALEntryResponse
     replicateWALEntry(RpcController controller, AdminProtos.ReplicateWALEntryRequest request) {
         String clusterId = request.getReplicationClusterId();
-        LOG.info(clusterId);
+//        LOG.info(clusterId);
         String sourceBaseNamespaceDirPath = request.getSourceBaseNamespaceDirPath();
-        LOG.info(sourceBaseNamespaceDirPath);
+//        LOG.info(sourceBaseNamespaceDirPath);
         String sourceHFileArchiveDirPath = request.getSourceHFileArchiveDirPath();
-        LOG.info(sourceHFileArchiveDirPath);
+//        LOG.info(sourceHFileArchiveDirPath);
         List<AdminProtos.WALEntry> entryProtos = request.getEntryList();
-        LOG.debug("entryProtos: " + entryProtos.toString());
+//        LOG.debug("entryProtos: " + entryProtos.toString());
         CellScanner cellScanner = ((HBaseRpcController) controller).cellScanner();
         ((HBaseRpcController) controller).setCellScanner(null);
         try {
-            queue.put(new Pair<>(entryProtos, getCells(cellScanner)));
+            queue.put(new Triple<>(Arrays.asList(clusterId, sourceBaseNamespaceDirPath, sourceHFileArchiveDirPath),
+                    entryProtos, getCells(cellScanner)));
             LOG.info("got {} entryProto(s)", entryProtos.size());
         } catch (InterruptedException e) {
             LOG.error("Failed to put entries to queue - {}", e.getMessage());

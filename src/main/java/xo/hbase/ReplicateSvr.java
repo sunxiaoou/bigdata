@@ -4,8 +4,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.ipc.*;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
-import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.util.Triple;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
 import org.apache.zookeeper.*;
@@ -24,7 +23,7 @@ public class ReplicateSvr {
     private static final Logger LOG = LoggerFactory.getLogger(ReplicateSvr.class);
 
     private final ReplicateConfig config;
-    private final BlockingQueue<Pair<List<AdminProtos.WALEntry>, List<Cell>>> queue;
+    private final BlockingQueue<Triple<List<String>, List<AdminProtos.WALEntry>, List<Cell>>> queue;
     private final NettyRpcServer rpcServer;
     private final AbstractSink sink;
     private final int port;
@@ -86,14 +85,15 @@ public class ReplicateSvr {
         LOG.info("peer({}) is ready on HBase({})", peer, key);
     }
 
-    private void processCache(List<Pair<List<AdminProtos.WALEntry>, List<Cell>>> cache) {
-        Iterator<Pair<List<AdminProtos.WALEntry>, List<Cell>>> iterator = cache.iterator();
+    private void processCache(List<Triple<List<String>, List<AdminProtos.WALEntry>, List<Cell>>> cache) {
+        Iterator<Triple<List<String>, List<AdminProtos.WALEntry>, List<Cell>>> iterator = cache.iterator();
         while (iterator.hasNext()) {
-            Pair<List<AdminProtos.WALEntry>, List<Cell>> pair = iterator.next();
-            List<AdminProtos.WALEntry> entryProtos = pair.getFirst();
-            List<Cell> cells = pair.getSecond();
+            Triple<List<String>, List<AdminProtos.WALEntry>, List<Cell>> triple = iterator.next();
+            List<String> list = triple.getFirst();
+            List<AdminProtos.WALEntry> entryProtos = triple.getSecond();
+            List<Cell> cells = triple.getThird();
             CellScanner scanner = CellUtil.createCellScanner(cells.iterator());
-            if (!sink.put(entryProtos, scanner)) {
+            if (!sink.put(entryProtos, scanner, list.get(0), list.get(1), list.get(2))) {
                 break;
             }
             iterator.remove();
@@ -111,21 +111,12 @@ public class ReplicateSvr {
         rpcServer.start();
         LOG.info("RPC server started on: " + rpcServer.getListenerAddress());
 
-        List<Pair<List<AdminProtos.WALEntry>, List<Cell>>> cache = new ArrayList<>();
+        List<Triple<List<String>, List<AdminProtos.WALEntry>, List<Cell>>> cache = new ArrayList<>();
         try {
             while (true) {
-                Pair<List<AdminProtos.WALEntry>, List<Cell>> pair = queue.take();
-                if (null != sink) {
-                    cache.add(pair);
-                    processCache(cache);
-                } else {    // just log entries
-                    List<AdminProtos.WALEntry> entryProtos = pair.getFirst();
-                    List<Cell> cells = pair.getSecond();
-                    CellScanner scanner = CellUtil.createCellScanner(cells.iterator());
-                    for (WAL.Entry entry: AbstractSink.merge(entryProtos, scanner)) {
-                        LOG.info(entry.toString());
-                    }
-                }
+                Triple<List<String>, List<AdminProtos.WALEntry>, List<Cell>> triple = queue.take();
+                cache.add(triple);
+                processCache(cache);
             }
         } catch (InterruptedException e) {
             LOG.error("Failed to take entries from queue - {}", e.getMessage());

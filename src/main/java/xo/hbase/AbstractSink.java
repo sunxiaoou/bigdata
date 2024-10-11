@@ -68,7 +68,11 @@ public abstract class AbstractSink {
      * @param entryProtos
      * @param cellScanner
      */
-    public abstract boolean put(List<AdminProtos.WALEntry> entryProtos, CellScanner cellScanner);
+    public abstract boolean put(List<AdminProtos.WALEntry> entryProtos,
+                                CellScanner cellScanner,
+                                String replicationClusterId,
+                                String sourceBaseNamespaceDirPath,
+                                String sourceHFileArchiveDirPath);
 
     public abstract void flush();
 

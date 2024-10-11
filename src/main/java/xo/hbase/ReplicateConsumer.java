@@ -82,7 +82,8 @@ public class ReplicateConsumer {
                             HConstants.CLUSTER_ID_DEFAULT,
                             null,
                             null);
-            sink.put(pair.getFirst().getEntryList(), pair.getSecond());
+            sink.put(pair.getFirst().getEntryList(), pair.getSecond(),
+                    null, null, null);
         } catch (IOException e) {
             e.printStackTrace();
         }

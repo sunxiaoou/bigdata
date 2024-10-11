@@ -45,7 +45,11 @@ public class KafkaSink extends AbstractSink {
     }
 
     @Override
-    public boolean put(List<AdminProtos.WALEntry> entryProtos, CellScanner cellScanner) {
+    public boolean put(List<AdminProtos.WALEntry> entryProtos,
+            CellScanner cellScanner,
+            String replicationClusterId,
+            String sourceBaseNamespaceDirPath,
+            String sourceHFileArchiveDirPath) {
         List<WAL.Entry> entries = merge(entryProtos, cellScanner);
         for (WAL.Entry entry: entries) {
             String tableName = tableMap.get(entry.getKey().getTableName().getNameAsString());

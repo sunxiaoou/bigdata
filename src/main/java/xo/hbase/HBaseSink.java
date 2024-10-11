@@ -21,6 +21,8 @@ public class HBaseSink extends AbstractSink {
         super(config);
         Configuration conf = HBaseConfiguration.create();
         // resources/hbase-site.xml can be used alternatively
+        conf.set("fs.defaultFS",
+                String.format("hdfs://%s:%s", config.getTargetHadoopHdfsHost(), config.getTargetHadoopHdfsPort()));
         conf.set(HConstants.ZOOKEEPER_QUORUM, config.getTargetHBaseQuorumHost());
         conf.set(HConstants.ZOOKEEPER_CLIENT_PORT, String.valueOf(config.getTargetHBaseQuorumPort()));
         conf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, config.getTargetHBaseQuorumPath());
@@ -28,13 +30,17 @@ public class HBaseSink extends AbstractSink {
     }
 
     @Override
-    public boolean put(List<AdminProtos.WALEntry> entryProtos, CellScanner cellScanner) {
+    public boolean put(List<AdminProtos.WALEntry> entryProtos,
+                       CellScanner cellScanner,
+                       String replicationClusterId,
+                       String sourceBaseNamespaceDirPath,
+                       String sourceHFileArchiveDirPath) {
         try {
             sink.replicateEntries(entryProtos,
-                cellScanner,
-                null,
-                null,
-                null);
+                    cellScanner,
+                    replicationClusterId,
+                    sourceBaseNamespaceDirPath,
+                    sourceHFileArchiveDirPath);
             LOG.info("put {} entryProto(s) already", entryProtos.size());
         } catch (IOException e) {
             LOG.error("Failed to replicate entryProto(s) - {}", e.getMessage());

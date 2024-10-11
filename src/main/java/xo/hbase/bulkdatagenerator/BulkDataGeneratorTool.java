@@ -90,19 +90,18 @@ public class BulkDataGeneratorTool {
   private final Map<String, String> tableOptions = new HashMap<>();
 
   public static void main(String[] args) throws Exception {
-    String pathStr = "hadoop3";
+    String pathStr = args[0];
     Configuration conf = HBaseConfiguration.create();
     conf.addResource(pathStr + "/core-site.xml");
     conf.addResource(pathStr + "/hdfs-site.xml");
     conf.addResource(pathStr + "/mapred-site.xml");
     conf.addResource(pathStr + "/yarn-site.xml");
     conf.addResource(pathStr + "/hbase-site.xml");
-    conf.set("hbase.zookeeper.quorum", "hadoop3,hadoop4,hadoop5");
-    conf.set("hbase.zookeeper.property.clientPort", "" + 2181);
-    conf.set("zookeeper.znode.parent", "/hbase");
     HBase.changeUser("sunxo");
     BulkDataGeneratorTool bulkDataGeneratorTool = new BulkDataGeneratorTool();
-    bulkDataGeneratorTool.run(conf, args);
+    String[] newArgs = new String[args.length - 1];
+    System.arraycopy(args, 1, newArgs, 0, args.length - 1);
+    bulkDataGeneratorTool.run(conf, newArgs);
   }
 
   public boolean run(Configuration conf, String[] args) throws IOException {
