@@ -33,11 +33,11 @@
         <value>ubuntu</value>
     </property>
     <property>
-        <name>hbase.zookeeper.property.clientPort</name>
-        <value>2181</value>
+        <name>hbase.replication.cluster.id</name>
+        <value>hb_u</value>
     </property>
     <property>
-        <name>zookeeper.znode.parent</name>
-        <value>/hbase</value>
+        <name>hbase.replication.bulkload.enabled</name>
+        <value>true</value>
     </property>
 </configuration>

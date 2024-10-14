@@ -1,7 +1,7 @@
 package xo.hbase;
 
 import org.apache.hadoop.hbase.CellScanner;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,16 +17,13 @@ public class DummySink extends AbstractSink {
     }
 
     @Override
-    public boolean put(List<AdminProtos.WALEntry> entryProtos,
-                       CellScanner cellScanner,
-                       String replicationClusterId,
-                       String sourceBaseNamespaceDirPath,
-                       String sourceHFileArchiveDirPath) {
-        for (WAL.Entry entry: AbstractSink.merge(entryProtos, cellScanner)) {
+    public boolean put(HBaseData hBaseData) {
+        LOG.info("replicationClusterId({})", hBaseData.getReplicationClusterId());
+        LOG.info("sourceBaseNamespaceDirPath({})", hBaseData.getSourceBaseNamespaceDirPath());
+        LOG.info("sourceHFileArchiveDirPath({})", hBaseData.getSourceHFileArchiveDirPath());
+        CellScanner cellScanner = CellUtil.createCellScanner(hBaseData.getCells().iterator());
+        for (WAL.Entry entry: AbstractSink.merge(hBaseData.getEntryProtos(), cellScanner)) {
             LOG.info(entry.toString());
-            LOG.info("replicationClusterId({})", replicationClusterId);
-            LOG.info("sourceBaseNamespaceDirPath({})", sourceBaseNamespaceDirPath);
-            LOG.info("sourceHFileArchiveDirPath({})", sourceHFileArchiveDirPath);
         }
         return true;
     }

@@ -1,5 +1,6 @@
 package xo.hbase;
 
+import org.apache.hadoop.hbase.Cell;
 import xo.fastjson.JsonUtil;
 import xo.protobuf.EntryProto;
 import xo.protobuf.ProtoBuf;
@@ -72,6 +73,20 @@ public class ReplicateConsumer {
         return entries;
     }
 
+    private List<Cell> getCells(CellScanner scanner) {
+        List<Cell> cells = new ArrayList<>();
+        while (true) {
+            try {
+                if (!scanner.advance()) break;
+            } catch (IOException e) {
+                LOG.error("Failed to get cells - {}", e.getMessage());
+                e.printStackTrace();
+            }
+            cells.add(scanner.current());
+        }
+        return cells;
+    }
+
     private void put(List<WAL.Entry> entries, HBaseSink sink) {
         try {
             WAL.Entry[] arr = new WAL.Entry[entries.size()];
@@ -82,8 +97,13 @@ public class ReplicateConsumer {
                             HConstants.CLUSTER_ID_DEFAULT,
                             null,
                             null);
-            sink.put(pair.getFirst().getEntryList(), pair.getSecond(),
-                    null, null, null);
+            AdminProtos.ReplicateWALEntryRequest request = pair.getFirst();
+            CellScanner cellScanner = pair.getSecond();
+            sink.put(new HBaseData(request.getReplicationClusterId(),
+                    request.getSourceBaseNamespaceDirPath(),
+                    request.getSourceHFileArchiveDirPath(),
+                    request.getEntryList(),
+                    getCells(cellScanner)));
         } catch (IOException e) {
             e.printStackTrace();
         }

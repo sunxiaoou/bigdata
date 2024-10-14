@@ -8,8 +8,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -63,16 +61,7 @@ public abstract class AbstractSink {
         return list;
     }
 
-    /**
-     * Put keys and edits as entry list to target sink
-     * @param entryProtos
-     * @param cellScanner
-     */
-    public abstract boolean put(List<AdminProtos.WALEntry> entryProtos,
-                                CellScanner cellScanner,
-                                String replicationClusterId,
-                                String sourceBaseNamespaceDirPath,
-                                String sourceHFileArchiveDirPath);
+    public abstract boolean put(HBaseData hBaseData);
 
     public abstract void flush();
 

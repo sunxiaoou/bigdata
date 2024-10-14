@@ -2,6 +2,7 @@ package xo.hbase;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSink;
@@ -30,17 +31,15 @@ public class HBaseSink extends AbstractSink {
     }
 
     @Override
-    public boolean put(List<AdminProtos.WALEntry> entryProtos,
-                       CellScanner cellScanner,
-                       String replicationClusterId,
-                       String sourceBaseNamespaceDirPath,
-                       String sourceHFileArchiveDirPath) {
+    public boolean put(HBaseData hBaseData) {
+        List<AdminProtos.WALEntry> entryProtos = hBaseData.getEntryProtos();
+        CellScanner cellScanner = CellUtil.createCellScanner(hBaseData.getCells().iterator());
         try {
             sink.replicateEntries(entryProtos,
                     cellScanner,
-                    replicationClusterId,
-                    sourceBaseNamespaceDirPath,
-                    sourceHFileArchiveDirPath);
+                    hBaseData.getReplicationClusterId(),
+                    hBaseData.getSourceBaseNamespaceDirPath(),
+                    hBaseData.getSourceHFileArchiveDirPath());
             LOG.info("put {} entryProto(s) already", entryProtos.size());
         } catch (IOException e) {
             LOG.error("Failed to replicate entryProto(s) - {}", e.getMessage());

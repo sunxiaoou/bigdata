@@ -1,5 +1,6 @@
 package xo.hbase;
 
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import xo.fastjson.JsonUtil;
 import xo.protobuf.ProtoBuf;
@@ -45,11 +46,9 @@ public class KafkaSink extends AbstractSink {
     }
 
     @Override
-    public boolean put(List<AdminProtos.WALEntry> entryProtos,
-            CellScanner cellScanner,
-            String replicationClusterId,
-            String sourceBaseNamespaceDirPath,
-            String sourceHFileArchiveDirPath) {
+    public boolean put(HBaseData hBaseData) {
+        List<AdminProtos.WALEntry> entryProtos = hBaseData.getEntryProtos();
+        CellScanner cellScanner = CellUtil.createCellScanner(hBaseData.getCells().iterator());
         List<WAL.Entry> entries = merge(entryProtos, cellScanner);
         for (WAL.Entry entry: entries) {
             String tableName = tableMap.get(entry.getKey().getTableName().getNameAsString());

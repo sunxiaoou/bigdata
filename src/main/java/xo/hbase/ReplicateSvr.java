@@ -4,7 +4,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.ipc.*;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
-import org.apache.hadoop.hbase.util.Triple;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
 import org.apache.zookeeper.*;
@@ -23,7 +22,7 @@ public class ReplicateSvr {
     private static final Logger LOG = LoggerFactory.getLogger(ReplicateSvr.class);
 
     private final ReplicateConfig config;
-    private final BlockingQueue<Triple<List<String>, List<AdminProtos.WALEntry>, List<Cell>>> queue;
+    private final BlockingQueue<HBaseData> queue;
     private final NettyRpcServer rpcServer;
     private final AbstractSink sink;
     private final int port;
@@ -85,15 +84,10 @@ public class ReplicateSvr {
         LOG.info("peer({}) is ready on HBase({})", peer, key);
     }
 
-    private void processCache(List<Triple<List<String>, List<AdminProtos.WALEntry>, List<Cell>>> cache) {
-        Iterator<Triple<List<String>, List<AdminProtos.WALEntry>, List<Cell>>> iterator = cache.iterator();
+    private void processCache(List<HBaseData> cache) {
+        Iterator<HBaseData> iterator = cache.iterator();
         while (iterator.hasNext()) {
-            Triple<List<String>, List<AdminProtos.WALEntry>, List<Cell>> triple = iterator.next();
-            List<String> list = triple.getFirst();
-            List<AdminProtos.WALEntry> entryProtos = triple.getSecond();
-            List<Cell> cells = triple.getThird();
-            CellScanner scanner = CellUtil.createCellScanner(cells.iterator());
-            if (!sink.put(entryProtos, scanner, list.get(0), list.get(1), list.get(2))) {
+            if (!sink.put(iterator.next())) {
                 break;
             }
             iterator.remove();
@@ -111,11 +105,11 @@ public class ReplicateSvr {
         rpcServer.start();
         LOG.info("RPC server started on: " + rpcServer.getListenerAddress());
 
-        List<Triple<List<String>, List<AdminProtos.WALEntry>, List<Cell>>> cache = new ArrayList<>();
+        List<HBaseData> cache = new ArrayList<>();
         try {
             while (true) {
-                Triple<List<String>, List<AdminProtos.WALEntry>, List<Cell>> triple = queue.take();
-                cache.add(triple);
+                HBaseData hBaseData = queue.take();
+                cache.add(hBaseData);
                 processCache(cache);
             }
         } catch (InterruptedException e) {
