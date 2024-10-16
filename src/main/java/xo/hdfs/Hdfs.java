@@ -102,7 +102,7 @@ public class Hdfs {
 
     public static void main(String[] args) throws IOException {
 //        Hdfs fs = new Hdfs("192.168.55.250", 8020, "sunxo");
-        Hdfs fs = new Hdfs("ubuntu", "sunxo");
+        Hdfs fs = new Hdfs("hb_u", "sunxo");
 //        fs.createFile("/tmp/output/hello.txt", "Hello Hadoop");
 //        LOG.info(fs.readFile("/tmp/output/hello.txt"));
 //        LOG.debug("delete - {}", fs.delFile("/tmp/output/myfile.txt"));

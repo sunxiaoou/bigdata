@@ -37,6 +37,7 @@ public class ReplicateConfig {
     private static final String TARGET_HADOOP_USER = "target.hadoop.user";
     private static final String TARGET_HADOOP_HDFS_HOST = "target.hadoop.hdfs.host";
     private static final String TARGET_HADOOP_HDFS_PORT = "target.hadoop.hdfs.port";
+    private static final String TARGET_HBASE_CONFPATH = "target.hbase.confPath";
     private static final String TARGET_HBASE_QUORUM_HOST = "target.hbase.quorum.host";
     private static final String TARGET_HBASE_QUORUM_PORT = "target.hbase.quorum.port";
     private static final String TARGET_HBASE_QUORUM_PATH = "target.hbase.quorum.path";
@@ -171,6 +172,10 @@ public class ReplicateConfig {
 
     public short getSinkFileNumber() {
         return Short.parseShort(properties.getProperty(SINK_FILE_NUMBER));
+    }
+
+    public String getTargetHBaseConfPath() {
+        return properties.getProperty(TARGET_HBASE_CONFPATH);
     }
 
     public String getTargetHBaseQuorumHost() {

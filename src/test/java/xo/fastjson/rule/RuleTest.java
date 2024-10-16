@@ -22,7 +22,7 @@ import java.util.Map;
 public class RuleTest {
     private static final Logger LOG = LoggerFactory.getLogger(RuleTest.class);
 
-    private static final String json = "target/classes/hb_ht_h2.json";
+    private static final String json = "src/main/resources/hb_ht_h2.json";
     private static JsonRule rule = null;
 
     @BeforeClass
@@ -91,6 +91,10 @@ public class RuleTest {
             int version = (int) db.get("version");
             LOG.info("user({}), pass({}), version({})", user, pass, version);
         }
+
+        JSONObject hdfs = ((JSONArray) db.get("set")).getJSONObject(0);
+        LOG.info("host({}), port({})", hdfs.get("ip"), hdfs.get("port"));
+
         JSONObject zookeeper = (JSONObject) db.get("zookeeper");
 //        Table<Integer, String, String> table = getZookeeperTable(zookeeper);
 //        showZookeeper(table);

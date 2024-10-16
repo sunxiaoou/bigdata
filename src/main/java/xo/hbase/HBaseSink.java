@@ -1,6 +1,8 @@
 package xo.hbase;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -11,6 +13,7 @@ import org.apache.hadoop.hbase.wal.WAL;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
@@ -22,11 +25,31 @@ public class HBaseSink extends AbstractSink {
         super(config);
         Configuration conf = HBaseConfiguration.create();
         // resources/hbase-site.xml can be used alternatively
-        conf.set("fs.defaultFS",
-                String.format("hdfs://%s:%s", config.getTargetHadoopHdfsHost(), config.getTargetHadoopHdfsPort()));
-        conf.set(HConstants.ZOOKEEPER_QUORUM, config.getTargetHBaseQuorumHost());
-        conf.set(HConstants.ZOOKEEPER_CLIENT_PORT, String.valueOf(config.getTargetHBaseQuorumPort()));
-        conf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, config.getTargetHBaseQuorumPath());
+        File confDir = new File(System.getProperty("user.dir"), config.getTargetHBaseConfPath());
+        if (confDir.exists() && confDir.isDirectory()) {
+            for (String confFile : FileUtil.list(confDir)) {
+                if (new File(confDir, confFile).isFile() && confFile.endsWith(".xml")) {
+                    conf.addResource(new Path(confDir.getPath(), confFile));
+                }
+                LOG.info("config sink with resource ({}/{})", confDir, confFile);
+            }
+        } else {
+            String fs = String.format("hdfs://%s:%d", config.getTargetHadoopHdfsHost(),
+                    config.getTargetHadoopHdfsPort());
+            String hbDir = fs + "/hbase";
+            conf.set("fs.defaultFS", fs);
+            String zHost = config.getTargetHBaseQuorumHost();
+            String zPort = String.valueOf(config.getTargetHBaseQuorumPort());
+            String zNode = config.getTargetHBaseQuorumPath();
+            String repConf = System.getProperty("user.dir");
+            conf.set(HConstants.HBASE_DIR, hbDir);
+            conf.set(HConstants.ZOOKEEPER_QUORUM, zHost);
+            conf.set(HConstants.ZOOKEEPER_CLIENT_PORT, zPort);
+            conf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, zNode);
+            conf.set(HConstants.REPLICATION_CONF_DIR, repConf);     // can omitted
+            LOG.info("config sink with hbDir({}) zk({}:{}:{}) repConf({})", hbDir, zHost, zPort, zNode,
+                    repConf);
+        }
         this.sink = new ReplicationSink(conf, null);
     }
 
