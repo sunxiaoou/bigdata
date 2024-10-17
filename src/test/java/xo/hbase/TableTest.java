@@ -1,5 +1,7 @@
 package xo.hbase;
 
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.serializer.SerializerFeature;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -7,9 +9,15 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 public class TableTest {
@@ -42,6 +50,31 @@ public class TableTest {
         String snapshot = HBase.tableSnapshot(table);
         LOG.info("snapshot({})", snapshot);
         LOG.info("table({})", HBase.snapshotTable(snapshot));
+    }
+
+    @Test
+    public void columnFamilies2Json() throws IOException {
+        String table = "manga:fruit";
+        Map<String, Object> families = db.getColumnFamilies(table);
+        LOG.info("table({})'s desc: {}", table, families);
+        String json = JSON.toJSONString(families, SerializerFeature.PrettyFormat, SerializerFeature.MapSortField);
+        String fileName = "tmp/json/" + table.replaceFirst(":", "-") + ".json";
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(fileName))) {
+            writer.write(json);
+            LOG.info("written column families to {}", fileName);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Test
+    public void createTable() throws IOException {
+        String file = "tmp/json/manga-fruit.json";
+        String table = "manga:fruit2";
+        String json = new String(Files.readAllBytes(Paths.get(file)), StandardCharsets.UTF_8);
+        Map<String, Object> cfMap = JSON.parseObject(json, Map.class);
+        db.createTable(table, cfMap);
+        LOG.info("created table({}) from {}", table, file);
     }
 
     @Test

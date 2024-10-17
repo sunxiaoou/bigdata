@@ -7,6 +7,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.io.compress.Compression;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
@@ -168,9 +169,9 @@ public class HBase implements AutoCloseable {
         List<TableDescriptor> descriptors = admin.listTableDescriptorsByNamespace(Bytes.toBytes(space));
         for (TableDescriptor descriptor: descriptors) {
             String name = descriptor.getTableName().getNameAsString();
-            if (name.contains(":")) {
-                name = name.split(":")[1];
-            }
+//            if (name.contains(":")) {
+//                name = name.split(":")[1];
+//            }
             tables.add(name);
         }
         return tables;
@@ -185,8 +186,59 @@ public class HBase implements AutoCloseable {
         return tables;
     }
 
-    public void createTable(String space, String name, String family) throws IOException {
-        TableName tableName = TableName.valueOf(space == null ? name : space + ':' + name);    // qualified name
+    public Map<String, Object> getColumnFamilies(String name) throws IOException {
+        TableName tableName = TableName.valueOf(name);
+        TableDescriptor tableDescriptor = admin.getDescriptor(tableName);
+        assert name.equals(tableDescriptor.getTableName().getNameAsString());
+        Map<String, Object> cfMap = new HashMap<>();
+        for (ColumnFamilyDescriptor cf : tableDescriptor.getColumnFamilies()) {
+            Map<String, Object> cfDetails = new HashMap<>();
+            cfDetails.put("blockCache", cf.isBlockCacheEnabled());
+            cfDetails.put("blockSize", cf.getBlocksize());
+            cfDetails.put("bloomFilter", cf.getBloomFilterType());
+            cfDetails.put("compression", cf.getCompressionType().name());
+            cfDetails.put("dataBlockEncoding", cf.getDataBlockEncoding());
+            cfDetails.put("inMemory", cf.isInMemory());
+            cfDetails.put("keepDeleteCells", cf.getKeepDeletedCells());
+            cfDetails.put("minVersions", cf.getMinVersions());
+            cfDetails.put("scope", cf.getScope());
+            cfDetails.put("ttl", cf.getTimeToLive());
+            cfDetails.put("versions", cf.getMaxVersions());
+            cfMap.put(Bytes.toString(cf.getName()), cfDetails);
+        }
+        return cfMap;
+    }
+
+    public void createTable(String name, Map<String, Object> cfMap) throws IOException {
+        TableName tableName = TableName.valueOf(name);
+        TableDescriptorBuilder tableDescriptorBuilder = TableDescriptorBuilder.newBuilder(tableName);
+        for (Map.Entry<String, Object> entry : cfMap.entrySet()) {
+            String cfName = entry.getKey();
+            Map<String, Object> cfDetails = (Map<String, Object>) entry.getValue();
+            ColumnFamilyDescriptorBuilder cfBuilder = ColumnFamilyDescriptorBuilder.newBuilder(cfName.getBytes());
+            cfBuilder.setBlockCacheEnabled(((Boolean) cfDetails.get("blockCache")));
+            cfBuilder.setBlocksize((Integer) cfDetails.get("blockSize"));
+            cfBuilder.setBloomFilterType(BloomType.valueOf((String) cfDetails.get("bloomFilter")));
+            cfBuilder.setCompressionType(Compression.Algorithm.valueOf((String) cfDetails.get("compression")));
+            cfBuilder.setDataBlockEncoding(DataBlockEncoding.valueOf((String) cfDetails.get("dataBlockEncoding")));
+            cfBuilder.setInMemory((Boolean) cfDetails.get("inMemory"));
+            cfBuilder.setKeepDeletedCells(KeepDeletedCells.valueOf((String) cfDetails.get("keepDeleteCells")));
+            cfBuilder.setMinVersions((Integer) cfDetails.get("minVersions"));
+            cfBuilder.setScope((Integer) cfDetails.get("scope"));
+            cfBuilder.setTimeToLive((Integer) cfDetails.get("ttl"));
+            cfBuilder.setMaxVersions((Integer) cfDetails.get("versions"));
+            tableDescriptorBuilder.setColumnFamily(cfBuilder.build());
+        }
+        TableDescriptor tableDescriptor = tableDescriptorBuilder.build();
+        if (!admin.tableExists(tableName)) {
+            admin.createTable(tableDescriptor);
+        } else {
+            LOG.info("Table {} already exists", name);
+        }
+    }
+
+    public void createTable(String name, String family) throws IOException {
+        TableName tableName = TableName.valueOf(name);    // qualified name
         if (! admin.tableExists(tableName)) {
             TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
                     .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(family))
@@ -227,9 +279,9 @@ public class HBase implements AutoCloseable {
         }
     }
 
-    public void putCell(String space, String name, byte[] key, byte[] family, byte[] qualifier, byte[] value)
+    public void putCell(String name, byte[] key, byte[] family, byte[] qualifier, byte[] value)
             throws IOException {
-        TableName tableName = TableName.valueOf(space == null ? name : space + ':' + name);    // qualified name
+        TableName tableName = TableName.valueOf(name);    // qualified name
         try (Table table = conn.getTable(tableName)) {
             Put put = new Put(key);
             put.addColumn(family, qualifier, value);
@@ -282,8 +334,8 @@ public class HBase implements AutoCloseable {
         }
     }
 
-    public void deleteCell(String space, String name, byte[] key, byte[] family) throws IOException {
-        TableName tableName = TableName.valueOf(space == null ? name : space + ':' + name);    // qualified name
+    public void deleteCell(String name, byte[] key, byte[] family) throws IOException {
+        TableName tableName = TableName.valueOf(name);    // qualified name
         try (Table table = conn.getTable(tableName)) {
             Delete delete = new Delete(key);
             delete.addFamily(family);
