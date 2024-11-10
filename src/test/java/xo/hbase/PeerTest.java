@@ -10,19 +10,17 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashSet;
 
-import static org.junit.Assert.*;
-
 public class PeerTest {
     private static final Logger LOG = LoggerFactory.getLogger(PeerTest.class);
     private static HBase db;
-    private static final String peer = "hb_c1";
-    private static final String peerHost = "centos1";
+    private static final String peer = "c2";
+    private static final String peerHost = "centos2";
 
     @BeforeClass
     public static void setupBeforeClass() throws IOException {
-//        String host = "ubuntu";
-//        db = new HBase(host, 2181, "/hbase");
-        db = new HBase();
+        String host = "hb_u";
+        db = new HBase(host, 2181, "/hbase");
+//        db = new HBase();
     }
 
     @AfterClass
@@ -37,8 +35,9 @@ public class PeerTest {
 
     @Test
     public void addPeer() throws IOException {
-        String key = String.format("%s:2181:/%s", peerHost, peer);
-        db.addPeer(peer, key, Arrays.asList("peTable", "manga:fruit"), true);
+        String key = String.format("%s:2181:/hbase", peerHost);
+//        String key = String.format("%s:2181:/%s", peerHost, peer);
+        db.addPeer(peer, key, Arrays.asList("bulk", "manga:fruit"), true);
         LOG.info("peers: {}", db.listPeers());
     }
 

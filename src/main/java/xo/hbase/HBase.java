@@ -84,6 +84,7 @@ public class HBase implements AutoCloseable {
         conf.set("zookeeper.znode.parent", znode);
         conn = ConnectionFactory.createConnection(conf);
         admin = conn.getAdmin();
+//        conf.forEach(entry -> LOG.info(entry.getKey() + "=" + entry.getValue()));
     }
 
     public HBase(String pathStr) throws IOException {
@@ -93,7 +94,7 @@ public class HBase implements AutoCloseable {
         conf.addResource(pathStr + "/mapred-site.xml");
         conf.addResource(pathStr + "/yarn-site.xml");
         conf.addResource(pathStr + "/hbase-site.xml");
-//        conf.forEach(entry -> System.out.println(entry.getKey() + "=" + entry.getValue()));
+//        conf.forEach(entry -> LOG.info(entry.getKey() + "=" + entry.getValue()));
         conn = ConnectionFactory.createConnection(conf);
         admin = conn.getAdmin();
     }

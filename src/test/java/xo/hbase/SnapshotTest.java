@@ -49,7 +49,7 @@ public class SnapshotTest {
 
     @Test
     public void snapshotExists() throws IOException {
-        LOG.info("snapshotExists: {}", srcDb.snapshotExists("manga-fruit_240521"));
+        LOG.info("snapshotExists: {}", srcDb.snapshotExists(snapshot));
     }
 
     @Test

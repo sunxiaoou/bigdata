@@ -23,7 +23,7 @@ import java.util.regex.Pattern;
 public class TableTest {
     private static final Logger LOG = LoggerFactory.getLogger(TableTest.class);
 
-    private static final String host = "hadoop2";
+    private static final String host = "hb_h2";
 //    private static final String host = "ubuntu";
     private static final String confPath = System.getProperty("user.dir") + "/src/main/resources/" + host;
     private static HBase db;
@@ -31,7 +31,8 @@ public class TableTest {
     @BeforeClass
     public static void setupBeforeClass() throws IOException {
 //        db = new HBase();
-//        db = new HBase(host, 2181, "/hbase");
+//        db = new HBase("node1", 2181, "/hbase");
+//        db = new HBase("hadoop2", 2181, "/hbase");
 //        db = new HBase(host);
         db = new HBase(HBase.getPath(confPath));
     }
@@ -39,6 +40,11 @@ public class TableTest {
     @AfterClass
     public static void tearDownAfterClass() throws IOException {
         db.close();
+    }
+
+    @Test
+    public void listNamespaces() throws IOException {
+        LOG.info("namespaces({})", db.listNameSpaces());
     }
 
     @Test
