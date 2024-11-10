@@ -52,8 +52,8 @@ public class Fruit {
     private static void run(String op, String host, String table) throws IOException {
         // use resources/hbase-site.xml as host is null
         HBase db = host == null ? new HBase(): new HBase(host, 2181, "/hbase");
-        String defaultName = "manga:fruit";
-        String name = defaultName;
+        String regex = "^manga:fruit.*";
+        String name = "manga:fruit";
         if (table == null) {
             System.out.println(db.listNameSpaces());
             System.out.println(db.listTables("manga"));
@@ -61,8 +61,34 @@ public class Fruit {
             name = table;
         }
         switch (op) {
+            case "create":
+                if (name.matches(regex)) {
+                    Map<String, Object> cf = new HashMap<>();
+                    cf.put("blockCache", true);
+                    cf.put("blockSize", 65536);
+                    cf.put("bloomFilter", "ROW");
+                    cf.put("compression", "NONE");
+                    cf.put("dataBlockEncoding", "NONE");
+                    cf.put("inMemory", false);
+                    cf.put("keepDeleteCells", "FALSE");
+                    cf.put("minVersions", 0);
+                    cf.put("scope", 1);
+                    cf.put("ttl", 2147483647);
+                    cf.put("versions", 1);
+                    Map<String, Object> cfMap = new HashMap<>();
+                    cfMap.put("cf", cf);
+                    db.createTable(table, cfMap, true);
+                    System.out.println(name + " created");
+                } else {
+                    System.out.println("Can only create \"manga:fruit\"");
+                }
+                return;
+            case "drop":
+                db.dropTable(name);
+                System.out.println(name + " dropped");
+                return;
             case "put":
-                if (defaultName.equals(name)) {
+                if (name.matches(regex)) {
                     db.putRows(name, fruits());
                     System.out.println(name + " put");
                 } else {
@@ -70,7 +96,7 @@ public class Fruit {
                 }
                 return;
             case "add":
-                if (defaultName.equals(name)) {
+                if (name.matches(regex)) {
                     db.putRow(name, fruit(new Triple<>(107, "🍐", (float) 115)));
                     System.out.println(name + " add");
                 } else {
@@ -78,7 +104,7 @@ public class Fruit {
                 }
                 return;
             case "delete":
-                if (defaultName.equals(name)) {
+                if (name.matches(regex)) {
                     db.deleteRow(name, "107");
                     System.out.println(name + " deleted");
                 } else {
@@ -89,7 +115,7 @@ public class Fruit {
                 System.out.println(String.format("%s has %d rows", name, db.countTableRows(name)));
                 return;
             case "scan":
-                if (defaultName.equals(name)) {
+                if (name.matches(regex)) {
                     System.out.println(db.scanTable(name));
                     System.out.println(name + " scanned");
                 } else {
@@ -117,7 +143,7 @@ public class Fruit {
         } else if (args.length > 0) {
             run(args[0], null, null);
         } else {
-            System.out.println("Usage: HBase put|add|delete|count|scan|isEmpty|truncate host[,host2,...] table");
+            System.out.println("Usage: Fruit create|drop|put|add|delete|count|scan|isEmpty|truncate host[,host2,...] table");
         }
     }
 }

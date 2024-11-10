@@ -1,5 +1,6 @@
 package xo.hbase;
 
+import com.alibaba.fastjson.JSON;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -23,6 +24,9 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.regex.Pattern;
@@ -210,7 +214,7 @@ public class HBase implements AutoCloseable {
         return cfMap;
     }
 
-    public void createTable(String name, Map<String, Object> cfMap) throws IOException {
+    void createTable(String name, Map<String, Object> cfMap, boolean overwrite) throws IOException {
         TableName tableName = TableName.valueOf(name);
         TableDescriptorBuilder tableDescriptorBuilder = TableDescriptorBuilder.newBuilder(tableName);
         for (Map.Entry<String, Object> entry : cfMap.entrySet()) {
@@ -231,11 +235,23 @@ public class HBase implements AutoCloseable {
             tableDescriptorBuilder.setColumnFamily(cfBuilder.build());
         }
         TableDescriptor tableDescriptor = tableDescriptorBuilder.build();
-        if (!admin.tableExists(tableName)) {
-            admin.createTable(tableDescriptor);
-        } else {
-            LOG.info("Table {} already exists", name);
+        if (admin.tableExists(tableName)) {
+            if (!overwrite) {
+                LOG.info("table({}) already exists", name);
+                return;
+            }
+            LOG.info("remove existed table({})", name);
+            dropTable(name);
         }
+        admin.createTable(tableDescriptor);
+    }
+
+    public void createTable(String jsonFile) throws IOException {
+        String jsonStr = new String(Files.readAllBytes(Paths.get(jsonFile)), StandardCharsets.UTF_8);
+        Map<String, Object> jsonObj = JSON.parseObject(jsonStr, Map.class);
+        createTable((String) jsonObj.get("tableName"),
+                (Map<String, Object>) jsonObj.get("columnFamilies"),
+                (boolean) jsonObj.get("overwrite"));
     }
 
     public void createTable(String name, String family) throws IOException {

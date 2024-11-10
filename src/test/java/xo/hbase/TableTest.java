@@ -12,10 +12,8 @@ import org.slf4j.LoggerFactory;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -75,12 +73,29 @@ public class TableTest {
 
     @Test
     public void createTable() throws IOException {
-        String file = "tmp/json/manga-fruit.json";
         String table = "manga:fruit2";
-        String json = new String(Files.readAllBytes(Paths.get(file)), StandardCharsets.UTF_8);
-        Map<String, Object> cfMap = JSON.parseObject(json, Map.class);
-        db.createTable(table, cfMap);
-        LOG.info("created table({}) from {}", table, file);
+        Map<String, Object> cf = new HashMap<>();
+        cf.put("blockCache", true);
+        cf.put("blockSize", 65536);
+        cf.put("bloomFilter", "ROW");
+        cf.put("compression", "NONE");
+        cf.put("dataBlockEncoding", "NONE");
+        cf.put("inMemory", false);
+        cf.put("keepDeleteCells", "FALSE");
+        cf.put("minVersions", 0);
+        cf.put("scope", 1);
+        cf.put("ttl", 2147483647);
+        cf.put("versions", 1);
+        Map<String, Object> cfMap = new HashMap<>();
+        cfMap.put("cf", cf);
+        db.createTable(table, cfMap, false);
+        LOG.info("created table({})", table);
+    }
+
+    @Test
+    public void createTable2() throws IOException {
+        String file = "tmp/json/fruit.json";
+        db.createTable(file);
     }
 
     @Test
