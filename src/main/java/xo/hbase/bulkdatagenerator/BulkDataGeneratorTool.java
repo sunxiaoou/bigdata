@@ -97,7 +97,7 @@ public class BulkDataGeneratorTool {
     conf.addResource(pathStr + "/mapred-site.xml");
     conf.addResource(pathStr + "/yarn-site.xml");
     conf.addResource(pathStr + "/hbase-site.xml");
-    HBase.changeUser("sunxo");
+    HBase.changeUser(System.getenv("USER"));
     BulkDataGeneratorTool bulkDataGeneratorTool = new BulkDataGeneratorTool();
     String[] newArgs = new String[args.length - 1];
     System.arraycopy(args, 1, newArgs, 0, args.length - 1);
