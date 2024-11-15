@@ -6,6 +6,7 @@ HADOOP_TAR="hadoop-2.10.2.tar.gz"
 HBASE_TAR="hbase-2.4.16-bin.tar.gz"
 DEFAULT_PARENT_DIR="$HOME/bigdata"
 GROUP=$(id -gn)
+PID_DIR=/run/hadoop
 
 
 # Step 1: Install Zookeeper
@@ -22,7 +23,6 @@ install_zookeeper() {
     # Configure zoo.cfg
     zk_conf="$ZOOKEEPER_HOME/conf"
     cp "$zk_conf/zoo_sample.cfg" "$zk_conf/zoo.cfg"
-#    sed -i 's|/tmp/zookeeper|'"$ZOOKEEPER_HOME/tmp"'|' "$zk_conf/zoo.cfg"
     sed -i -e "s|/tmp/zookeeper|${ZOOKEEPER_HOME}/tmp|" \
         -e "s|#autopurge.purgeInterval=1|autopurge.purgeInterval=1|" \
         "$zk_conf/zoo.cfg"
@@ -45,12 +45,12 @@ install_hadoop() {
     # Configure Hadoop environment
     ha_conf="$HADOOP_HOME/etc/hadoop"
     orig.sh "$ha_conf/hadoop-env.sh" "$ha_conf/mapred-env.sh" "$ha_conf/yarn-env.sh"
-    sed -i -e "s|\${JAVA_HOME}|${JAVA_HOME}|" -e "s|\${HADOOP_PID_DIR}|/run/hadoop|" \
+    sed -i -e "s|\${JAVA_HOME}|${JAVA_HOME}|" -e "s|\${HADOOP_PID_DIR}|${PID_DIR}|" \
          "$ha_conf/hadoop-env.sh"
-    sed -i "s|#export HADOOP_MAPRED_PID_DIR=|export HADOOP_MAPRED_PID_DIR=/run/hadoop|" \
+    sed -i "s|#export HADOOP_MAPRED_PID_DIR=|export HADOOP_MAPRED_PID_DIR=${PID_DIR}|" \
          "$ha_conf/mapred-env.sh"
-    sed -i '$a\export YARN_PID_DIR=/run/hadoop' "$ha_conf/yarn-env.sh"
-    mkdir -p /run/hadoop
+    sed -i "\$a\export YARN_PID_DIR=${PID_DIR}" "$ha_conf/yarn-env.sh"
+    mkdir -p $PID_DIR
 
     cat > "$ha_conf/core-site.xml" <<EOL
 <configuration>
@@ -138,6 +138,7 @@ EOL
     "$HADOOP_HOME/sbin/start-dfs.sh"
     "$HADOOP_HOME/sbin/start-yarn.sh"
     "$HADOOP_HOME/sbin/mr-jobhistory-daemon.sh" start historyserver
+    grep -P "ERROR|\tat" "$HADOOP_HOME"/logs/*.log
 }
 
 # Step 3: Install HBase
@@ -147,7 +148,7 @@ install_hbase() {
     # Extract HBase
     parent=$(dirname "$HBASE_HOME")
     mkdir -p "$parent"
-    tar xf "$TAR_DIR/$HBASE_HOME" -C "$parent"
+    tar xf "$TAR_DIR/$HBASE_TAR" -C "$parent"
     sudo chown -R "$USER:$GROUP" "$HBASE_HOME"
     dup_jar=$HBASE_HOME/lib/client-facing-thirdparty/slf4j-reload4j-1.7.33.jar
     if [ -f "$dup_jar" ]; then
@@ -156,10 +157,12 @@ install_hbase() {
 
     # Configure HBase environment
     hb_conf="$HBASE_HOME/conf"
+    orig.sh "$hb_conf/hbase-env.sh"
     sed -i -e "s|# export JAVA_HOME=/usr/java/jdk1.8.0/|export JAVA_HOME=${JAVA_HOME}|" \
-        -e "s|# export HBASE_PID_DIR=/var/hadoop/pids|export HBASE_PID_DIR=/run/hadoop" \
-        -e 's|# export HBASE_MANAGES_ZK=true|export HBASE_MANAGES_ZK=false|' \
+        -e "s|# export HBASE_PID_DIR=/var/hadoop/pids|export HBASE_PID_DIR=${PID_DIR}|" \
+        -e "s|# export HBASE_MANAGES_ZK=true|export HBASE_MANAGES_ZK=false|" \
         "$hb_conf/hbase-env.sh"
+    mkdir -p $PID_DIR
 
     cat > "$hb_conf/hbase-site.xml" <<EOL
 <configuration>
@@ -188,6 +191,7 @@ EOL
 
     # Start HBase
     "$HBASE_HOME/bin/start-hbase.sh"
+    grep -P "ERROR|\tat" "$HBASE_HOME"/logs/*.log
 }
 
 # Step 4: Verify Installation
@@ -235,6 +239,12 @@ main() {
     install_hadoop
     install_hbase
     verify_installation
+
+    ip=$(grep -w "$HOSTNAME" /etc/hosts | awk '{print $1}')
+    echo "HBase related urls"
+    echo "http://$ip:50070/explorer.html#/"
+    echo "http://$ip:8088/cluster"
+    echo "http://$ip:16010/master-status"
 }
 
 # Run main function
