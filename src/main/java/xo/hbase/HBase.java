@@ -560,11 +560,13 @@ public class HBase implements AutoCloseable {
         admin.removeReplicationPeer(peerId);
     }
 
-    public List<String> listSnapshots() throws IOException {
+    public List<String> listSnapshots(String table) throws IOException {
         List<String> snapshots = new ArrayList<>();
         List<SnapshotDescription> descriptions = admin.listSnapshots();
         for (SnapshotDescription descriptor : descriptions) {
-            snapshots.add(descriptor.getName());
+            if (table == null || descriptor.getTableName().getNameAsString().equals(table)) {
+                snapshots.add(descriptor.getName());
+            }
         }
         LOG.debug("snapshots: {}", snapshots);
         return snapshots;

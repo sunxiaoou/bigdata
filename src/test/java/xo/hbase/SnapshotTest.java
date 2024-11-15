@@ -1,93 +1,67 @@
 package xo.hbase;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 
 public class SnapshotTest {
-    private static final Logger LOG = LoggerFactory.getLogger(SnapshotTest.class);
-//    private static final String srcHost = "ubuntu";
-    private static final String srcHost = "hadoop3";
-    private static final String srcPath = System.getProperty("user.dir") + "/src/main/resources/" + srcHost;
-//    private static final String tgtHost = "centos2";
-    private static final String tgtHost = "hadoop2";
-//    private static final String table = "manga:fruit";
-    private static final String table = "bulk";
-    private static HBase srcDb;
-    private static HBase tgtDb;
-    private static String snapshot;
-
-    @BeforeClass
-    public static void setupBeforeClass() throws IOException {
-//        srcDb = new HBase(srcHost);
-        srcDb = new HBase(HBase.getPath(srcPath));
-
-        SimpleDateFormat sdf = new SimpleDateFormat("yyMMdd");
-        String dateStr = sdf.format(new Date());
-        snapshot = table.replaceFirst(":", "-") + "_" + dateStr;
-
-//        tgtDb = new HBase(tgtHost, 2181, "/hbase");
-        tgtDb = new HBase(tgtHost);
-    }
-
-    @AfterClass
-    public static void tearDownAfterClass() throws IOException {
-        tgtDb.close();
-        srcDb.close();
+    @Test
+    public void listSnapshots() {
+        String[] args = {
+                "--action", "list",
+                "--db", "hb_u"};
+        Snapshot.main(args);
     }
 
     @Test
-    public void listSnapshots() throws IOException {
-        LOG.info("snapshots: {}", srcDb.listSnapshots());
+    public void listTableSnapshots() {
+        String[] args = {
+                "--action", "list",
+                "--db", "hb_c2",
+                "--table", "manga:fruit"};
+        Snapshot.main(args);
     }
 
     @Test
-    public void snapshotExists() throws IOException {
-        LOG.info("snapshotExists: {}", srcDb.snapshotExists(snapshot));
+    public void createSnapshot() {
+        String[] args = {
+                "--action", "create",
+                "--db", "hb_u",
+                "--table", "manga:fruit"};
+        Snapshot.main(args);
     }
 
     @Test
-    public void deleteSnapshots() throws IOException {
-        for (String snapshot: srcDb.listSnapshots()) {
-            srcDb.deleteSnapshot(snapshot);
-        }
+    public void deleteSnapshot() {
+        String[] args = {
+                "--action", "delete",
+                "--db", "hb_u",
+                "--table", "manga:fruit"};
+        Snapshot.main(args);
     }
 
     @Test
-    public void createSnapshot() throws IOException {
-        srcDb.createSnapshot(table, snapshot);
+    public void deleteAllSnapshots() {
+        String[] args = {
+                "--action", "deleteAll",
+                "--db", "hb_u"};
+        Snapshot.main(args);
     }
 
     @Test
-    public void cloneSnapshot() throws IOException {
-        srcDb.cloneSnapshot(snapshot, snapshot.replaceFirst("-", ":"));
+    public void exportSnapshot() {
+        String[] args = {
+                "--action", "export",
+                "--db", "hb_u",
+                "--db2", "hb_c2",
+                "--table", "manga:fruit"};
+        Snapshot.main(args);
     }
 
     @Test
-    public void exportSnapshot() throws Exception {
-//        String fs = tgtDb.getProperty("fs.defaultFS");
-        HBase.changeUser(tgtDb.getUser());
-        String copyTo = tgtDb.getProperty("hbase.rootdir");
-        LOG.info("{}", srcDb.exportSnapshot(snapshot, copyTo));
-    }
-
-    @Test
-    public void cloneSnapshotTgt() throws IOException {
-        int idx = snapshot.lastIndexOf('_');
-        String s = idx == -1 ? snapshot: snapshot.substring(0, idx);
-        tgtDb.cloneSnapshot(snapshot, s.replaceFirst("-", ":"));
-    }
-
-    @Test
-    public void deleteSnapshotsTgt() throws IOException {
-        for (String snapshot: tgtDb.listSnapshots()) {
-            tgtDb.deleteSnapshot(snapshot);
-        }
+    public void cloneSnapshot() {
+        String[] args = {
+                "--action", "clone",
+                "--db", "hb_c2",
+                "--table", "manga:fruit"};
+        Snapshot.main(args);
     }
 }
