@@ -3,6 +3,7 @@ package xo.sap.jco;
 import com.sap.conn.jco.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import xo.utility.HexDump;
 
 import java.util.*;
 
@@ -186,7 +187,21 @@ public class ODPWrapper {
         function.execute(destination);
     }
 
-    public List<JCoTable> fullFetch(
+    public void getMeta(JCoTable jCoTable) {
+        System.out.println("Row Data:");
+        JCoRecordMetaData metaData = (JCoRecordMetaData) jCoTable.getMetaData();
+        for (int i = 0; i < metaData.getFieldCount(); i++) {
+            String fieldName = metaData.getName(i);         // 字段名称
+            String fieldType = metaData.getTypeAsString(i); // 字段类型
+            String fieldValue = jCoTable.getString(fieldName); // 获取字段值（这里用字符串读取）
+
+            System.out.println("  Field: " + fieldName);
+            System.out.println("    Type: " + fieldType);
+            System.out.println("    Value: " + fieldValue);
+        }
+    }
+
+    public List<byte[]> fullFetch(
             String subscriberType,
             String subscriberName,
             String subscriberProcess,
@@ -195,7 +210,7 @@ public class ODPWrapper {
         String pointer =
                 openExtractionSession(subscriberType, subscriberName, subscriberProcess, context, odpName, "F");
         String extractPackage = "";
-        List<JCoTable> packages = new ArrayList<>();
+        List<byte[]> list = new ArrayList<>();
         while (true) {
             JCoFunction function = destination.getRepository().getFunction("RODPS_REPL_ODP_FETCH");
             if (function == null) {
@@ -204,23 +219,27 @@ public class ODPWrapper {
             function.getImportParameterList().setValue("I_POINTER", pointer);
             function.getImportParameterList().setValue("I_PACKAGE", extractPackage);
             function.execute(destination);
-
-            JCoTable table = function.getTableParameterList().getTable("ET_DATA");
-            if (table.isEmpty()) {
-                LOG.info("All data fetched.");
+            JCoTable etData = function.getTableParameterList().getTable("ET_DATA");
+            if (etData.isEmpty()) {
+                LOG.info("ET_DATA is empty, all data fetched.");
                 break;
             }
-            while (table.nextRow()) {
-                packages.add(table);
+            while (etData.nextRow()) {
+                for (JCoField field : etData) {
+                    if ("DATA".equals(field.getName())) {
+                        list.add(field.getByteArray());
+                        break;
+                    }
+                }
             }
             extractPackage = function.getExportParameterList().getString("E_PACKAGE");
             if (extractPackage.isEmpty()) {
-                LOG.info("All data fetched.");
+                LOG.info("No more extract package, all data fetched.");
                 break;
             }
         }
         closeExtractionSession(pointer);
-        return packages;
+        return list;
     }
 
     /**

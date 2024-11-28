@@ -6,6 +6,9 @@ import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import xo.utility.HexDump;
+
+import java.util.List;
 
 import static org.junit.Assert.*;
 
@@ -48,13 +51,17 @@ public class ODPWrapperTest {
                 "F"));
     }
 
+
     @Test
     public void fullFetch() throws JCoException {
-        LOG.info("{}", odpWrapper.fullFetch(
+        List<byte[]> list = odpWrapper.fullFetch(
                 "RODPS_REPL_TEST",
                 "TestRepository_DoesNotExist",
                 "TestDataFlow_DoesNotExist",
                 "SLT~ODP01",
-                "FRUIT2"));
+                "FRUIT2");
+        for (byte[] bytes: list) {
+            HexDump.hexDump(bytes);
+        }
     }
 }
