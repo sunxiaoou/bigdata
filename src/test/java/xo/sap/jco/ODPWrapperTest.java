@@ -51,6 +51,25 @@ public class ODPWrapperTest {
                 "F"));
     }
 
+    public void getODPCursors(String mode) throws JCoException {
+        LOG.info("{}", odpWrapper.getODPCursors(
+                "RODPS_REPL_TEST",
+                "TestRepository_DoesNotExist",
+                "TestDataFlow_DoesNotExist",
+                "SLT~ODP01",
+                "FRUIT2",
+                mode));
+    }
+
+    @Test
+    public void getODPCursorsFull() throws JCoException {
+        getODPCursors("F");
+    }
+
+    @Test
+    public void getODPCursorsDelta() throws JCoException {
+        getODPCursors("D");
+    }
 
     @Test
     public void fullFetch() throws JCoException {

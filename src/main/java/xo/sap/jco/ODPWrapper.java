@@ -3,7 +3,6 @@ package xo.sap.jco;
 import com.sap.conn.jco.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import xo.utility.HexDump;
 
 import java.util.*;
 
@@ -121,6 +120,36 @@ public class ODPWrapper {
         return odps;
     }
 
+    public List<Map<String, String>> getODPCursors(
+            String subscriberType,
+            String subscriberName,
+            String subscriberProcess,
+            String context,
+            String odpName,
+            String mode) throws JCoException {
+        JCoFunction function = destination.getRepository().getFunction("RODPS_REPL_CURSOR_GET_LIST");
+        if (function == null) {
+            throw new RuntimeException("Function RODPS_REPL_CURSOR_GET_LIST not found in SAP.");
+        }
+        function.getImportParameterList().setValue("I_SUBSCRIBER_TYPE", subscriberType);
+        function.getImportParameterList().setValue("I_SUBSCRIBER_NAME", subscriberName);
+        function.getImportParameterList().setValue("I_SUBSCRIBER_PROCESS", subscriberProcess);
+        function.getImportParameterList().setValue("I_CONTEXT", context);
+        function.getImportParameterList().setValue("I_ODPNAME", odpName);
+        function.getImportParameterList().setValue("I_EXTRACTION_MODE", mode);
+        function.execute(destination);
+        JCoTable ltPoint = function.getTableParameterList().getTable("ET_PROCESS");
+        List<Map<String, String>> points = new ArrayList<>();
+        while (ltPoint.nextRow()) {
+            Map<String, String> point = new HashMap<>();
+            point.put("POINTER", ltPoint.getString("POINTER"));
+            point.put("SUBSCRIBER_PROC", ltPoint.getString("SUBSCRIBER_PROC"));
+            point.put("CLOSED", ltPoint.getString("CLOSED").equalsIgnoreCase("X") ? "T": "F");
+            points.add(point);
+        }
+        return points;
+    }
+
     /**
      * Open a data extraction session in Full or Delta mode.
      * @param context The context name
@@ -209,6 +238,7 @@ public class ODPWrapper {
             String odpName) throws JCoException {
         String pointer =
                 openExtractionSession(subscriberType, subscriberName, subscriberProcess, context, odpName, "F");
+        LOG.info("Point({})", pointer);
         String extractPackage = "";
         List<byte[]> list = new ArrayList<>();
         while (true) {
