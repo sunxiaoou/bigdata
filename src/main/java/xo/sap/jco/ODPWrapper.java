@@ -3,6 +3,7 @@ package xo.sap.jco;
 import com.sap.conn.jco.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import xo.utility.Triple;
 
 import java.util.*;
 
@@ -81,14 +82,7 @@ public class ODPWrapper {
         return odps;
     }
 
-    /**
-     * Fetch the fields and metadata for a specific ODP.
-     * @param context The context name
-     * @param odpName The ODP name
-     * @return List of fields with their metadata
-     * @throws JCoException if any SAP error occurs
-     */
-    public List<Map<String, String>> getODPDetails(
+    public Triple<Map<String, String>, List<Map<String, String>>, List<Map<String, String>>> getODPDetails(
             String subscriberType,
             String context,
             String odpName) throws JCoException {
@@ -101,23 +95,52 @@ public class ODPWrapper {
         function.getImportParameterList().setValue("I_ODPNAME", odpName);
         function.execute(destination);
 
-        JCoTable table = function.getTableParameterList().getTable("ET_FIELDS");
-        List<String> fields = new ArrayList<>();
-        for (JCoField field : table) {
-            fields.add(field.getName());
+        JCoParameterList exportParameters = function.getExportParameterList();
+        Map<String, String> parameters = new HashMap<>();
+        for (JCoField field: exportParameters) {
+            parameters.put(field.getName(), field.getValue().toString());
         }
-        List<Map<String, String>> odps = new ArrayList<>();
-        while (table.nextRow()) {
-            Map<String, String> odp = new HashMap<>();
-            for (String field: fields) {
-                String value = table.getString(field);
+
+        JCoTable etModes = function.getTableParameterList().getTable("ET_DELTAMODES");
+        List<String> modeNames = new ArrayList<>();
+        for (JCoField field : etModes) {
+            modeNames.add(field.getName());
+        }
+        List<Map<String, String>> modes = new ArrayList<>();
+        while (etModes.nextRow()) {
+            Map<String, String> field = new HashMap<>();
+            for (String name: modeNames) {
+                String value = etModes.getString(name);
                 if (!"".equals(value)) {
-                    odp.put(field, value);
+                    field.put(name, value);
                 }
             }
-            odps.add(odp);
+            modes.add(field);
         }
-        return odps;
+
+        JCoTable etFields = function.getTableParameterList().getTable("ET_FIELDS");
+        List<String> fieldNames = new ArrayList<>();
+        for (JCoField field : etFields) {
+            fieldNames.add(field.getName());
+        }
+        List<Map<String, String>> fields = new ArrayList<>();
+        while (etFields.nextRow()) {
+            Map<String, String> field = new HashMap<>();
+            for (String name: fieldNames) {
+                String value = etFields.getString(name);
+                if (!"".equals(value)) {
+                    field.put(name, value);
+                }
+            }
+            fields.add(field);
+        }
+
+        JCoTable etReturn = function.getTableParameterList().getTable("ET_RETURN");
+        if (!etReturn.isEmpty()) {
+            LOG.warn(etReturn.getString("MESSAGE"));
+        }
+
+        return new Triple<>(parameters, modes, fields);
     }
 
     public List<Map<String, String>> getODPCursors(
@@ -150,6 +173,28 @@ public class ODPWrapper {
         return points;
     }
 
+    public void resetODP(
+            String subscriberType,
+            String subscriberName,
+            String subscriberProcess,
+            String context,
+            String odpName) throws JCoException {
+        JCoFunction function = destination.getRepository().getFunction("RODPS_REPL_ODP_RESET");
+        if (function == null) {
+            throw new RuntimeException("Function RODPS_REPL_ODP_RESET not found in SAP.");
+        }
+        function.getImportParameterList().setValue("I_SUBSCRIBER_TYPE", subscriberType);
+        function.getImportParameterList().setValue("I_SUBSCRIBER_NAME", subscriberName);
+        function.getImportParameterList().setValue("I_SUBSCRIBER_PROCESS", subscriberProcess);
+        function.getImportParameterList().setValue("I_CONTEXT", context);
+        function.getImportParameterList().setValue("I_ODPNAME", odpName);
+        function.execute(destination);
+        JCoTable etReturn = function.getTableParameterList().getTable("ET_RETURN");
+        if (!etReturn.isEmpty()) {
+            LOG.info(etReturn.getString("MESSAGE"));
+        }
+    }
+
     /**
      * Open a data extraction session in Full or Delta mode.
      * @param context The context name
@@ -180,29 +225,6 @@ public class ODPWrapper {
     }
 
     /**
-     * Fetch data packages for the given extraction pointer.
-     * @param pointer The extraction pointer
-     * @return List of data packages, each represented as a table
-     * @throws JCoException if any SAP error occurs
-     */
-    public List<JCoTable> fetchData(String pointer, String extractPackage) throws JCoException {
-        JCoFunction function = destination.getRepository().getFunction("RODPS_REPL_ODP_FETCH");
-        if (function == null) {
-            throw new RuntimeException("Function RODPS_REPL_ODP_FETCH not found in SAP.");
-        }
-        function.getImportParameterList().setValue("I_POINTER", pointer);
-        function.getImportParameterList().setValue("I_PACKAGE", extractPackage);
-        function.execute(destination);
-
-        List<JCoTable> dataPackages = new ArrayList<>();
-        JCoTable dataTable = function.getTableParameterList().getTable("ET_DATA");
-        while (dataTable.nextRow()) {
-            dataPackages.add(dataTable);
-        }
-        return dataPackages;
-    }
-
-    /**
      * Close an open extraction session.
      * @param pointer The extraction pointer
      * @throws JCoException if any SAP error occurs
@@ -214,6 +236,10 @@ public class ODPWrapper {
         }
         function.getImportParameterList().setValue("I_POINTER", pointer);
         function.execute(destination);
+        JCoTable etReturn = function.getTableParameterList().getTable("ET_RETURN");
+        if (!etReturn.isEmpty()) {
+            LOG.info(etReturn.getString("MESSAGE"));
+        }
     }
 
     public void getMeta(JCoTable jCoTable) {
