@@ -95,7 +95,7 @@ public class ODPWrapperTest {
 
     @Test
     public void fullFetch() throws JCoException {
-        List<byte[]> list = odpWrapper.fullFetch(
+        List<byte[]> list = odpWrapper.fetchODPFull(
                 "RODPS_REPL_TEST",
                 "TestRepository_DoesNotExist",
                 "TestDataFlow_DoesNotExist",

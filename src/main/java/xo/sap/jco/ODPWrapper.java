@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 import xo.utility.Triple;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class ODPWrapper {
     private static final Logger LOG = LoggerFactory.getLogger(ODPWrapper.class);
@@ -133,17 +134,8 @@ public class ODPWrapper {
         function.getImportParameterList().setValue("I_ODPNAME", odpName);
         function.getImportParameterList().setValue("I_EXTRACTION_MODE", mode);
         function.execute(destination);
-//        JCoTable ltPoint = function.getTableParameterList().getTable("ET_PROCESS");
-//        List<Map<String, String>> points = new ArrayList<>();
-//        while (ltPoint.nextRow()) {
-//            Map<String, String> point = new HashMap<>();
-//            point.put("POINTER", ltPoint.getString("POINTER"));
-//            point.put("SUBSCRIBER_PROC", ltPoint.getString("SUBSCRIBER_PROC"));
-//            point.put("CLOSED", ltPoint.getString("CLOSED").equalsIgnoreCase("X") ? "T": "F");
-//            points.add(point);
-//        }
-//        return points;
-        return getTableFields(function, "ET_PROCESS");
+        List<Map<String, String>> pointers = getTableFields(function, "ET_PROCESS");
+        return pointers.stream().filter(map -> map.containsKey("CLOSED")).collect(Collectors.toList());
     }
 
     public void resetODP(
@@ -215,7 +207,7 @@ public class ODPWrapper {
         }
     }
 
-    public void getMeta(JCoTable jCoTable) {
+    private void getMeta(JCoTable jCoTable) {
         System.out.println("Row Data:");
         JCoRecordMetaData metaData = (JCoRecordMetaData) jCoTable.getMetaData();
         for (int i = 0; i < metaData.getFieldCount(); i++) {
@@ -229,17 +221,8 @@ public class ODPWrapper {
         }
     }
 
-    public List<byte[]> fullFetch(
-            String subscriberType,
-            String subscriberName,
-            String subscriberProcess,
-            String context,
-            String odpName) throws JCoException {
-        String pointer =
-                openExtractionSession(subscriberType, subscriberName, subscriberProcess, context, odpName, "F");
-        LOG.info("Point({})", pointer);
-        String extractPackage = "";
-        List<byte[]> list = new ArrayList<>();
+    private List<byte[]> fetchODP(String pointer, String extractPackage) throws JCoException {
+        List<byte[]> data = new ArrayList<>();
         while (true) {
             JCoFunction function = destination.getRepository().getFunction("RODPS_REPL_ODP_FETCH");
             if (function == null) {
@@ -248,36 +231,36 @@ public class ODPWrapper {
             function.getImportParameterList().setValue("I_POINTER", pointer);
             function.getImportParameterList().setValue("I_PACKAGE", extractPackage);
             function.execute(destination);
-            JCoTable etData = function.getTableParameterList().getTable("ET_DATA");
-            if (etData.isEmpty()) {
-                LOG.info("ET_DATA is empty, all data fetched.");
+            if ("X".equals(function.getExportParameterList().getString("E_NO_MORE_DATA"))) {
                 break;
             }
-            while (etData.nextRow()) {
-                for (JCoField field : etData) {
+            extractPackage = function.getExportParameterList().getString("E_PACKAGE");
+            JCoTable table = function.getTableParameterList().getTable("ET_DATA");
+            if (table.isEmpty()) {
+                break;
+            }
+            do {
+                for (JCoField field : table) {
                     if ("DATA".equals(field.getName())) {
-                        list.add(field.getByteArray());
+                        data.add(field.getByteArray());
                         break;
                     }
                 }
-            }
-            extractPackage = function.getExportParameterList().getString("E_PACKAGE");
-            if (extractPackage.isEmpty()) {
-                LOG.info("No more extract package, all data fetched.");
-                break;
-            }
+            } while (table.nextRow());
         }
-        closeExtractionSession(pointer);
-        return list;
+        return data;
     }
 
-    /**
-     * Print errors from a JCo table (ET_RETURN).
-     * @param returnTable The ET_RETURN table from the SAP function
-     */
-    private void printErrors(JCoTable returnTable) {
-        while (returnTable.nextRow()) {
-            System.err.println("Error: " + returnTable.getString("MESSAGE"));
-        }
+    public List<byte[]> fetchODPFull(
+            String subscriberType,
+            String subscriberName,
+            String subscriberProcess,
+            String context,
+            String odpName) throws JCoException {
+        String pointer =
+                openExtractionSession(subscriberType, subscriberName, subscriberProcess, context, odpName, "F");
+        List<byte[]> data = fetchODP(pointer, "");
+        closeExtractionSession(pointer);
+        return data;
     }
 }
