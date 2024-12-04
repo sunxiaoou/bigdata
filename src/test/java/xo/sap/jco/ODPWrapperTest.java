@@ -42,7 +42,7 @@ public class ODPWrapperTest {
         Triple<Map<String, String>, List<Map<String, String>>, List<Map<String, String>>> details =
                 odpWrapper.getODPDetails("RODPS_REPL_TEST", "SLT~ODP01", "FRUIT2");
         LOG.info("exportParameters - {}", details.getFirst());
-        LOG.info("deltaModes - {}", details.getSecond());
+        LOG.info("segments - {}", details.getSecond());
         LOG.info("fields - {}", details.getThird());
     }
 
@@ -67,7 +67,6 @@ public class ODPWrapperTest {
         LOG.info("{}", odpWrapper.getODPCursors(
                 "RODPS_REPL_TEST",
                 "TestRepository_DoesNotExist",
-                "TestDataFlow_DoesNotExist",
                 "SLT~ODP01",
                 "FRUIT2",
                 mode));

@@ -19,6 +19,47 @@ public class ODPWrapper {
         this.destination = JCoDestinationManager.getDestination(destinationName);
     }
 
+    private Map<String, String> getExportParameters(JCoFunction function) {
+        JCoParameterList exportParameters = function.getExportParameterList();
+        Map<String, String> parameters = new HashMap<>();
+        for (JCoField field: exportParameters) {
+            String value = field.getValue().toString();
+            if (!"".equals(value)) {
+                parameters.put(field.getName(), value);
+            }
+        }
+        return parameters;
+    }
+
+    private List<Map<String, String>> getTableFields(JCoFunction function, String tableName) {
+        List<Map<String, String>> fields = new ArrayList<>();
+        JCoTable table = function.getTableParameterList().getTable(tableName);
+        if (!table.isEmpty()) {
+            List<String> names = new ArrayList<>();
+            for (JCoField field : table) {
+                names.add(field.getName());
+            }
+            do {
+                Map<String, String> field = new HashMap<>();
+                for (String name : names) {
+                    String value = table.getString(name);
+                    if (!"".equals(value)) {
+                        field.put(name, value);
+                    }
+                }
+                fields.add(field);
+            } while (table.nextRow());
+        }
+        return fields;
+    }
+
+    private void printError(JCoFunction function) {
+        JCoTable etReturn = function.getTableParameterList().getTable("ET_RETURN");
+        if (!etReturn.isEmpty()) {
+            LOG.error(etReturn.getString("MESSAGE"));
+        }
+    }
+
     /**
      * Fetch the list of available ODP contexts.
      * @return List of contexts with their description
@@ -31,20 +72,7 @@ public class ODPWrapper {
         }
         function.getImportParameterList().setValue("I_INCLUDE_HIDDEN", "X");
         function.execute(destination);
-        JCoTable table = function.getTableParameterList().getTable("ET_CONTEXT");
-        List<String> fields = new ArrayList<>();
-        for (JCoField field : table) {
-            fields.add(field.getName());
-        }
-        List<Map<String, String>> contexts = new ArrayList<>();
-        while (table.nextRow()) {
-            Map<String, String> context = new HashMap<>();
-            for (String field: fields) {
-                context.put(field, table.getString(field));
-            }
-            contexts.add(context);
-        }
-        return contexts;
+        return getTableFields(function, "ET_CONTEXT");
     }
 
     /**
@@ -65,21 +93,8 @@ public class ODPWrapper {
         function.getImportParameterList().setValue("I_CONTEXT", context);
         function.getImportParameterList().setValue("I_SEARCH_PATTERN", pattern);
         function.execute(destination);
-
-        JCoTable table = function.getTableParameterList().getTable("ET_NODES");
-        List<String> fields = new ArrayList<>();
-        for (JCoField field : table) {
-            fields.add(field.getName());
-        }
-        List<Map<String, String>> odps = new ArrayList<>();
-        while (table.nextRow()) {
-            Map<String, String> odp = new HashMap<>();
-            for (String field: fields) {
-                odp.put(field, table.getString(field));
-            }
-            odps.add(odp);
-        }
-        return odps;
+        printError(function);
+        return getTableFields(function, "ET_NODES");
     }
 
     public Triple<Map<String, String>, List<Map<String, String>>, List<Map<String, String>>> getODPDetails(
@@ -95,58 +110,16 @@ public class ODPWrapper {
         function.getImportParameterList().setValue("I_ODPNAME", odpName);
         function.execute(destination);
 
-        JCoParameterList exportParameters = function.getExportParameterList();
-        Map<String, String> parameters = new HashMap<>();
-        for (JCoField field: exportParameters) {
-            parameters.put(field.getName(), field.getValue().toString());
-        }
-
-        JCoTable etModes = function.getTableParameterList().getTable("ET_DELTAMODES");
-        List<String> modeNames = new ArrayList<>();
-        for (JCoField field : etModes) {
-            modeNames.add(field.getName());
-        }
-        List<Map<String, String>> modes = new ArrayList<>();
-        while (etModes.nextRow()) {
-            Map<String, String> field = new HashMap<>();
-            for (String name: modeNames) {
-                String value = etModes.getString(name);
-                if (!"".equals(value)) {
-                    field.put(name, value);
-                }
-            }
-            modes.add(field);
-        }
-
-        JCoTable etFields = function.getTableParameterList().getTable("ET_FIELDS");
-        List<String> fieldNames = new ArrayList<>();
-        for (JCoField field : etFields) {
-            fieldNames.add(field.getName());
-        }
-        List<Map<String, String>> fields = new ArrayList<>();
-        while (etFields.nextRow()) {
-            Map<String, String> field = new HashMap<>();
-            for (String name: fieldNames) {
-                String value = etFields.getString(name);
-                if (!"".equals(value)) {
-                    field.put(name, value);
-                }
-            }
-            fields.add(field);
-        }
-
-        JCoTable etReturn = function.getTableParameterList().getTable("ET_RETURN");
-        if (!etReturn.isEmpty()) {
-            LOG.warn(etReturn.getString("MESSAGE"));
-        }
-
-        return new Triple<>(parameters, modes, fields);
+        printError(function);
+        return new Triple<>(getExportParameters(function),
+//                getTableFields(function, "ET_DELTAMODES"),
+                getTableFields(function, "ET_SEGMENTS"),
+                getTableFields(function, "ET_FIELDS"));
     }
 
     public List<Map<String, String>> getODPCursors(
             String subscriberType,
             String subscriberName,
-            String subscriberProcess,
             String context,
             String odpName,
             String mode) throws JCoException {
@@ -156,21 +129,21 @@ public class ODPWrapper {
         }
         function.getImportParameterList().setValue("I_SUBSCRIBER_TYPE", subscriberType);
         function.getImportParameterList().setValue("I_SUBSCRIBER_NAME", subscriberName);
-        function.getImportParameterList().setValue("I_SUBSCRIBER_PROCESS", subscriberProcess);
         function.getImportParameterList().setValue("I_CONTEXT", context);
         function.getImportParameterList().setValue("I_ODPNAME", odpName);
         function.getImportParameterList().setValue("I_EXTRACTION_MODE", mode);
         function.execute(destination);
-        JCoTable ltPoint = function.getTableParameterList().getTable("ET_PROCESS");
-        List<Map<String, String>> points = new ArrayList<>();
-        while (ltPoint.nextRow()) {
-            Map<String, String> point = new HashMap<>();
-            point.put("POINTER", ltPoint.getString("POINTER"));
-            point.put("SUBSCRIBER_PROC", ltPoint.getString("SUBSCRIBER_PROC"));
-            point.put("CLOSED", ltPoint.getString("CLOSED").equalsIgnoreCase("X") ? "T": "F");
-            points.add(point);
-        }
-        return points;
+//        JCoTable ltPoint = function.getTableParameterList().getTable("ET_PROCESS");
+//        List<Map<String, String>> points = new ArrayList<>();
+//        while (ltPoint.nextRow()) {
+//            Map<String, String> point = new HashMap<>();
+//            point.put("POINTER", ltPoint.getString("POINTER"));
+//            point.put("SUBSCRIBER_PROC", ltPoint.getString("SUBSCRIBER_PROC"));
+//            point.put("CLOSED", ltPoint.getString("CLOSED").equalsIgnoreCase("X") ? "T": "F");
+//            points.add(point);
+//        }
+//        return points;
+        return getTableFields(function, "ET_PROCESS");
     }
 
     public void resetODP(
