@@ -39,7 +39,7 @@ public class ODPWrapperTest {
 
     @Test
     public void getODPDetails() throws JCoException {
-        Triple<Map<String, String>, List<Map<String, String>>, List<Map<String, String>>> details =
+        Triple<Map<String, String>, List<Map<String, String>>, List<FieldMeta>> details =
                 odpWrapper.getODPDetails("RODPS_REPL_TEST", "SLT~ODP01", "FRUIT2");
         LOG.info("exportParameters - {}", details.getFirst());
         LOG.info("segments - {}", details.getSecond());
@@ -94,15 +94,47 @@ public class ODPWrapperTest {
     }
 
     @Test
-    public void fullFetch() throws JCoException {
+    public void getUtf8BytesLength() {
+        byte[] data = {(byte) 0xF0, (byte) 0x9F, (byte) 0x8D, (byte) 0x89, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
+                0x20};
+        LOG.info("Bytes length is {}", ODPParser.getUtf8BytesLength(data, 0, 10));
+    }
+
+    @Test
+    public void parseRow() throws Exception {
+        byte[] rowData = {
+                0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x31,
+                0x30, 0x31, 0x20, (byte) 0xF0, (byte) 0x9F, (byte) 0x8D, (byte) 0x89, 0x20,
+                0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x36, 0x2E, 0x30, 0x30, 0x30, 0x30, 0x30,
+                0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x45, 0x2B, 0x30, 0x32, 0x43,
+                0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
+                0x20, 0x20, 0x31, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        };
+        List<FieldMeta> fieldMetas = odpWrapper.getODPDetails(
+                "RODPS_REPL_TEST",
+                "SLT~ODP01",
+                "FRUIT2").getThird();
+        ODPParser odpParser = new ODPParser(fieldMetas);
+        LOG.info("rowData - {}", odpParser.parseRow2Json(rowData));
+    }
+
+    @Test
+    public void fullFetch() throws Exception {
+        List<FieldMeta> fieldMetas = odpWrapper.getODPDetails(
+                "RODPS_REPL_TEST",
+                "SLT~ODP01",
+                "FRUIT2").getThird();
         List<byte[]> list = odpWrapper.fetchODPFull(
                 "RODPS_REPL_TEST",
                 "TestRepository_DoesNotExist",
                 "TestDataFlow_DoesNotExist",
                 "SLT~ODP01",
                 "FRUIT2");
-        for (byte[] bytes: list) {
-            HexDump.hexDump(bytes);
+        ODPParser odpParser = new ODPParser(fieldMetas);
+        for (byte[] rowData: list) {
+            HexDump.hexDump(rowData);
+            LOG.info("row - {}", odpParser.parseRow2Json(rowData));
         }
     }
 }

@@ -98,7 +98,30 @@ public class ODPWrapper {
         return getTableFields(function, "ET_NODES");
     }
 
-    public Triple<Map<String, String>, List<Map<String, String>>, List<Map<String, String>>> getODPDetails(
+    public static List<FieldMeta> parseFieldMeta(List<Map<String, String>> fieldMetaData) {
+        List<FieldMeta> fieldMetaList = new ArrayList<>();
+        for (Map<String, String> meta : fieldMetaData) {
+            FieldMeta fieldMeta = new FieldMeta(
+                    "X".equals(meta.get("KEYFLAG")),
+                    Integer.parseInt(meta.getOrDefault("OUTPUTLENG", "0")),
+                    meta.get("DESCRIPTION"),
+                    "X".equals(meta.get("TRANSFER")),
+                    "X".equals(meta.get("SEL_EQUAL")),
+                    Integer.parseInt(meta.getOrDefault("LENGTH", "0")),
+                    "X".equals(meta.get("SEL_BETWEEN")),
+                    "X".equals(meta.get("SEL_NONDEFAULT")),
+                    Integer.parseInt(meta.getOrDefault("DECIMALS", "0")),
+                    meta.get("TYPE"),
+                    "X".equals(meta.get("SEL_PATTERN")),
+                    meta.get("NAME"),
+                    "X".equals(meta.get("DELTAFIELD"))
+            );
+            fieldMetaList.add(fieldMeta);
+        }
+        return fieldMetaList;
+    }
+
+    public Triple<Map<String, String>, List<Map<String, String>>, List<FieldMeta>> getODPDetails(
             String subscriberType,
             String context,
             String odpName) throws JCoException {
@@ -115,7 +138,7 @@ public class ODPWrapper {
         return new Triple<>(getExportParameters(function),
 //                getTableFields(function, "ET_DELTAMODES"),
                 getTableFields(function, "ET_SEGMENTS"),
-                getTableFields(function, "ET_FIELDS"));
+                parseFieldMeta(getTableFields(function, "ET_FIELDS")));
     }
 
     public List<Map<String, String>> getODPCursors(
@@ -222,7 +245,7 @@ public class ODPWrapper {
     }
 
     private List<byte[]> fetchODP(String pointer, String extractPackage) throws JCoException {
-        List<byte[]> data = new ArrayList<>();
+        List<byte[]> rows = new ArrayList<>();
         while (true) {
             JCoFunction function = destination.getRepository().getFunction("RODPS_REPL_ODP_FETCH");
             if (function == null) {
@@ -242,13 +265,13 @@ public class ODPWrapper {
             do {
                 for (JCoField field : table) {
                     if ("DATA".equals(field.getName())) {
-                        data.add(field.getByteArray());
+                        rows.add(field.getByteArray());
                         break;
                     }
                 }
             } while (table.nextRow());
         }
-        return data;
+        return rows;
     }
 
     public List<byte[]> fetchODPFull(
@@ -259,8 +282,8 @@ public class ODPWrapper {
             String odpName) throws JCoException {
         String pointer =
                 openExtractionSession(subscriberType, subscriberName, subscriberProcess, context, odpName, "F");
-        List<byte[]> data = fetchODP(pointer, "");
+        List<byte[]> rows = fetchODP(pointer, "");
         closeExtractionSession(pointer);
-        return data;
+        return rows;
     }
 }

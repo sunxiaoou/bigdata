@@ -6,24 +6,62 @@ import javassist.*;
 
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.List;
 
 public class ODPParser {
+    private final List<FieldMeta> fieldMetas;
+    private final Class<?> pojoClass;
 
-    public static class FieldMeta {
-        String name;
-        int length;
-        String type;
-
-        public FieldMeta(String name, int length, String type) {
-            this.name = name;
-            this.length = length;
-            this.type = type;
-        }
+    public ODPParser(List<FieldMeta> fieldMetas) throws Exception {
+        this.fieldMetas = fieldMetas;
+        this.pojoClass = createPOJOClass();
     }
 
-    private static int getUtf8BytesLength(byte[] data, int offset, int charCount) {
+    private static String capitalize(String str) {
+        return str.substring(0, 1).toUpperCase() + str.substring(1);
+    }
+
+    private Class<?> createPOJOClass() throws Exception {
+        ClassPool pool = ClassPool.getDefault();
+        CtClass ctClass = pool.makeClass("DynamicPOJO");
+
+        for (FieldMeta fieldMeta : fieldMetas) {
+            String fieldType;
+            switch (fieldMeta.getType()) {
+                case "INT4":
+                    fieldType = "int";
+                    break;
+                case "CHAR":
+                    fieldType = "java.lang.String";
+                    break;
+                case "FLTP":
+                    fieldType = "double";
+                    break;
+                case "DEC":
+                    fieldType = "long";
+                    break;
+                default:
+                    fieldType = "java.lang.String"; // Default to String for unknown types
+            }
+
+            // Add field
+            CtField field = new CtField(pool.get(fieldType), fieldMeta.getName(), ctClass);
+            field.setModifiers(Modifier.PRIVATE);
+            ctClass.addField(field);
+
+            // Add getter
+            CtMethod getter = CtNewMethod.getter("get" + capitalize(fieldMeta.getName()), field);
+            ctClass.addMethod(getter);
+
+            // Add setter
+            CtMethod setter = CtNewMethod.setter("set" + capitalize(fieldMeta.getName()), field);
+            ctClass.addMethod(setter);
+        }
+
+        return ctClass.toClass();
+    }
+
+    public static int getUtf8BytesLength(byte[] data, int offset, int charCount) {
         int byteLength = 0; // 记录实际字节长度
         int charsProcessed = 0; // 已处理的 char 数量
 
@@ -65,15 +103,14 @@ public class ODPParser {
         return byteLength;
     }
 
-    public static Object parseRow(byte[] data, List<FieldMeta> metaInfo) throws Exception {
-        Class<?> pojoClass = generateDynamicClass(metaInfo);
+    public Object parseRow(byte[] data) throws Exception {
         Object instance = pojoClass.getDeclaredConstructor().newInstance();
 
         int offset = 0;
-        for (FieldMeta fieldMeta : metaInfo) {
-            int length = fieldMeta.length;
-            String fieldName = fieldMeta.name;
-            String fieldType = fieldMeta.type;
+        for (FieldMeta fieldMeta : fieldMetas) {
+            int length = fieldMeta.getOutputLength();
+            String fieldName = fieldMeta.getName();
+            String fieldType = fieldMeta.getType();
 
             if ("CHAR".equalsIgnoreCase(fieldType)) {
                 length = getUtf8BytesLength(data, offset, length);
@@ -100,83 +137,9 @@ public class ODPParser {
         return instance;
     }
 
-    private static String capitalize(String str) {
-        return str.substring(0, 1).toUpperCase() + str.substring(1);
-    }
-
-    private static Class<?> generateDynamicClass(List<FieldMeta> metaInfo) throws Exception {
-        ClassPool pool = ClassPool.getDefault();
-        CtClass ctClass = pool.makeClass("DynamicPOJO");
-
-        for (FieldMeta fieldMeta : metaInfo) {
-            String fieldType;
-            switch (fieldMeta.type) {
-                case "INT4":
-                    fieldType = "int";
-                    break;
-                case "CHAR":
-                    fieldType = "java.lang.String";
-                    break;
-                case "FLTP":
-                    fieldType = "double";
-                    break;
-                case "DEC":
-                    fieldType = "long";
-                    break;
-                default:
-                    fieldType = "java.lang.String"; // Default to String for unknown types
-            }
-
-            // Add field
-            CtField field = new CtField(pool.get(fieldType), fieldMeta.name, ctClass);
-            field.setModifiers(Modifier.PRIVATE);
-            ctClass.addField(field);
-
-            // Add getter
-            CtMethod getter = CtNewMethod.getter("get" + capitalize(fieldMeta.name), field);
-            ctClass.addMethod(getter);
-
-            // Add setter
-            CtMethod setter = CtNewMethod.setter("set" + capitalize(fieldMeta.name), field);
-            ctClass.addMethod(setter);
-        }
-
-        return ctClass.toClass();
-    }
-
-    public static String getJson(Object pojo) {
+    public String parseRow2Json(byte[] data) throws Exception {
+        Object pojo = parseRow(data);
         TypeUtils.compatibleWithFieldName = true;
         return JSON.toJSONString(pojo);
-    }
-
-    static void test() {
-        byte[] data = {(byte) 0xF0, (byte) 0x9F, (byte) 0x8D, (byte) 0x89, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20};
-        System.out.println(getUtf8BytesLength(data, 0, 10));
-    }
-
-    public static void main(String[] args) throws Exception {
-//        test();
-//        System.exit(1);
-
-        // Simulate metadata from RODPS_REPL_ODP_GET_DETAIL
-        List<FieldMeta> metaInfo = new ArrayList<>();
-        metaInfo.add(new FieldMeta("ID", 11, "INT4"));
-        metaInfo.add(new FieldMeta("NAME", 10, "CHAR"));
-        metaInfo.add(new FieldMeta("PRICE", 24, "FLTP"));
-        metaInfo.add(new FieldMeta("ODQ_CHANGEMODE", 1, "CHAR"));
-        metaInfo.add(new FieldMeta("ODQ_ENTITYCNTR", 20, "DEC"));
-
-        // Simulate data from RODPS_REPL_ODP_FETCH
-        byte[] data = {
-                0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x31, 0x30, 0x31, 0x20, (byte) 0xF0, (byte) 0x9F, (byte) 0x8D, (byte) 0x89, 0x20,
-                0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x36, 0x2E, 0x30, 0x30, 0x30, 0x30, 0x30,
-                0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x45, 0x2B, 0x30, 0x32, 0x43,
-                0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
-                0x20, 0x20, 0x31, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        };
-
-        Object pojo = parseRow(data, metaInfo);
-        System.out.println(getJson(pojo));
     }
 }
