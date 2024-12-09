@@ -46,16 +46,16 @@ public class ODPWrapperTest {
         LOG.info("fields - {}", details.getThird());
     }
 
-    @Test
-    public void openExtractionSession() throws JCoException {
-        LOG.info("{}", odpWrapper.openExtractionSession(
-                "RODPS_REPL_TEST",
-                "TestRepository_DoesNotExist",
-                "TestDataFlow_DoesNotExist",
-                "SLT~ODP01",
-                "FRUIT2",
-                "F"));
-    }
+//    @Test
+//    public void openExtractionSession() throws JCoException {
+//        LOG.info("{}", odpWrapper.openExtractionSession(
+//                "RODPS_REPL_TEST",
+//                "TestRepository_DoesNotExist",
+//                "TestDataFlow_DoesNotExist",
+//                "SLT~ODP01",
+//                "FRUIT2",
+//                "F"));
+//    }
 
     @Test
     public void closeExtractionSession() throws JCoException {
@@ -119,22 +119,32 @@ public class ODPWrapperTest {
         LOG.info("rowData - {}", odpParser.parseRow2Json(rowData));
     }
 
-    @Test
-    public void fullFetch() throws Exception {
+    private void fetchODP(String mode) throws Exception {
         List<FieldMeta> fieldMetas = odpWrapper.getODPDetails(
                 "RODPS_REPL_TEST",
                 "SLT~ODP01",
                 "FRUIT2").getThird();
-        List<byte[]> list = odpWrapper.fetchODPFull(
+        ODPParser odpParser = new ODPParser(fieldMetas);
+        List<byte[]> rows = odpWrapper.fetchODP(
                 "RODPS_REPL_TEST",
                 "TestRepository_DoesNotExist",
                 "TestDataFlow_DoesNotExist",
                 "SLT~ODP01",
-                "FRUIT2");
-        ODPParser odpParser = new ODPParser(fieldMetas);
-        for (byte[] rowData: list) {
-            HexDump.hexDump(rowData);
+                "FRUIT2",
+                mode);
+        for (byte[] rowData: rows) {
+//            HexDump.hexDump(rowData);
             LOG.info("row - {}", odpParser.parseRow2Json(rowData));
         }
+    }
+
+    @Test
+    public void fetchODPFull() throws Exception {
+        fetchODP("F");
+    }
+
+    @Test
+    public void fetchODPDelta() throws Exception {
+        fetchODP("D");
     }
 }

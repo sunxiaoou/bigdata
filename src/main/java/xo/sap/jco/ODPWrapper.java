@@ -209,7 +209,10 @@ public class ODPWrapper {
         function.getImportParameterList().setValue("I_ODPNAME", odpName);
         function.getImportParameterList().setValue("I_EXTRACTION_MODE", mode);
         function.execute(destination);
-        return function.getExportParameterList().getString("E_POINTER");
+        printError(function);
+        Map<String, String> parameters = getExportParameters(function);
+        LOG.info("{}", parameters);
+        return parameters.get("E_POINTER");
     }
 
     /**
@@ -274,14 +277,15 @@ public class ODPWrapper {
         return rows;
     }
 
-    public List<byte[]> fetchODPFull(
+    public List<byte[]> fetchODP(
             String subscriberType,
             String subscriberName,
             String subscriberProcess,
             String context,
-            String odpName) throws JCoException {
+            String odpName,
+            String mode) throws JCoException {
         String pointer =
-                openExtractionSession(subscriberType, subscriberName, subscriberProcess, context, odpName, "F");
+                openExtractionSession(subscriberType, subscriberName, subscriberProcess, context, odpName, mode);
         List<byte[]> rows = fetchODP(pointer, "");
         closeExtractionSession(pointer);
         return rows;
