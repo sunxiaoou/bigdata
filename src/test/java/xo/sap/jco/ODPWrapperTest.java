@@ -42,20 +42,10 @@ public class ODPWrapperTest {
         Triple<Map<String, String>, List<Map<String, String>>, List<FieldMeta>> details =
                 odpWrapper.getODPDetails("RODPS_REPL_TEST", "SLT~ODP01", "FRUIT2");
         LOG.info("exportParameters - {}", details.getFirst());
+//        LOG.info("deltaModes - {}", details.getSecond());
         LOG.info("segments - {}", details.getSecond());
         LOG.info("fields - {}", details.getThird());
     }
-
-//    @Test
-//    public void openExtractionSession() throws JCoException {
-//        LOG.info("{}", odpWrapper.openExtractionSession(
-//                "RODPS_REPL_TEST",
-//                "TestRepository_DoesNotExist",
-//                "TestDataFlow_DoesNotExist",
-//                "SLT~ODP01",
-//                "FRUIT2",
-//                "F"));
-//    }
 
     @Test
     public void closeExtractionSession() throws JCoException {
@@ -80,6 +70,11 @@ public class ODPWrapperTest {
     @Test
     public void getODPCursorsDelta() throws JCoException {
         getODPCursors("D");
+    }
+
+    @Test
+    public void getODPCursorsRealTime() throws JCoException {
+        getODPCursors("R");
     }
 
     @Test

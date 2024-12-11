@@ -72,12 +72,13 @@ public class FruitHana {
     }
 
     private static int update() throws SQLException {
-        String updateSql = "UPDATE " + tableName + " SET NAME = ?, PRICE = ? WHERE ID = ?";
+//        String updateSql = "UPDATE " + tableName + " SET NAME = ?, PRICE = ? WHERE ID = ?";
+        String updateSql = "UPDATE " + tableName + " SET PRICE = PRICE * 1.10";
         int rowsUpdated;
         try (PreparedStatement preparedStatement = connection.prepareStatement(updateSql)) {
-            preparedStatement.setString(1, "🍉");
-            preparedStatement.setDouble(2, 600);
-            preparedStatement.setInt(3, 101);
+//            preparedStatement.setString(1, "🍉");
+//            preparedStatement.setDouble(2, 600);
+//            preparedStatement.setInt(3, 101);
             rowsUpdated = preparedStatement.executeUpdate();
         }
         return rowsUpdated;
