@@ -1,6 +1,7 @@
 package xo.sap.jco;
 
 import com.sap.conn.jco.*;
+import org.apache.commons.cli.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import xo.utility.Triple;
@@ -289,5 +290,160 @@ public class ODPWrapper {
         List<byte[]> rows = fetchODP(pointer, "");
         closeExtractionSession(pointer);
         return rows;
+    }
+
+    private static void run(String action, CommandLine cmd) {
+        try {
+            ODPWrapper odpWrapper = new ODPWrapper(DestinationConcept.SomeSampleDestinations.ABAP_AS1);
+            switch (action) {
+                case "ListContexts":
+                    LOG.info("{}", odpWrapper.getContexts());
+                    return;
+                case "ListODPs":
+                    assert cmd.hasOption("subscriberType") &&
+                            cmd.hasOption("contextName") &&
+                            cmd.hasOption("odpNamePattern");
+                    LOG.info("{}", odpWrapper.getODPList(
+                            cmd.getOptionValue("subscriberType"),
+                            cmd.getOptionValue("contextName"),
+                            cmd.getOptionValue("odpNamePattern")));
+                    return;
+                case "ShowODP":
+                    assert cmd.hasOption("subscriberType") &&
+                            cmd.hasOption("contextName") &&
+                            cmd.hasOption("odpNamePattern");
+                    Triple<Map<String, String>, List<Map<String, String>>, List<FieldMeta>> details =
+                            odpWrapper.getODPDetails(
+                                    cmd.getOptionValue("subscriberType"),
+                                    cmd.getOptionValue("contextName"),
+                                    cmd.getOptionValue("odpNamePattern"));
+                    LOG.info("exportParameters - {}", details.getFirst());
+                    LOG.info("segments - {}", details.getSecond());
+                    LOG.info("fields - {}", details.getThird());
+                    return;
+                case "ListCursors":
+                    assert cmd.hasOption("subscriberType") &&
+                            cmd.hasOption("subscriberName") &&
+                            cmd.hasOption("contextName") &&
+                            cmd.hasOption("odpNamePattern") &&
+                            cmd.hasOption("extractMode");
+                    LOG.info("{}", odpWrapper.getODPCursors(
+                            cmd.getOptionValue("subscriberType"),
+                            cmd.getOptionValue("subscriberName"),
+                            cmd.getOptionValue("contextName"),
+                            cmd.getOptionValue("odpNamePattern"),
+                            cmd.getOptionValue("extractMode")));
+                    return;
+                case "ResetODP":
+                    assert cmd.hasOption("subscriberType") &&
+                            cmd.hasOption("subscriberName") &&
+                            cmd.hasOption("subscriberProcess") &&
+                            cmd.hasOption("contextName") &&
+                            cmd.hasOption("odpNamePattern");
+                    odpWrapper.resetODP(
+                            cmd.getOptionValue("subscriberType"),
+                            cmd.getOptionValue("subscriberName"),
+                            cmd.getOptionValue("subscriberProcess"),
+                            cmd.getOptionValue("contextName"),
+                            cmd.getOptionValue("odpNamePattern"));
+                    return;
+                case "FetchODP":
+                    assert cmd.hasOption("subscriberType") &&
+                            cmd.hasOption("subscriberName") &&
+                            cmd.hasOption("subscriberProcess") &&
+                            cmd.hasOption("contextName") &&
+                            cmd.hasOption("odpNamePattern") &&
+                            cmd.hasOption("extractMode");
+                    List<FieldMeta> fieldMetas = odpWrapper.getODPDetails(
+                            cmd.getOptionValue("subscriberType"),
+                            cmd.getOptionValue("contextName"),
+                            cmd.getOptionValue("odpNamePattern")).getThird();
+                    ODPParser odpParser = new ODPParser(fieldMetas);
+                    List<byte[]> rows = odpWrapper.fetchODP(
+                            cmd.getOptionValue("subscriberType"),
+                            cmd.getOptionValue("subscriberName"),
+                            cmd.getOptionValue("subscriberProcess"),
+                            cmd.getOptionValue("contextName"),
+                            cmd.getOptionValue("odpNamePattern"),
+                            cmd.getOptionValue("extractMode"));
+                    for (byte[] rowData: rows) {
+//                        HexDump.hexDump(rowData);
+                        LOG.info("row - {}", odpParser.parseRow2Json(rowData));
+                    }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+// ListContexts
+// ListODPs -st RODPS_REPL_TEST -cn "SLT~ODP01" -onp "FRUIT*"
+// ShowODP -st RODPS_REPL_TEST -cn "SLT~ODP01" -onp FRUIT2
+// ListCursors -st RODPS_REPL_TEST -sn TestRepository_DoesNotExist -cn "SLT~ODP01" -onp FRUIT2 -em D
+// ResetODP -st RODPS_REPL_TEST -sn TestRepository_DoesNotExist -sp TestDataFlow_DoesNotExist -cn "SLT~ODP01" -onp FRUIT2
+// FetchODP -st RODPS_REPL_TEST -sn TestRepository_DoesNotExist -sp TestDataFlow_DoesNotExist -cn "SLT~ODP01" -onp FRUIT2 -em D
+    public static void main(String[] args) {
+        Options options = new Options();
+        // Define action argument (mandatory)
+        Option action = Option.builder("a")
+                .longOpt("action")
+                .desc("Action to perform: ListContexts, ListODPs, ShowODP, ListCursors, ResetODP, FetchODP")
+                .hasArg()
+                .argName("action")
+                .required()
+                .build();
+        options.addOption(action);
+
+        // Define optional parameters
+        options.addOption(Option.builder("st")
+                .longOpt("subscriberType")
+                .desc("Type of the subscriber")
+                .hasArg()
+                .argName("subscriberType")
+                .build());
+        options.addOption(Option.builder("sn")
+                .longOpt("subscriberName")
+                .desc("Name of the subscriber")
+                .hasArg()
+                .argName("subscriberName")
+                .build());
+        options.addOption(Option.builder("sp")
+                .longOpt("subscriberProcess")
+                .desc("Subscriber process name")
+                .hasArg()
+                .argName("subscriberProcess")
+                .build());
+        options.addOption(Option.builder("cn")
+                .longOpt("contextName")
+                .desc("Name of the context")
+                .hasArg()
+                .argName("contextName")
+                .build());
+        options.addOption(Option.builder("onp")
+                .longOpt("odpNamePattern")
+                .desc("Pattern for ODP names")
+                .hasArg()
+                .argName("odpNamePattern")
+                .build());
+        options.addOption(Option.builder("em")
+                .longOpt("extractMode")
+                .desc("Mode of extraction")
+                .hasArg()
+                .argName("extractMode")
+                .build());
+        // Parse the command-line arguments
+        CommandLineParser parser = new DefaultParser();
+        HelpFormatter formatter = new HelpFormatter();
+        try {
+            CommandLine cmd = parser.parse(options, args);
+            // Retrieve the action
+            String actionValue = cmd.getOptionValue("action");
+            System.out.println("Action: " + actionValue);
+            run(actionValue, cmd);
+        } catch (ParseException e) {
+            System.out.println(e.getMessage());
+            formatter.printHelp("ODPWrapper", options);
+            System.exit(1);
+        }
     }
 }
