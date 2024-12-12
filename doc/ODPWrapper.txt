@@ -1,0 +1,7 @@
+$ cd ~/learn/java/bigdata
+$ odp -a ListContexts
+$ odp -a ListODPs -st RODPS_REPL_TEST -cn "SLT~ODP01" -onp "FRUIT*"
+$ odp -a ShowODP -st RODPS_REPL_TEST -cn "SLT~ODP01" -onp FRUIT2
+$ odp -a ListCursors -st RODPS_REPL_TEST -sn TestRepository_DoesNotExist -cn "SLT~ODP01" -onp FRUIT2 -em D
+$ odp -a ResetODP -st RODPS_REPL_TEST -sn TestRepository_DoesNotExist -sp TestDataFlow_DoesNotExist -cn "SLT~ODP01" -onp FRUIT2
+$ odp -a FetchODP -st RODPS_REPL_TEST -sn TestRepository_DoesNotExist -sp TestDataFlow_DoesNotExist -cn "SLT~ODP01" -onp FRUIT2 -em D
