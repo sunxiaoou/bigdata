@@ -6,7 +6,7 @@ jco.client.ashost=sap01
 jco.client.sysnr=01
 jco.client.client=150
 jco.client.user=INFO2
-jco.client.passwd=f2BYPEyV:P$G*eET!*|COI)A#(:%YzP-%(?K+-D,eus}Tzts
+jco.client.passwd=
 jco.client.lang=en
 #
 #further useful standard properties (see documentation in DestinationDataProvider)
