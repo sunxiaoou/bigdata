@@ -354,17 +354,18 @@ public class ODPWrapper {
                             cmd.hasOption("contextName") &&
                             cmd.hasOption("odpNamePattern") &&
                             cmd.hasOption("extractMode");
+                    String odpName = cmd.getOptionValue("odpNamePattern");
                     List<FieldMeta> fieldMetas = odpWrapper.getODPDetails(
                             cmd.getOptionValue("subscriberType"),
                             cmd.getOptionValue("contextName"),
-                            cmd.getOptionValue("odpNamePattern")).getThird();
-                    ODPParser odpParser = new ODPParser(fieldMetas);
+                            odpName).getThird();
+                    ODPParser odpParser = new ODPParser(odpName, fieldMetas);
                     List<byte[]> rows = odpWrapper.fetchODP(
                             cmd.getOptionValue("subscriberType"),
                             cmd.getOptionValue("subscriberName"),
                             cmd.getOptionValue("subscriberProcess"),
                             cmd.getOptionValue("contextName"),
-                            cmd.getOptionValue("odpNamePattern"),
+                            odpName,
                             cmd.getOptionValue("extractMode"));
                     for (byte[] rowData: rows) {
 //                        HexDump.hexDump(rowData);
@@ -376,12 +377,6 @@ public class ODPWrapper {
         }
     }
 
-// ListContexts
-// ListODPs -st RODPS_REPL_TEST -cn "SLT~ODP01" -onp "FRUIT*"
-// ShowODP -st RODPS_REPL_TEST -cn "SLT~ODP01" -onp FRUIT2
-// ListCursors -st RODPS_REPL_TEST -sn TestRepository_DoesNotExist -cn "SLT~ODP01" -onp FRUIT2 -em D
-// ResetODP -st RODPS_REPL_TEST -sn TestRepository_DoesNotExist -sp TestDataFlow_DoesNotExist -cn "SLT~ODP01" -onp FRUIT2
-// FetchODP -st RODPS_REPL_TEST -sn TestRepository_DoesNotExist -sp TestDataFlow_DoesNotExist -cn "SLT~ODP01" -onp FRUIT2 -em D
     public static void main(String[] args) {
         Options options = new Options();
         // Define action argument (mandatory)

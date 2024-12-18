@@ -12,18 +12,18 @@ public class ODPParser {
     private final List<FieldMeta> fieldMetas;
     private final Class<?> pojoClass;
 
-    public ODPParser(List<FieldMeta> fieldMetas) throws Exception {
+    public ODPParser(String className, List<FieldMeta> fieldMetas) throws Exception {
         this.fieldMetas = fieldMetas;
-        this.pojoClass = createPOJOClass();
+        this.pojoClass = createPOJOClass(className);
     }
 
     private static String capitalize(String str) {
         return str.substring(0, 1).toUpperCase() + str.substring(1);
     }
 
-    private Class<?> createPOJOClass() throws Exception {
+    private Class<?> createPOJOClass(String className) throws Exception {
         ClassPool pool = ClassPool.getDefault();
-        CtClass ctClass = pool.makeClass("DynamicPOJO");
+        CtClass ctClass = pool.makeClass("Pojo" + className);
 
         for (FieldMeta fieldMeta : fieldMetas) {
             String fieldType;
