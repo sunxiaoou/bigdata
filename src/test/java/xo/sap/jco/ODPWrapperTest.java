@@ -110,7 +110,7 @@ public class ODPWrapperTest {
                 "RODPS_REPL_TEST",
                 "SLT~ODP01",
                 "FRUIT2").getThird();
-        ODPParser odpParser = new ODPParser(fieldMetas);
+        ODPParser odpParser = new ODPParser("FRUIT2", fieldMetas);
         LOG.info("rowData - {}", odpParser.parseRow2Json(rowData));
     }
 
@@ -119,7 +119,7 @@ public class ODPWrapperTest {
                 "RODPS_REPL_TEST",
                 "SLT~ODP01",
                 "FRUIT2").getThird();
-        ODPParser odpParser = new ODPParser(fieldMetas);
+        ODPParser odpParser = new ODPParser("FRUIT2", fieldMetas);
         List<byte[]> rows = odpWrapper.fetchODP(
                 "RODPS_REPL_TEST",
                 "TestRepository_DoesNotExist",
