@@ -15,9 +15,9 @@ install_zookeeper() {
 
     # Extract Zookeeper
     parent=$(dirname "$ZOOKEEPER_HOME")
-    mkdir -p "$parent"
-    tar xf "$TAR_DIR/$ZOOKEEPER_TAR" -C "$parent"
-    mv "$parent"/${ZOOKEEPER_TAR%.tar.gz} "$ZOOKEEPER_HOME"
+    sudo mkdir -p "$parent"
+    sudo tar xf "$TAR_DIR/$ZOOKEEPER_TAR" -C "$parent"
+    sudo mv "$parent"/${ZOOKEEPER_TAR%.tar.gz} "$ZOOKEEPER_HOME"
     sudo chown -R "$USER:$GROUP" "$ZOOKEEPER_HOME"
 
     # Configure zoo.cfg
@@ -38,8 +38,8 @@ install_hadoop() {
 
     # Extract Hadoop
     parent=$(dirname "$HADOOP_HOME")
-    mkdir -p "$parent"
-    tar xf "$TAR_DIR/$HADOOP_TAR" -C "$parent"
+    sudo mkdir -p "$parent"
+    sudo tar xf "$TAR_DIR/$HADOOP_TAR" -C "$parent"
     sudo chown -R "$USER:$GROUP" "$HADOOP_HOME"
 
     # Configure Hadoop environment
@@ -50,7 +50,8 @@ install_hadoop() {
     sed -i "s|#export HADOOP_MAPRED_PID_DIR=|export HADOOP_MAPRED_PID_DIR=${PID_DIR}|" \
          "$ha_conf/mapred-env.sh"
     sed -i "\$a\export YARN_PID_DIR=${PID_DIR}" "$ha_conf/yarn-env.sh"
-    mkdir -p $PID_DIR
+    sudo mkdir -p $PID_DIR
+    sudo chown -R "$USER:$GROUP" "$PID_DIR"
 
     cat > "$ha_conf/core-site.xml" <<EOL
 <configuration>
@@ -147,8 +148,8 @@ install_hbase() {
 
     # Extract HBase
     parent=$(dirname "$HBASE_HOME")
-    mkdir -p "$parent"
-    tar xf "$TAR_DIR/$HBASE_TAR" -C "$parent"
+    sudo mkdir -p "$parent"
+    sudo tar xf "$TAR_DIR/$HBASE_TAR" -C "$parent"
     sudo chown -R "$USER:$GROUP" "$HBASE_HOME"
     dup_jar=$HBASE_HOME/lib/client-facing-thirdparty/slf4j-reload4j-1.7.33.jar
     if [ -f "$dup_jar" ]; then
@@ -162,7 +163,8 @@ install_hbase() {
         -e "s|# export HBASE_PID_DIR=/var/hadoop/pids|export HBASE_PID_DIR=${PID_DIR}|" \
         -e "s|# export HBASE_MANAGES_ZK=true|export HBASE_MANAGES_ZK=false|" \
         "$hb_conf/hbase-env.sh"
-    mkdir -p $PID_DIR
+    sudo mkdir -p $PID_DIR
+    sudo chown -R "$USER:$GROUP" "$PID_DIR"
 
     cat > "$hb_conf/hbase-site.xml" <<EOL
 <configuration>
