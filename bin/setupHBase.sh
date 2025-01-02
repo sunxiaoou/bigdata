@@ -2,6 +2,7 @@
 
 TAR_DIR="$HOME/Downloads/bigdata"
 ZOOKEEPER_TAR="apache-zookeeper-3.8.1-bin.tar.gz"
+KAFKA_TAR="kafka_2.13-3.3.1.tgz"
 HADOOP_TAR="hadoop-2.10.2.tar.gz"
 HBASE_TAR="hbase-2.4.16-bin.tar.gz"
 DEFAULT_PARENT_DIR="$HOME/bigdata"
@@ -32,7 +33,33 @@ install_zookeeper() {
     "$ZOOKEEPER_HOME/bin/zkServer.sh" start
 }
 
-# Step 2: Install Hadoop
+# Step 2: Install Kafka
+install_kafka() {
+    echo "Installing Kafka..."
+
+    # Extract Kafka
+    parent=$(dirname "$KAFKA_HOME")
+    sudo mkdir -p "$parent"
+    sudo tar xf "$TAR_DIR/$KAFKA_TAR" -C "$parent"
+    sudo mv "$parent"/${KAFKA_TAR%.tgz} "$KAFKA_HOME"
+    sudo chown -R "$USER:$GROUP" "$KAFKA_HOME"
+
+    # Configure server.properties
+    kfk_conf="$KAFKA_HOME/config"
+    orig.sh "$kfk_conf/server.properties"
+    sed -i "s|/tmp/kafka-logs|${KAFKA_HOME}/tmp|" "$kfk_conf"/server.properties
+
+    # Create necessary directories and start Kafka
+    mkdir -p "$KAFKA_HOME"/tmp
+    "$KAFKA_HOME/bin/kafka-server-start.sh" -daemon "$KAFKA_HOME"/config/server.properties
+    sleep 2
+    if grep -P "ERROR|\tat" "$KAFKA_HOME"/logs/*.log; then
+        echo "Error found in Kafka logs"
+        exit 1
+    fi
+}
+
+# Step 3: Install Hadoop
 install_hadoop() {
     echo "Installing Hadoop..."
 
@@ -138,11 +165,15 @@ EOL
     "$HADOOP_HOME/bin/hdfs" namenode -format
     "$HADOOP_HOME/sbin/start-dfs.sh"
     "$HADOOP_HOME/sbin/start-yarn.sh"
+    "$HADOOP_HOME/bin/hdfs" dfs -mkdir -p /tmp/logs/
     "$HADOOP_HOME/sbin/mr-jobhistory-daemon.sh" start historyserver
-    grep -P "ERROR|\tat" "$HADOOP_HOME"/logs/*.log
+    if grep -P "ERROR|\tat" "$HADOOP_HOME"/logs/*.log; then
+        echo "Error found in Hadoop logs"
+        exit 1
+    fi
 }
 
-# Step 3: Install HBase
+# Step 4: Install HBase
 install_hbase() {
     echo "Installing HBase..."
 
@@ -193,10 +224,13 @@ EOL
 
     # Start HBase
     "$HBASE_HOME/bin/start-hbase.sh"
-    grep -P "ERROR|\tat" "$HBASE_HOME"/logs/*.log
+    if grep -P "ERROR|\tat" "$HBASE_HOME"/logs/*.log; then
+        echo "Error found in HBase logs"
+        exit 1
+    fi
 }
 
-# Step 4: Verify Installation
+# Step 5: Verify Installation
 verify_installation() {
     echo "Verifying Zookeeper..."
     pid=$(jps | grep -w QuorumPeerMain | awk '{print $1}')
@@ -227,6 +261,11 @@ main() {
         ZOOKEEPER_HOME=$DEFAULT_PARENT_DIR/zookeeper-$ver
     fi
 
+    if [ -z "$KAFKA_HOME" ]; then
+        ver=$(echo $KAFKA_TAR | sed -n 's/.*\-\([0-9]\+\.[0-9]\+\.[0-9]\+\).*/\1/p')
+        KAFKA_HOME=$DEFAULT_PARENT_DIR/kafka-$ver
+    fi
+
     if [ -z "$HADOOP_HOME" ]; then
         ver=$(echo $HADOOP_TAR | sed -n 's/.*\-\([0-9]\+\.[0-9]\+\.[0-9]\+\).*/\1/p')
         HADOOP_HOME=$DEFAULT_PARENT_DIR/hadoop-$ver
@@ -238,6 +277,7 @@ main() {
     fi
 
     install_zookeeper
+    install_kafka
     install_hadoop
     install_hbase
     verify_installation
