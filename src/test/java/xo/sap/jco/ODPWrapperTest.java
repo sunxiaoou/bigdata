@@ -20,7 +20,8 @@ public class ODPWrapperTest {
 
     @Before
     public void setUp() throws Exception {
-        odpWrapper = new ODPWrapper(DestinationConcept.SomeSampleDestinations.ABAP_AS1);
+//        odpWrapper = new ODPWrapper(DestinationConcept.SomeSampleDestinations.ABAP_AS1);
+        odpWrapper = new ODPWrapper(DestinationConcept.SomeSampleDestinations.ABAP_MS);
     }
 
     @After

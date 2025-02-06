@@ -117,7 +117,8 @@ public class ODPDaemon {
 
     public static void main(String[] args) throws JCoException {
         ODPDaemon ODPDaemon = new ODPDaemon(
-                new ODPWrapper(DestinationConcept.SomeSampleDestinations.ABAP_AS1),
+//                new ODPWrapper(DestinationConcept.SomeSampleDestinations.ABAP_AS1),
+                new ODPWrapper(DestinationConcept.SomeSampleDestinations.ABAP_MS),
                 "RODPS_REPL_TEST",
                 "TestRepository_DoesNotExist",
                 "TestDataFlow_DoesNotExist",
