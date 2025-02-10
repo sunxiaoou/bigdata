@@ -4,6 +4,8 @@ import com.sap.conn.jco.JCoException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.util.*;
 
 public class ODPDaemon {
@@ -13,33 +15,34 @@ public class ODPDaemon {
     private final String subscriberType;
     private final String subscriberName;
     private final String subscriberProcess;
-    private final String context;
-    private final List<String> queues;
+    private final List<String> tables;
     private final List<Thread> workers = new ArrayList<>();
 
-    public ODPDaemon(ODPWrapper odpWrapper,
+    public ODPDaemon(String odpName,
+                     Properties odpProperties,
                      String subscriberType,
                      String subscriberName,
                      String subscriberProcess,
-                     String context,
-                     List<String> queues) {
-        this.odpWrapper = odpWrapper;
+                     List<String> tables) throws JCoException {
+        this.odpWrapper = new ODPWrapper(odpName, odpProperties);
         this.subscriberType = subscriberType;
         this.subscriberName = subscriberName;
         this.subscriberProcess = subscriberProcess;
-        this.context = context;
-        this.queues = queues;
+        this.tables = tables;
     }
 
     public void start() {
-        for (String queue: queues) {
-            Thread worker = new Thread(() -> workerRun(queue), "Worker-" + queue);
+        for (String table: tables) {
+            Thread worker = new Thread(() -> workerRun(table), "Worker-" + table);
             worker.start();
             workers.add(worker);
         }
     }
 
-    private void workerRun(String queue) {
+    private void workerRun(String table) {
+        String[] split = table.split("\\.");
+        String context = split[0];
+        String queue = split[1];
         try {
             odpWrapper.resetODP(
                     subscriberType,
@@ -115,15 +118,25 @@ public class ODPDaemon {
         }
     }
 
+    private static Properties readProperties(String path) {
+        Properties properties = new Properties();
+        try (FileInputStream fis = new FileInputStream(path)) {
+            properties.load(fis);
+//            properties.forEach((key, value) -> System.out.println(key + ": " + value));
+        } catch (IOException e) {
+            LOG.error("Can not find file " + path, e);
+        }
+        return properties;
+    }
+
     public static void main(String[] args) throws JCoException {
         ODPDaemon ODPDaemon = new ODPDaemon(
-//                new ODPWrapper(DestinationConcept.SomeSampleDestinations.ABAP_AS1),
-                new ODPWrapper(DestinationConcept.SomeSampleDestinations.ABAP_MS),
+                "myTest",
+                readProperties("ABAP_MS.jcoDestination"),
                 "RODPS_REPL_TEST",
                 "TestRepository_DoesNotExist",
                 "TestDataFlow_DoesNotExist",
-                "SLT~ODP01",
-                Arrays.asList("FRUIT2", "FRUIT3"));
+                Arrays.asList("SLT~ODP01.FRUIT2", "SLT~ODP01.FRUIT3"));
         ODPDaemon.start();
         ODPDaemon.waitForStopSignal();
         ODPDaemon.stopAndWaitWorkers();

@@ -84,33 +84,23 @@ public class SimpleDestinationDataProvider implements DestinationDataProvider {
     /**
      * 直接添加 SAP 连接参数的便捷方法
      */
-    public static void addSAPDestination(String name, String ashost, String sysnr, String client, String user, String passwd, String lang) {
-        Properties props = new Properties();
-        props.setProperty(DestinationDataProvider.JCO_ASHOST, ashost);
-        props.setProperty(DestinationDataProvider.JCO_SYSNR, sysnr);
-        props.setProperty(DestinationDataProvider.JCO_CLIENT, client);
-        props.setProperty(DestinationDataProvider.JCO_USER, user);
-        props.setProperty(DestinationDataProvider.JCO_PASSWD, passwd);
-        props.setProperty(DestinationDataProvider.JCO_LANG, lang);
-        getInstance().addOrUpdateDestination(name, props);
+    public static void addDestination(String name, Properties properties) {
+        getInstance().addOrUpdateDestination(name, properties);
     }
 
     public static void main(String[] args) {
         try {
             // 注册自定义 DestinationDataProvider
             SimpleDestinationDataProvider.register();
-
             // 直接添加 SAP 目标（无需 .jcoDestination 文件）
-            SimpleDestinationDataProvider.addSAPDestination(
-                    "slt_as1",
-                    "sap01",  // SAP 服务器地址
-                    "01",         // SAP 系统编号
-                    "150",        // SAP 客户端
-                    "INFO2",  // 用户名
-                    "Info1234@", // 密码
-                    "en"         // 语言
-            );
-
+            Properties props = new Properties();
+            props.setProperty(DestinationDataProvider.JCO_ASHOST, "sap01");
+            props.setProperty(DestinationDataProvider.JCO_SYSNR, "01");
+            props.setProperty(DestinationDataProvider.JCO_CLIENT, "150");
+            props.setProperty(DestinationDataProvider.JCO_USER, "INFO2");
+            props.setProperty(DestinationDataProvider.JCO_PASSWD, "Info1234@");
+            props.setProperty(DestinationDataProvider.JCO_LANG, "en");
+            SimpleDestinationDataProvider.addDestination("slt_as1", props);
             // 获取目标并测试连接
             JCoDestination destination = JCoDestinationManager.getDestination("slt_as1");
             destination.ping();

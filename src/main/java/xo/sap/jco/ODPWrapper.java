@@ -21,6 +21,12 @@ public class ODPWrapper {
         this.destination = JCoDestinationManager.getDestination(destinationName);
     }
 
+    public ODPWrapper(String destinationName, Properties properties) throws JCoException {
+        SimpleDestinationDataProvider.register();
+        SimpleDestinationDataProvider.addDestination(destinationName, properties);
+        this.destination = JCoDestinationManager.getDestination(destinationName);
+    }
+
     private Map<String, String> getExportParameters(JCoFunction function) {
         JCoParameterList exportParameters = function.getExportParameterList();
         Map<String, String> parameters = new HashMap<>();
