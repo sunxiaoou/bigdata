@@ -20,8 +20,8 @@ public class ODPWrapperTest {
 
     @Before
     public void setUp() throws Exception {
-//        odpWrapper = new ODPWrapper(DestinationConcept.SomeSampleDestinations.ABAP_AS1);
-        odpWrapper = new ODPWrapper(DestinationConcept.SomeSampleDestinations.ABAP_MS);
+        odpWrapper = new ODPWrapper(DestinationConcept.SomeSampleDestinations.ABAP_AS1);
+//        odpWrapper = new ODPWrapper(DestinationConcept.SomeSampleDestinations.ABAP_MS);
     }
 
     @After
@@ -129,7 +129,7 @@ public class ODPWrapperTest {
                 "FRUIT2",
                 mode);
         for (byte[] rowData: rows) {
-//            HexDump.hexDump(rowData);
+            HexDump.hexDump(rowData);
             LOG.info("row - {}", odpParser.parseRow2Json(rowData));
         }
     }

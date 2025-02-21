@@ -73,7 +73,8 @@ public class FruitHana {
 
     private static int update() throws SQLException {
 //        String updateSql = "UPDATE " + tableName + " SET NAME = ?, PRICE = ? WHERE ID = ?";
-        String updateSql = "UPDATE " + tableName + " SET PRICE = PRICE * 1.10";
+//        String updateSql = "UPDATE " + tableName + " SET PRICE = PRICE + 1";
+        String updateSql = String.format("UPDATE %s SET PRICE = PRICE + 1 WHERE ID = %d", tableName, 107);
         int rowsUpdated;
         try (PreparedStatement preparedStatement = connection.prepareStatement(updateSql)) {
 //            preparedStatement.setString(1, "🍉");
@@ -155,7 +156,7 @@ public class FruitHana {
                     if (tableName.matches(regex)) {
                         System.out.println(add() + " row(s) inserted to " + tableName);
                     } else {
-                        LOG.warn("Can only put to \"{}\"", defaultName);
+                        LOG.warn("Can only add to \"{}\"", defaultName);
                     }
                     return;
                 case "delete":
@@ -179,7 +180,7 @@ public class FruitHana {
                     if (tableName.matches(regex)) {
                         System.out.println(tableName + " scanned - " + scan());
                     } else {
-                        LOG.warn("Can only put to \"{}\"", defaultName);
+                        LOG.warn("Can only scan to \"{}\"", defaultName);
                     }
                     return;
                 case "truncate":

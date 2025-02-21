@@ -12,6 +12,12 @@ mysql -h$host -u$user -p$passwd $db << EOF
 EOF
 }
 
+update() {
+mysql -h$host -u$user -p$passwd $db << EOF
+    UPDATE fruit SET price = price + 1 WHERE fruit_id = 107
+EOF
+}
+
 delete() {
 mysql -h$host -u$user -p$passwd $db << EOF 
     DELETE FROM fruit WHERE fruit_id = 107
@@ -65,6 +71,13 @@ run() {
             echo "Can only add to \"fruit\""
         fi
         ;;
+    "update")
+        if [ "fruit" = $table ]; then
+            update
+        else
+            echo "Can only update to \"fruit\""
+        fi
+        ;;
     "delete")
         if [ "fruit" = $table ]; then
             delete
@@ -102,6 +115,6 @@ elif [ "$#" -gt 1 ]; then
 elif [ "$#" -gt 0 ]; then
     run "$1"
 else
-    echo "Usage: $(basename $0) put|add|delete|count|scan|truncate host table"
+    echo "Usage: $(basename $0) put|add|update|delete|count|scan|truncate host table"
 fi
 

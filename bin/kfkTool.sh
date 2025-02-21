@@ -9,7 +9,7 @@ TOPIC_NAME=$3
 
 # 检查参数是否提供
 if [ -z "$KAFKA_HOSTNAME" ]; then
-  echo "Usage: $0 listTopics | showTopic | createTopic | deleteTopic | sendRecord | pollRecords hostname [topicName]"
+  echo "Usage: $(basename $0) listTopics|showTopic|createTopic|deleteTopic|sendRecord|pollRecords hostname [topicName]"
   exit 1
 fi
 
@@ -79,13 +79,15 @@ EOF
       echo "Usage: $0 hostname pollRecords topicName"
       exit 1
     fi
+    # Do we need --max-messages 10 ?
     $KAFKA_BIN/kafka-console-consumer.sh --bootstrap-server $KAFKA_HOSTNAME:$KAFKA_PORT --topic $TOPIC_NAME \
-        --from-beginning --property "print.timestamp=true" --property "print.key=true" --max-messages 10 |
+        --property "print.timestamp=true" --property "print.key=true" --from-beginning |
       while read -r LINE; do
-        OFFSET=$(echo $LINE | awk '{print $1}')
+        ts=$(echo $LINE | awk '{print $1}' | awk -F: '{print $2}')
+        DS=$(date -r $(($ts / 1000)) "+%y%m%d-%H%M%S")
         KEY=$(echo $LINE | awk '{print $2}')
         VALUE=$(echo $LINE | awk '{print $3}')
-        echo "Offset: $OFFSET, Key: $KEY, Value: $VALUE"
+        echo "Offset: $DS, Key: $KEY, Value: $VALUE"
       done
     ;;
 
