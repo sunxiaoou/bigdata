@@ -45,7 +45,9 @@ public class ODPWrapperTest {
         LOG.info("exportParameters - {}", details.getFirst());
 //        LOG.info("deltaModes - {}", details.getSecond());
         LOG.info("segments - {}", details.getSecond());
-        LOG.info("fields - {}", details.getThird());
+        List<FieldMeta> fieldMetas = details.getThird();
+        LOG.info("fields - [{}]", fieldMetas.size());
+        fieldMetas.forEach(x -> LOG.info("{}", x));
     }
 
     @Test
@@ -53,14 +55,57 @@ public class ODPWrapperTest {
         odpWrapper.closeExtractionSession("20241202052351");
     }
 
+    @Test
+    public void registerODPCallback() throws JCoException {
+        odpWrapper.registerODPCallback(
+                "RODPS_REPL_TEST",
+                "tester",
+                "EN",
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                "sap01");
+    }
+
+    @Test
+    public void createODPSubscriber() throws JCoException {
+        odpWrapper.createODPSubscriber(
+                "RODPS_REPL_TEST",
+                "ELDCLNT150",
+                "EN",
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                "sap01",
+                "SAPABAP1");
+    }
+
+    @Test
+    public void getODPSubscriptions() throws JCoException {
+        odpWrapper.getODPSubscriptions(
+                "RODPS_REPL_TEST",
+                "",
+                "",
+                "",
+                "");
+    }
+
     public void getODPCursors(String mode) throws JCoException {
 //        String subscriberProcess = "F".equals(mode) ? "TestDataFlow_DoesNotExist":  "TestDeltaFlow_DoesNotExist";
-        LOG.info("{}", odpWrapper.getODPCursors(
+        List<Map<String, String>> cursors = odpWrapper.getODPCursors(
                 "RODPS_REPL_TEST",
                 "TestRepository_DoesNotExist",
                 "SLT~ODP01",
                 "FRUIT2",
-                mode));
+                mode);
+        LOG.info("cursors num({})", cursors.size());
+        cursors.forEach(x -> LOG.info("{}", x));
     }
 
     @Test
@@ -76,6 +121,11 @@ public class ODPWrapperTest {
     @Test
     public void getODPCursorsRealTime() throws JCoException {
         getODPCursors("R");
+    }
+
+    @Test
+    public void getODPLastModification() throws JCoException {
+        odpWrapper.getLastModification("RODPS_REPL_TEST", "SLT~ODP01");
     }
 
     @Test

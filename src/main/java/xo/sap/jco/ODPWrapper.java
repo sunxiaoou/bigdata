@@ -4,6 +4,7 @@ import com.sap.conn.jco.*;
 import org.apache.commons.cli.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import xo.utility.HexDump;
 import xo.utility.Triple;
 
 import java.util.*;
@@ -148,6 +149,97 @@ public class ODPWrapper {
                 parseFieldMeta(getTableFields(function, "ET_FIELDS")));
     }
 
+    private void setOptionalValue(JCoParameterList parameters, String key, String value) {
+        if (value != null && !value.isEmpty()) {
+            parameters.setValue(key, value);
+        }
+    }
+
+    public void getODPSubscriptions(
+            String subscriberType,
+            String subscriberName,
+            String subscriberProcess,
+            String context,
+            String odpName) throws JCoException {
+        JCoFunction function = destination.getRepository().getFunction("RODPS_REPL_ODP_GET_SUBSCR");
+        if (function == null) {
+            throw new RuntimeException("Function RODPS_REPL_ODP_GET_SUBSCR not found in SAP.");
+        }
+        JCoParameterList parameters = function.getImportParameterList();
+        setOptionalValue(parameters, "I_SUBSCRIBER_TYPE", subscriberType);
+        setOptionalValue(parameters, "I_SUBSCRIBER_NAME", subscriberName);
+        setOptionalValue(parameters, "I_SUBSCRIBER_PROCESS", subscriberProcess);
+        setOptionalValue(parameters, "I_CONTEXT", context);
+        setOptionalValue(parameters, "I_ODPNAME", odpName);
+        JCoTable subscriptions = function.getTableParameterList().getTable("ET_SUBSCRIPTIONS");
+        if (subscriptions.getNumRows() > 0) {
+            LOG.info("{}", subscriptions.toJSON());
+        }
+    }
+
+    public void registerODPCallback(
+            String subscriberType,
+            String subscriberName,
+            String langu,
+            String client,
+            String appServer,
+            String systemId,
+            String systemNo,
+            String userName,
+            String password,
+            String dbHost) throws JCoException {
+        JCoFunction function = destination.getRepository().getFunction("RODPS_REPL_ODP_SUBSCRIBER_NEW");
+        if (function == null) {
+            throw new RuntimeException("Function RODPS_REPL_ODP_SUBSCRIBER_NEW not found in SAP.");
+        }
+        JCoParameterList parameters = function.getImportParameterList();
+        parameters.setValue("I_SUBSCRIBER_TYPE", subscriberType);
+        parameters.setValue("I_SUBSCRIBER_NAME", subscriberName);
+        setOptionalValue(parameters, "I_SUBSCRIBER_LANGU", langu);
+        setOptionalValue(parameters, "I_SUBSCRIBER_CLIENT", client);
+        setOptionalValue(parameters, "I_SUBSCRIBER_CLIENT", client);
+        setOptionalValue(parameters, "I_SUBSCRIBER_APPLSERVER", appServer);
+        setOptionalValue(parameters, "I_SUBSCRIBER_SYSTEMID", systemId);
+        setOptionalValue(parameters, "I_SUBSCRIBER_SYSTEMNO", systemNo);
+        setOptionalValue(parameters, "I_SUBSCRIBER_USER_NAME", userName);
+        setOptionalValue(parameters, "I_SUBSCRIBER_PASSWORD", password);
+        setOptionalValue(parameters, "I_SUBSCRIBER_DBHOST", dbHost);
+        function.execute(destination);
+        printError(function);
+    }
+
+    public void createODPSubscriber(
+            String subscriberType,
+            String subscriberName,
+            String langu,
+            String client,
+            String appServer,
+            String systemId,
+            String systemNo,
+            String userName,
+            String password,
+            String dbHost,
+            String dbSys) throws JCoException {
+        JCoFunction function = destination.getRepository().getFunction("RODPS_REPL_ODP_SUBSCRIBER_NEW");
+        if (function == null) {
+            throw new RuntimeException("Function RODPS_REPL_ODP_SUBSCRIBER_NEW not found in SAP.");
+        }
+        JCoParameterList parameters = function.getImportParameterList();
+        parameters.setValue("I_SUBSCRIBER_TYPE", subscriberType);
+        parameters.setValue("I_SUBSCRIBER_NAME", subscriberName);
+        setOptionalValue(parameters, "I_SUBSCRIBER_LANGU", langu);
+        setOptionalValue(parameters, "I_SUBSCRIBER_CLIENT", client);
+        setOptionalValue(parameters, "I_SUBSCRIBER_APPLSERVER", appServer);
+        setOptionalValue(parameters, "I_SUBSCRIBER_SYSTEMID", systemId);
+        setOptionalValue(parameters, "I_SUBSCRIBER_SYSTEMNO", systemNo);
+        setOptionalValue(parameters, "I_SUBSCRIBER_USER_NAME", userName);
+        setOptionalValue(parameters, "I_SUBSCRIBER_PASSWORD", password);
+        setOptionalValue(parameters, "I_SUBSCRIBER_DBHOST", dbHost);
+        setOptionalValue(parameters, "I_SUBSCRIBER_DBSYS", dbSys);
+        function.execute(destination);
+        printError(function);
+    }
+
     public List<Map<String, String>> getODPCursors(
             String subscriberType,
             String subscriberName,
@@ -166,6 +258,24 @@ public class ODPWrapper {
         function.execute(destination);
         List<Map<String, String>> pointers = getTableFields(function, "ET_PROCESS");
         return pointers.stream().filter(map -> map.containsKey("CLOSED")).collect(Collectors.toList());
+    }
+
+    public void getLastModification(String subscriberType, String context) throws JCoException {
+        JCoFunction function = destination.getRepository().getFunction("RODPS_REPL_ODP_GET_LAST_MODIF");
+        if (function == null) {
+            throw new RuntimeException("Function RODPS_REPL_ODP_GET_LAST_MODIF not found in SAP.");
+        }
+        JCoParameterList parameters = function.getImportParameterList();
+        parameters.setValue("I_SUBSCRIBER_TYPE", subscriberType);
+        parameters.setValue("I_CONTEXT", context);
+        function.execute(destination);
+        Map<String, String> exportParameters = getExportParameters(function);
+        LOG.info("{}", exportParameters);
+        printError(function);
+        JCoTable itOdp = function.getTableParameterList().getTable("IT_ODP");
+        if (itOdp.getNumRows() > 0) {
+            LOG.info("{}", itOdp.toJSON());
+        }
     }
 
     public void resetODP(
@@ -187,6 +297,8 @@ public class ODPWrapper {
         JCoTable etReturn = function.getTableParameterList().getTable("ET_RETURN");
         if (!etReturn.isEmpty()) {
             LOG.info(etReturn.getString("MESSAGE"));
+        } else {
+            LOG.info("{}.{} has been reset", context, odpName);
         }
     }
 
@@ -218,7 +330,11 @@ public class ODPWrapper {
         function.execute(destination);
         printError(function);
         Map<String, String> parameters = getExportParameters(function);
-        LOG.info("{}", parameters);
+        if (parameters.containsKey("E_DELTA_EXTENSION")) {
+            LOG.info("{}.{} has opened with {}", context, odpName, parameters);
+        } else {
+            LOG.debug("{}.{} has opened with {}", context, odpName, parameters);
+        }
         return parameters.get("E_POINTER");
     }
 
@@ -237,6 +353,8 @@ public class ODPWrapper {
         JCoTable etReturn = function.getTableParameterList().getTable("ET_RETURN");
         if (!etReturn.isEmpty()) {
             LOG.info(etReturn.getString("MESSAGE"));
+        } else {
+            LOG.debug("pointer {} has closed", pointer);
         }
     }
 
@@ -301,6 +419,7 @@ public class ODPWrapper {
     private static void run(String action, CommandLine cmd) {
         try {
             ODPWrapper odpWrapper = new ODPWrapper(DestinationConcept.SomeSampleDestinations.ABAP_AS1);
+            List<FieldMeta> fieldMetas;
             switch (action) {
                 case "ListContexts":
                     LOG.info("{}", odpWrapper.getContexts());
@@ -325,7 +444,9 @@ public class ODPWrapper {
                                     cmd.getOptionValue("odpNamePattern"));
                     LOG.info("exportParameters - {}", details.getFirst());
                     LOG.info("segments - {}", details.getSecond());
-                    LOG.info("fields - {}", details.getThird());
+                    fieldMetas = details.getThird();
+                    LOG.info("fields - [{}]", fieldMetas.size());
+                    fieldMetas.forEach(x -> LOG.info("{}", x));
                     return;
                 case "ListCursors":
                     assert cmd.hasOption("subscriberType") &&
@@ -333,12 +454,14 @@ public class ODPWrapper {
                             cmd.hasOption("contextName") &&
                             cmd.hasOption("odpNamePattern") &&
                             cmd.hasOption("extractMode");
-                    LOG.info("{}", odpWrapper.getODPCursors(
+                    List<Map<String, String>> odpCursors = odpWrapper.getODPCursors(
                             cmd.getOptionValue("subscriberType"),
                             cmd.getOptionValue("subscriberName"),
                             cmd.getOptionValue("contextName"),
                             cmd.getOptionValue("odpNamePattern"),
-                            cmd.getOptionValue("extractMode")));
+                            cmd.getOptionValue("extractMode"));
+                    LOG.info("cursors - {}", odpCursors.size());
+                    odpCursors.forEach(x -> LOG.info("{}", x));
                     return;
                 case "ResetODP":
                     assert cmd.hasOption("subscriberType") &&
@@ -361,7 +484,7 @@ public class ODPWrapper {
                             cmd.hasOption("odpNamePattern") &&
                             cmd.hasOption("extractMode");
                     String odpName = cmd.getOptionValue("odpNamePattern");
-                    List<FieldMeta> fieldMetas = odpWrapper.getODPDetails(
+                    fieldMetas = odpWrapper.getODPDetails(
                             cmd.getOptionValue("subscriberType"),
                             cmd.getOptionValue("contextName"),
                             odpName).getThird();
@@ -374,7 +497,7 @@ public class ODPWrapper {
                             odpName,
                             cmd.getOptionValue("extractMode"));
                     for (byte[] rowData: rows) {
-//                        HexDump.hexDump(rowData);
+                        HexDump.hexDump(rowData);
                         LOG.info("row - {}", odpParser.parseRow2Json(rowData));
                     }
             }
