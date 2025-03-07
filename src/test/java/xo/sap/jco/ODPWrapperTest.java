@@ -16,6 +16,14 @@ import static org.junit.Assert.*;
 
 public class ODPWrapperTest {
     private static final Logger LOG = LoggerFactory.getLogger(ODPWrapperTest.class);
+
+    private static final String subscriberType = "RODPS_REPL_TEST";
+    private static final String subscriber = "TestRepository_DoesNotExist";
+    private static final String subscription = "TestDataFlow_DoesNotExist";
+    private static final String odpContext = "SLT~ODP01";
+//    private static final String odpName = "FRUIT2";
+    private static final String odpName = "VALUATION";
+
     private ODPWrapper odpWrapper;
 
     @Before
@@ -35,13 +43,14 @@ public class ODPWrapperTest {
 
     @Test
     public void getODPList() throws JCoException {
-        LOG.info("{}", odpWrapper.getODPList("RODPS_REPL_TEST", "SLT~ODP01", "FRUIT*"));
+//        LOG.info("{}", odpWrapper.getODPList(subscriberType, odpContext, "FRUIT*"));
+        LOG.info("{}", odpWrapper.getODPList(subscriberType, odpContext, "VAL*"));
     }
 
     @Test
     public void getODPDetails() throws JCoException {
         Triple<Map<String, String>, List<Map<String, String>>, List<FieldMeta>> details =
-                odpWrapper.getODPDetails("RODPS_REPL_TEST", "SLT~ODP01", "FRUIT2");
+                odpWrapper.getODPDetails(subscriberType, odpContext, odpName);
         LOG.info("exportParameters - {}", details.getFirst());
 //        LOG.info("deltaModes - {}", details.getSecond());
         LOG.info("segments - {}", details.getSecond());
@@ -58,7 +67,7 @@ public class ODPWrapperTest {
     @Test
     public void registerODPCallback() throws JCoException {
         odpWrapper.registerODPCallback(
-                "RODPS_REPL_TEST",
+                subscriberType,
                 "tester",
                 "EN",
                 null,
@@ -73,7 +82,7 @@ public class ODPWrapperTest {
     @Test
     public void createODPSubscriber() throws JCoException {
         odpWrapper.createODPSubscriber(
-                "RODPS_REPL_TEST",
+                subscriberType,
                 "ELDCLNT150",
                 "EN",
                 null,
@@ -89,7 +98,7 @@ public class ODPWrapperTest {
     @Test
     public void getODPSubscriptions() throws JCoException {
         odpWrapper.getODPSubscriptions(
-                "RODPS_REPL_TEST",
+                subscriberType,
                 "",
                 "",
                 "",
@@ -97,12 +106,12 @@ public class ODPWrapperTest {
     }
 
     public void getODPCursors(String mode) throws JCoException {
-//        String subscriberProcess = "F".equals(mode) ? "TestDataFlow_DoesNotExist":  "TestDeltaFlow_DoesNotExist";
+//        String subscriberProcess = "F".equals(mode) ? subscription:  "TestDeltaFlow_DoesNotExist";
         List<Map<String, String>> cursors = odpWrapper.getODPCursors(
-                "RODPS_REPL_TEST",
-                "TestRepository_DoesNotExist",
-                "SLT~ODP01",
-                "FRUIT2",
+                subscriberType,
+                subscriber,
+                odpContext,
+                odpName,
                 mode);
         LOG.info("cursors num({})", cursors.size());
         cursors.forEach(x -> LOG.info("{}", x));
@@ -125,17 +134,17 @@ public class ODPWrapperTest {
 
     @Test
     public void getODPLastModification() throws JCoException {
-        odpWrapper.getLastModification("RODPS_REPL_TEST", "SLT~ODP01");
+        odpWrapper.getLastModification(subscriberType, odpContext);
     }
 
     @Test
     public void resetODP() throws JCoException {
         odpWrapper.resetODP(
-                "RODPS_REPL_TEST",
-                "TestRepository_DoesNotExist",
-                "TestDataFlow_DoesNotExist",
-                "SLT~ODP01",
-                "FRUIT2"
+                subscriberType,
+                subscriber,
+                subscription,
+                odpContext,
+                odpName
         );
     }
 
@@ -158,8 +167,8 @@ public class ODPWrapperTest {
                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         };
         List<FieldMeta> fieldMetas = odpWrapper.getODPDetails(
-                "RODPS_REPL_TEST",
-                "SLT~ODP01",
+                subscriberType,
+                odpContext,
                 "FRUIT2").getThird();
         ODPParser odpParser = new ODPParser("FRUIT2", fieldMetas);
         LOG.info("rowData - {}", odpParser.parseRow2Json(rowData));
@@ -167,19 +176,22 @@ public class ODPWrapperTest {
 
     private void fetchODP(String mode) throws Exception {
         List<FieldMeta> fieldMetas = odpWrapper.getODPDetails(
-                "RODPS_REPL_TEST",
-                "SLT~ODP01",
-                "FRUIT2").getThird();
-        ODPParser odpParser = new ODPParser("FRUIT2", fieldMetas);
+                subscriberType,
+                odpContext,
+                odpName).getThird();
+        ODPParser odpParser = new ODPParser(odpName, fieldMetas);
         List<byte[]> rows = odpWrapper.fetchODP(
-                "RODPS_REPL_TEST",
-                "TestRepository_DoesNotExist",
-                "TestDataFlow_DoesNotExist",
-                "SLT~ODP01",
-                "FRUIT2",
+                subscriberType,
+                subscriber,
+                subscription,
+                odpContext,
+                odpName,
                 mode);
+        LOG.info("got {} row(s)", rows.size());
         for (byte[] rowData: rows) {
-            HexDump.hexDump(rowData);
+            if (LOG.isDebugEnabled()) {
+                HexDump.hexDump(rowData);
+            }
             LOG.info("row - {}", odpParser.parseRow2Json(rowData));
         }
     }
