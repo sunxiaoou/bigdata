@@ -57,6 +57,7 @@ public class ODPWrapperTest {
         List<FieldMeta> fieldMetas = details.getThird();
         LOG.info("fields - [{}]", fieldMetas.size());
         fieldMetas.forEach(x -> LOG.info("{}", x));
+        LOG.info("outputLength sum - {}", fieldMetas.stream().mapToInt(FieldMeta::getOutputLength).sum());
     }
 
     @Test
@@ -180,14 +181,16 @@ public class ODPWrapperTest {
                 odpContext,
                 odpName).getThird();
         ODPParser odpParser = new ODPParser(odpName, fieldMetas);
-        List<byte[]> rows = odpWrapper.fetchODP(
+        List<byte[]> fictions = odpWrapper.fetchODP(
                 subscriberType,
                 subscriber,
                 subscription,
                 odpContext,
                 odpName,
                 mode);
-        LOG.info("got {} row(s)", rows.size());
+        LOG.info("got {} fictions(s)", fictions.size());
+        List<byte[]> rows = ODPParser.mergeFragments(fictions, odpParser.getNumOfFragment());
+        LOG.info("as {} row(s)", rows.size());
         for (byte[] rowData: rows) {
             if (LOG.isDebugEnabled()) {
                 HexDump.hexDump(rowData);
