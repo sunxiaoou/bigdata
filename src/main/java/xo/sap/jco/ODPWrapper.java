@@ -12,6 +12,8 @@ import java.util.stream.Collectors;
 
 public class ODPWrapper {
     private static final Logger LOG = LoggerFactory.getLogger(ODPWrapper.class);
+    private static final int lenOfFragment = 250;
+
     private final JCoDestination destination;
 
     /**
@@ -153,6 +155,12 @@ public class ODPWrapper {
         if (value != null && !value.isEmpty()) {
             parameters.setValue(key, value);
         }
+    }
+
+    public static int getNumOfFragment(List<FieldMeta> fieldMetas) {
+        int lenOfRow = fieldMetas.stream().mapToInt(FieldMeta::getOutputLength).sum();
+        int n = lenOfRow / lenOfFragment;
+        return lenOfRow % lenOfFragment == 0 ? n : n + 1;
     }
 
     public void getODPSubscriptions(
@@ -373,7 +381,7 @@ public class ODPWrapper {
     }
 
     private List<byte[]> fetchODP(String pointer, String extractPackage) throws JCoException {
-        List<byte[]> rows = new ArrayList<>();
+        List<byte[]> fragments = new ArrayList<>();
         while (true) {
             JCoFunction function = destination.getRepository().getFunction("RODPS_REPL_ODP_FETCH");
             if (function == null) {
@@ -393,13 +401,13 @@ public class ODPWrapper {
             do {
                 for (JCoField field : table) {
                     if ("DATA".equals(field.getName())) {
-                        rows.add(field.getByteArray());
+                        fragments.add(field.getByteArray());
                         break;
                     }
                 }
             } while (table.nextRow());
         }
-        return rows;
+        return fragments;
     }
 
     public List<byte[]> fetchODP(
@@ -411,8 +419,29 @@ public class ODPWrapper {
             String mode) throws JCoException {
         String pointer =
                 openExtractionSession(subscriberType, subscriberName, subscriberProcess, context, odpName, mode);
-        List<byte[]> rows = fetchODP(pointer, "");
+        List<byte[]> fragments = fetchODP(pointer, "");
         closeExtractionSession(pointer);
+        return fragments;
+    }
+
+    public static List<byte[]> mergeFragments(List<byte[]> fragments, int n) {
+        List<byte[]> rows = new ArrayList<>();
+        int size = fragments.size();
+        for (int i = 0; i < size; i += n) {
+            int end = Math.min(i + n, size);
+            int totalLength = 0;
+            for (int j = i; j < end; j++) {
+                totalLength += fragments.get(j).length;
+            }
+            byte[] row = new byte[totalLength];
+            int offset = 0;
+            for (int j = i; j < end; j ++) {
+                byte[] currentArray = fragments.get(j);
+                System.arraycopy(currentArray, 0, row, offset, currentArray.length);
+                offset += currentArray.length;
+            }
+            rows.add(row);
+        }
         return rows;
     }
 
@@ -488,17 +517,25 @@ public class ODPWrapper {
                             cmd.getOptionValue("subscriberType"),
                             cmd.getOptionValue("contextName"),
                             odpName).getThird();
+                    int numOfFragment = getNumOfFragment(fieldMetas);
                     ODPParser odpParser = new ODPParser(odpName, fieldMetas);
-                    List<byte[]> rows = odpWrapper.fetchODP(
+                    List<byte[]> fragments = odpWrapper.fetchODP(
                             cmd.getOptionValue("subscriberType"),
                             cmd.getOptionValue("subscriberName"),
                             cmd.getOptionValue("subscriberProcess"),
                             cmd.getOptionValue("contextName"),
                             odpName,
                             cmd.getOptionValue("extractMode"));
-                    for (byte[] rowData: rows) {
-                        HexDump.hexDump(rowData);
-                        LOG.info("row - {}", odpParser.parseRow2Json(rowData));
+                    if (!fragments.isEmpty()) {
+                        LOG.info("got {} fragment(s)", fragments.size());
+                        List<byte[]> rows = mergeFragments(fragments, numOfFragment);
+                        LOG.info("as {} row(s)", rows.size());
+                        for (byte[] row : rows) {
+                            if (LOG.isDebugEnabled()) {
+                                HexDump.hexDump(row);
+                            }
+                            LOG.info("row - {}", odpParser.parseRow2Json(row));
+                        }
                     }
             }
         } catch (Exception e) {

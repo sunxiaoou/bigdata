@@ -180,22 +180,25 @@ public class ODPWrapperTest {
                 subscriberType,
                 odpContext,
                 odpName).getThird();
+        int numOfFragment = ODPWrapper.getNumOfFragment(fieldMetas);
         ODPParser odpParser = new ODPParser(odpName, fieldMetas);
-        List<byte[]> fictions = odpWrapper.fetchODP(
+        List<byte[]> fragments = odpWrapper.fetchODP(
                 subscriberType,
                 subscriber,
                 subscription,
                 odpContext,
                 odpName,
                 mode);
-        LOG.info("got {} fictions(s)", fictions.size());
-        List<byte[]> rows = ODPParser.mergeFragments(fictions, odpParser.getNumOfFragment());
-        LOG.info("as {} row(s)", rows.size());
-        for (byte[] rowData: rows) {
-            if (LOG.isDebugEnabled()) {
-                HexDump.hexDump(rowData);
+        if (!fragments.isEmpty()) {
+            LOG.info("got {} fragment(s)", fragments.size());
+            List<byte[]> rows = ODPWrapper.mergeFragments(fragments, numOfFragment);
+            LOG.info("as {} row(s)", rows.size());
+            for (byte[] row : rows) {
+                if (LOG.isDebugEnabled()) {
+                    HexDump.hexDump(row);
+                }
+                LOG.info("row - {}", odpParser.parseRow2Json(row));
             }
-            LOG.info("row - {}", odpParser.parseRow2Json(rowData));
         }
     }
 

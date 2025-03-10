@@ -6,26 +6,15 @@ import javassist.*;
 
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.List;
 
 public class ODPParser {
-    private static final int lenOfFragment = 250;
-
     private final List<FieldMeta> fieldMetas;
-    private final int numOfFragment;
     private final Class<?> pojoClass;
 
     public ODPParser(String className, List<FieldMeta> fieldMetas) throws Exception {
         this.fieldMetas = fieldMetas;
-        int lenOfRow = fieldMetas.stream().mapToInt(FieldMeta::getOutputLength).sum();
-        int n = lenOfRow / lenOfFragment;
-        this.numOfFragment = lenOfRow % lenOfFragment == 0 ? n : n + 1;
         this.pojoClass = createPOJOClass(className);
-    }
-
-    public int getNumOfFragment() {
-        return numOfFragment;
     }
 
     private static String capitalize(String str) {
@@ -112,27 +101,6 @@ public class ODPParser {
         }
 
         return byteLength;
-    }
-
-    public static List<byte[]> mergeFragments(List<byte[]> fragments, int n) {
-        List<byte[]> rows = new ArrayList<>();
-        int size = fragments.size();
-        for (int i = 0; i < size; i += n) {
-            int end = Math.min(i + n, size);
-            int totalLength = 0;
-            for (int j = i; j < end; j++) {
-                totalLength += fragments.get(j).length;
-            }
-            byte[] row = new byte[totalLength];
-            int offset = 0;
-            for (int j = i; j < end; j ++) {
-                byte[] currentArray = fragments.get(j);
-                System.arraycopy(currentArray, 0, row, offset, currentArray.length);
-                offset += currentArray.length;
-            }
-            rows.add(row);
-        }
-        return rows;
     }
 
     public Object parseRow(byte[] data) throws Exception {
