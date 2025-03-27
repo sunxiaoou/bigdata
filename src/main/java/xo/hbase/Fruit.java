@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
@@ -50,8 +51,17 @@ public class Fruit {
     }
 
     private static void run(String op, String host, String table) throws IOException {
-        // use resources/hbase-site.xml as host is null
-        HBase db = host == null ? new HBase(): new HBase(host, 2181, "/hbase");
+        HBase db;
+        if (host == null) {
+            // use hadoop/hbase XMLs in classpath
+            db = new HBase();
+        } else if (Paths.get(host).toFile().exists()) {
+            // use hadoop/hbase XMLs in the specified directory
+            db = new HBase(host);
+        } else {
+            // use the specified host
+            db = new HBase(host, 2181, "/hbase");
+        }
         String regex = "^manga:fruit.*";
         String name = "manga:fruit";
         if (table == null) {
