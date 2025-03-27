@@ -99,9 +99,9 @@ public class HBase implements AutoCloseable {
         conf.addResource(pathStr + "/yarn-site.xml");
         conf.addResource(pathStr + "/hbase-site.xml");
 //        conf.forEach(entry -> LOG.info(entry.getKey() + "=" + entry.getValue()));
-        LOG.info("hadoop.security.authentication = {}", conf.get("hadoop.security.authentication"));
+        LOG.info("hadoop.security.authentication={}", conf.get("hadoop.security.authentication"));
         UserGroupInformation.setConfiguration(conf);
-        LOG.info("Auth method: {}", UserGroupInformation.getCurrentUser().getAuthenticationMethod());
+        LOG.info("Current user: {}", UserGroupInformation.getCurrentUser().getUserName());
         conn = ConnectionFactory.createConnection(conf);
         admin = conn.getAdmin();
     }
