@@ -1,0 +1,36 @@
+<configuration>
+    <property>
+        <name>fs.defaultFS</name>
+        <value>hdfs://centos3:8020</value>
+    </property>
+    <property>
+        <name>hadoop.tmp.dir</name>
+        <value>/opt/hadoop-2.10.2/data/tmp</value>
+    </property>
+    <property>
+        <name>hadoop.security.authentication</name>
+        <value>kerberos</value>
+    </property>
+    <property>
+        <name>hadoop.security.authorization</name>
+        <value>true</value>
+    </property>
+    <property>
+        <name>hadoop.http.authentication.kerberos.principal</name>
+        <value>HTTP/centos3@EXAMPLE.COM</value>
+    </property>
+    <property>
+        <name>hadoop.http.authentication.kerberos.keytab</name>
+        <value>/opt/kerb5/keytabs/hadoop.keytab</value>
+    </property>
+    <property>
+        <name>hadoop.security.auth_to_local</name>
+        <value>
+            RULE:[2:$1/$2@$0](hdfs\/.*@EXAMPLE\.COM)s/.*/sunxo/
+            RULE:[2:$1/$2@$0](yarn\/.*@EXAMPLE\.COM)s/.*/sunxo/
+            RULE:[2:$1/$2@$0](mapred\/.*@EXAMPLE\.COM)s/.*/sunxo/
+            RULE:[2:$1/$2@$0](hbase\/.*@EXAMPLE\.COM)s/.*/sunxo/
+            DEFAULT
+        </value>
+    </property>
+</configuration>

@@ -91,7 +91,7 @@ public class HBase implements AutoCloseable {
 //        conf.forEach(entry -> LOG.info(entry.getKey() + "=" + entry.getValue()));
     }
 
-    public HBase(String pathStr) throws IOException {
+    public HBase(String pathStr, String principal, String keytab) throws IOException {
         conf = HBaseConfiguration.create();
         conf.addResource(pathStr + "/core-site.xml");
         conf.addResource(pathStr + "/hdfs-site.xml");
@@ -99,9 +99,16 @@ public class HBase implements AutoCloseable {
         conf.addResource(pathStr + "/yarn-site.xml");
         conf.addResource(pathStr + "/hbase-site.xml");
 //        conf.forEach(entry -> LOG.info(entry.getKey() + "=" + entry.getValue()));
-        LOG.info("hadoop.security.authentication={}", conf.get("hadoop.security.authentication"));
-        UserGroupInformation.setConfiguration(conf);
-        LOG.info("Current user: {}", UserGroupInformation.getCurrentUser().getUserName());
+        if ("kerberos".equals(conf.get("hadoop.security.authentication"))) {
+            if (principal != null && keytab != null) {
+                UserGroupInformation.setConfiguration(conf);
+                UserGroupInformation.loginUserFromKeytab(principal, keytab);
+            } else {
+                LOG.warn("Kerberos authentication requires principal and keytab");
+            }
+        } else {
+            LOG.info("Current user: {}", UserGroupInformation.getCurrentUser());
+        }
         conn = ConnectionFactory.createConnection(conf);
         admin = conn.getAdmin();
     }

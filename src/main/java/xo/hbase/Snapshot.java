@@ -71,9 +71,9 @@ public class Snapshot {
         HBase db2 = null;
         String snapshot = null;
         try {
-            db = new HBase(dbStr);
+            db = new HBase(dbStr, null, null);
             if (dbStr2 != null) {
-                db2 = new HBase(dbStr2);
+                db2 = new HBase(dbStr2, null, null);
             }
             if (table != null) {
                 SimpleDateFormat sdf = new SimpleDateFormat("yyMMdd");

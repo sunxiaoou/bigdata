@@ -282,7 +282,7 @@ main() {
     install_hbase
     verify_installation
 
-    ip=$(grep -w "$HOSTNAME" /etc/hosts | awk '{print $1}')
+    ip=$(hostname -I | awk '{print $1}')
     echo "HBase related urls"
     echo "http://$ip:50070/explorer.html#/"
     echo "http://$ip:8088/cluster"

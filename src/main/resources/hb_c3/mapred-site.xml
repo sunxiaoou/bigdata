@@ -1,0 +1,34 @@
+<configuration>
+    <property>
+        <name>mapreduce.framework.name</name>
+        <value>yarn</value>
+    </property>
+    <property>
+        <name>mapreduce.jobhistory.address</name>
+        <value>centos3:10020</value>
+    </property>
+    <property>
+        <name>mapreduce.jobhistory.webapp.address</name>
+        <value>centos3:19888</value>
+    </property>
+    <property>
+        <name>mapreduce.jobhistory.keytab</name>
+        <value>/opt/kerb5/keytabs/hadoop.keytab</value>
+    </property>
+    <property>
+        <name>mapreduce.jobhistory.principal</name>
+        <value>mapred/centos3@EXAMPLE.COM</value>
+    </property>
+    <property>
+        <name>mapreduce.jobhistory.http.policy</name>
+        <value>HTTPS_ONLY</value>
+    </property>
+    <property>
+        <name>mapreduce.jobhistory.webapp.https.principal</name>
+        <value>HTTP/centos3@EXAMPLE.COM</value>
+    </property>
+    <property>
+        <name>mapreduce.jobhistory.webapp.https.keytab</name>
+        <value>/opt/kerb5/keytabs/hadoop.keytab</value>
+    </property>
+</configuration>

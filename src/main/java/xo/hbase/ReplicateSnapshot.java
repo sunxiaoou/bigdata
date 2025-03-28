@@ -23,7 +23,7 @@ public class ReplicateSnapshot {
 //                config.getSourceHBaseQuorumPort(),
 //                config.getSourceHBaseQuorumPath());
         // read hadoop/hbase config files directly
-        this.srcDb = new HBase(config.getSourceHBaseQuorumHost().split(",")[0]);
+        this.srcDb = new HBase(config.getSourceHBaseQuorumHost().split(",")[0], null, null);
         this.tgtDb = new HBase(
                 config.getTargetHBaseQuorumHost(),
                 config.getTargetHBaseQuorumPort(),

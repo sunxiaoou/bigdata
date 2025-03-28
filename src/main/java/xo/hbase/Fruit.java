@@ -1,5 +1,6 @@
 package xo.hbase;
 
+import org.apache.commons.cli.*;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Triple;
 import org.slf4j.Logger;
@@ -50,14 +51,14 @@ public class Fruit {
         return rows;
     }
 
-    private static void run(String op, String host, String table) throws IOException {
+    private static void run(String op, String host, String table, String principal, String keytab) throws IOException {
         HBase db;
         if (host == null) {
             // use hadoop/hbase XMLs in classpath
             db = new HBase();
         } else if (Paths.get(host).toFile().exists()) {
             // use hadoop/hbase XMLs in the specified directory
-            db = new HBase(host);
+            db = new HBase(host, principal, keytab);
         } else {
             // use the specified host
             db = new HBase(host, 2181, "/hbase");
@@ -122,7 +123,7 @@ public class Fruit {
                 }
                 return;
             case "count":
-                System.out.println(String.format("%s has %d rows", name, db.countTableRows(name)));
+                System.out.printf("%s has %d rows%n", name, db.countTableRows(name));
                 return;
             case "scan":
                 if (name.matches(regex)) {
@@ -146,14 +147,57 @@ public class Fruit {
     }
 
     public static void main(String[] args) throws IOException {
-        if (args.length > 2) {
-            run(args[0], args[1], args[2]);
-        } else if (args.length > 1) {
-            run(args[0], args[1], null);
-        } else if (args.length > 0) {
-            run(args[0], null, null);
-        } else {
-            System.out.println("Usage: Fruit create|drop|put|add|delete|count|scan|isEmpty|truncate host[,host2,...] table");
+        Options options = new Options();
+        options.addOption(Option.builder("a")
+                .longOpt("action")
+                .hasArg()
+                .required()
+                .desc("Action to perform (e.g., create)").build());
+        options.addOption(Option.builder("h")
+                .longOpt("host")
+                .hasArg()
+                .desc("HBase host configuration (hostname or config path)").build());
+        options.addOption(Option.builder("t")
+                .longOpt("table")
+                .hasArg()
+                .desc("Table name").build());
+        options.addOption(Option.builder("p")
+                .longOpt("principal")
+                .hasArg()
+                .desc("Principal name").build());
+        options.addOption(Option.builder("k")
+                .longOpt("keytab")
+                .hasArg()
+                .desc("keytab path").build());
+        options.addOption(Option.builder("?")
+                .longOpt("help")
+                .desc("Show help").build());
+
+        CommandLineParser parser = new DefaultParser();
+        HelpFormatter formatter = new HelpFormatter();
+        CommandLine cmd;
+
+        try {
+            cmd = parser.parse(options, args);
+        } catch (ParseException e) {
+            System.err.println("Error: " + e.getMessage());
+            formatter.printHelp("Fruit", options);
+            System.exit(1);
+            return;
         }
+
+        // 处理帮助选项
+        if (cmd.hasOption("help")) {
+            formatter.printHelp("Fruit", options);
+            System.exit(0);
+        }
+
+        // 提取参数并运行
+        String op = cmd.getOptionValue("action");
+        String host = cmd.getOptionValue("host");
+        String table = cmd.getOptionValue("table");
+        String principal = cmd.getOptionValue("principal");
+        String keytab = cmd.getOptionValue("keytab");
+        run(op, host, table, principal, keytab);
     }
 }
