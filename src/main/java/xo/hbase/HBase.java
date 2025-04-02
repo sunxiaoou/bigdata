@@ -62,9 +62,9 @@ public class HBase implements AutoCloseable {
         return snapshot.substring(0, snapshot.length() - 7).replaceFirst("-", ":");
     }
 
-    static public Path getPath(String pathStr) {
-        return new Path(pathStr);
-    }
+//    static public Path getPath(String pathStr) {
+//        return new Path(pathStr);
+//    }
 
     static public void changeUser(String user) throws IOException {
         String current = UserGroupInformation.getCurrentUser().getShortUserName();
@@ -93,12 +93,13 @@ public class HBase implements AutoCloseable {
 
     public HBase(String pathStr, String principal, String keytab) throws IOException {
         conf = HBaseConfiguration.create();
-        conf.addResource(pathStr + "/core-site.xml");
-        conf.addResource(pathStr + "/hdfs-site.xml");
-        conf.addResource(pathStr + "/mapred-site.xml");
-        conf.addResource(pathStr + "/yarn-site.xml");
-        conf.addResource(pathStr + "/hbase-site.xml");
+        conf.addResource(new Path(pathStr, "core-site.xml"));
+        conf.addResource(new Path(pathStr, "hdfs-site.xml"));
+        conf.addResource(new Path(pathStr, "mapred-site.xml"));
+        conf.addResource(new Path(pathStr, "yarn-site.xml"));
+        conf.addResource(new Path(pathStr, "hbase-site.xml"));
 //        conf.forEach(entry -> LOG.info(entry.getKey() + "=" + entry.getValue()));
+        LOG.info("default file system: {}", conf.get("fs.defaultFS"));
         if ("kerberos".equals(conf.get("hadoop.security.authentication"))) {
             if (principal != null && keytab != null) {
                 UserGroupInformation.setConfiguration(conf);
@@ -113,17 +114,17 @@ public class HBase implements AutoCloseable {
         admin = conn.getAdmin();
     }
 
-    public HBase(Path path) throws IOException {
-        conf = HBaseConfiguration.create();
-        conf.addResource(new Path(path, "core-site.xml"));
-        conf.addResource(new Path(path, "hdfs-site.xml"));
-        conf.addResource(new Path(path, "mapred-site.xml"));
-        conf.addResource(new Path(path, "yarn-site.xml"));
-        conf.addResource(new Path(path, "hbase-site.xml"));
-//        conf.forEach(entry -> System.out.println(entry.getKey() + "=" + entry.getValue()));
-        conn = ConnectionFactory.createConnection(conf);
-        admin = conn.getAdmin();
-    }
+//    public HBase(Path path) throws IOException {
+//        conf = HBaseConfiguration.create();
+//        conf.addResource(new Path(path, "core-site.xml"));
+//        conf.addResource(new Path(path, "hdfs-site.xml"));
+//        conf.addResource(new Path(path, "mapred-site.xml"));
+//        conf.addResource(new Path(path, "yarn-site.xml"));
+//        conf.addResource(new Path(path, "hbase-site.xml"));
+////        conf.forEach(entry -> System.out.println(entry.getKey() + "=" + entry.getValue()));
+//        conn = ConnectionFactory.createConnection(conf);
+//        admin = conn.getAdmin();
+//    }
 
     public void close() throws IOException {
         admin.close();

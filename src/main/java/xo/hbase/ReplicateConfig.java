@@ -1,5 +1,6 @@
 package xo.hbase;
 
+import lombok.Getter;
 import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,6 +24,8 @@ public class ReplicateConfig {
     private static final String REPLICATE_SERVER_SINK = "replicate.server.sink";
 
     private static final String SOURCE_HBASE_CONFPATH = "source.hbase.confPath";
+    private static final String SOURCE_HBASE_PRINCIPAL = "source.hbase.principal";
+    private static final String SOURCE_HBASE_KEYTAB = "source.hbase.keytab";
     private static final String SOURCE_HBASE_QUORUM_HOST = "source.hbase.quorum.host";
     private static final String SOURCE_HBASE_QUORUM_PORT = "source.hbase.quorum.port";
     private static final String SOURCE_HBASE_QUORUM_PATH = "source.hbase.quorum.path";
@@ -62,8 +65,8 @@ public class ReplicateConfig {
     private final Properties properties;
 
     private ReplicateConfig() {
-        LOG.info(System.getProperty("user.dir"));
-        String Path = System.getProperty("replicate.properties.file");
+//        LOG.info(System.getProperty("user.dir"));
+//        String Path = System.getProperty("replicate.properties.file");
         this.properties = new Properties();
         try (InputStream inputStream = ReplicateConfig.class.getClassLoader().getResourceAsStream(PROPERTIES_FILE)) {
             if (inputStream != null) {
@@ -72,16 +75,13 @@ public class ReplicateConfig {
                 throw new IOException("Unable to load the properties file: " + PROPERTIES_FILE);
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            LOG.error("", e);
         }
     }
 
     // Singleton instance
+    @Getter
     private static final ReplicateConfig instance = new ReplicateConfig();
-
-    public static ReplicateConfig getInstance() {
-        return instance;
-    }
 
     public String getReplicateServerName() {
         return properties.getProperty(REPLICATE_SERVER_NAME);
@@ -125,6 +125,14 @@ public class ReplicateConfig {
 
     public String getSourceHBaseConfPath() {
         return properties.getProperty(SOURCE_HBASE_CONFPATH);
+    }
+
+    public String getSourceHbasePrincipal() {
+        return properties.getProperty(SOURCE_HBASE_PRINCIPAL);
+    }
+
+    public String getSourceHbaseKeytab() {
+        return properties.getProperty(SOURCE_HBASE_KEYTAB);
     }
 
     public String getSourceHBaseQuorumHost() {

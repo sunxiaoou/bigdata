@@ -31,8 +31,13 @@ fi" "$zkEnv.orig" > "$zkEnv"
 
 process_site_file() {
     local base="$1"
-    local file=$HADOOP_HOME/etc/hadoop/$base
-    orig.sh file
+    local file
+    if [ "hbase-site.xml" = "$base" ]; then
+        file=$HBASE_HOME/conf/$base
+    else
+        file=$HADOOP_HOME/etc/hadoop/$base
+    fi
+    orig.sh "$file"
     case $base in
     "core-site.xml")
         sed "/<\/configuration>/i \\
@@ -221,25 +226,27 @@ process_site_file() {
 
 process_ssl_file() {
     local base="$1"
+    local type=${base#ssl-}
+    type=${type%.xml}
     local file=$HADOOP_HOME/etc/hadoop/${base}
     sed -E "
-        /<name>ssl\.client\.truststore\.location<\/name>/ {
+        /<name>ssl\.$type\.truststore\.location<\/name>/ {
             n
             s|<value></value>|<value>$TRUSTSTORE</value>|
         }
-        /<name>ssl\.client\.truststore\.password<\/name>/ {
+        /<name>ssl\.$type\.truststore\.password<\/name>/ {
             n
             s|<value></value>|<value>$PASSWORD</value>|
         }
-        /<name>ssl\.client\.keystore\.location<\/name>/ {
+        /<name>ssl\.$type\.keystore\.location<\/name>/ {
             n
             s|<value></value>|<value>$KEYSTORE</value>|
         }
-        /<name>ssl\.client\.keystore\.password<\/name>/ {
+        /<name>ssl\.$type\.keystore\.password<\/name>/ {
             n
             s|<value></value>|<value>$PASSWORD</value>|
         }
-        /<name>ssl\.client\.keystore\.keypassword<\/name>/ {
+        /<name>ssl\.$type\.keystore\.keypassword<\/name>/ {
             n
             s|<value></value>|<value>$PASSWORD</value>|
         } "\
@@ -306,7 +313,7 @@ EOF
 export HBASE_OPTS=\"-Djava.security.auth.login.config=\${HBASE_HOME}/conf/client.jaas\"\\
 export HBASE_MASTER_OPTS=\"-Djava.security.auth.login.config=\${HBASE_HOME}/conf/server.jaas\"\\
 export HBASE_REGIONSERVER_OPTS=\"-Djava.security.auth.login.config=\${HBASE_HOME}/conf/server.jaas\""\
-    hbase-env.sh
+    "$HBASE_HOME/conf/hbase-env.sh"
 
     process_site_file "hbase-site.xml"
 }

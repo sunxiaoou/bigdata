@@ -18,12 +18,10 @@ public class ReplicateSnapshot {
 
     public ReplicateSnapshot() throws IOException {
         this.config = ReplicateConfig.getInstance();
-//        this.srcDb = new HBase(
-//                config.getSourceHBaseQuorumHost(),
-//                config.getSourceHBaseQuorumPort(),
-//                config.getSourceHBaseQuorumPath());
         // read hadoop/hbase config files directly
-        this.srcDb = new HBase(config.getSourceHBaseQuorumHost().split(",")[0], null, null);
+        this.srcDb = new HBase(config.getSourceHBaseConfPath(),
+                config.getSourceHbasePrincipal(),
+                config.getSourceHBaseConfPath() + "/" + config.getSourceHbaseKeytab());
         this.tgtDb = new HBase(
                 config.getTargetHBaseQuorumHost(),
                 config.getTargetHBaseQuorumPort(),
@@ -96,9 +94,9 @@ public class ReplicateSnapshot {
 
     public static void main(String[] args) throws Exception {
         ReplicateSnapshot replicateSnapshot = new ReplicateSnapshot();
-        replicateSnapshot.addPeer();
+//        replicateSnapshot.addPeer();
         replicateSnapshot.doSnapshots();
-        replicateSnapshot.enablePeer();
+//        replicateSnapshot.enablePeer();
         replicateSnapshot.close();
     }
 }
