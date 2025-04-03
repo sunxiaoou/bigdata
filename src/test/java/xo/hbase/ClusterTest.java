@@ -14,14 +14,14 @@ import static org.junit.Assert.assertEquals;
 public class ClusterTest {
     private static final Logger LOG = LoggerFactory.getLogger(ClusterTest.class);
 
-    private static final String host = "hadoop3";
+    private static final String host = "hb_triple";
 //    private static final String host = "ubuntu";
     private static final String confPath = System.getProperty("user.dir") + "/src/main/resources/" + host;
     private static HBase db;
 
     @BeforeClass
     public static void setupBeforeClass() throws IOException {
-        db = new HBase(HBase.getPath(confPath));
+        db = new HBase(confPath, null, null);
     }
 
     @AfterClass

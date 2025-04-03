@@ -41,6 +41,8 @@ public class ReplicateConfig {
     private static final String TARGET_HADOOP_HDFS_HOST = "target.hadoop.hdfs.host";
     private static final String TARGET_HADOOP_HDFS_PORT = "target.hadoop.hdfs.port";
     private static final String TARGET_HBASE_CONFPATH = "target.hbase.confPath";
+    private static final String TARGET_HBASE_PRINCIPAL = "target.hbase.principal";
+    private static final String TARGET_HBASE_KEYTAB = "target.hbase.keytab";
     private static final String TARGET_HBASE_QUORUM_HOST = "target.hbase.quorum.host";
     private static final String TARGET_HBASE_QUORUM_PORT = "target.hbase.quorum.port";
     private static final String TARGET_HBASE_QUORUM_PATH = "target.hbase.quorum.path";
@@ -127,11 +129,11 @@ public class ReplicateConfig {
         return properties.getProperty(SOURCE_HBASE_CONFPATH);
     }
 
-    public String getSourceHbasePrincipal() {
+    public String getSourceHBasePrincipal() {
         return properties.getProperty(SOURCE_HBASE_PRINCIPAL);
     }
 
-    public String getSourceHbaseKeytab() {
+    public String getSourceHBaseKeytab() {
         return properties.getProperty(SOURCE_HBASE_KEYTAB);
     }
 
@@ -184,6 +186,14 @@ public class ReplicateConfig {
 
     public String getTargetHBaseConfPath() {
         return properties.getProperty(TARGET_HBASE_CONFPATH);
+    }
+
+    public String getTargetHBasePrincipal() {
+        return properties.getProperty(TARGET_HBASE_PRINCIPAL);
+    }
+
+    public String getTargetHBaseKeytab() {
+        return properties.getProperty(TARGET_HBASE_KEYTAB);
     }
 
     public String getTargetHBaseQuorumHost() {

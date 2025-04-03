@@ -21,9 +21,10 @@ import java.util.regex.Pattern;
 public class TableTest {
     private static final Logger LOG = LoggerFactory.getLogger(TableTest.class);
 
-    private static final String host = "hb_h2";
-//    private static final String host = "ubuntu";
-    private static final String confPath = System.getProperty("user.dir") + "/src/main/resources/" + host;
+//    private static final String host = "hb_h2";
+    private static final String host = "hb_u";
+//    private static final String confPath = System.getProperty("user.dir") + "/src/main/resources/" + host;
+    private static final String confPath = "src/main/resources/" + host;
     private static HBase db;
 
     @BeforeClass
@@ -31,8 +32,7 @@ public class TableTest {
 //        db = new HBase();
 //        db = new HBase("node1", 2181, "/hbase");
 //        db = new HBase("hadoop2", 2181, "/hbase");
-//        db = new HBase(host);
-        db = new HBase(HBase.getPath(confPath));
+        db = new HBase(confPath, null, null);
     }
 
     @AfterClass

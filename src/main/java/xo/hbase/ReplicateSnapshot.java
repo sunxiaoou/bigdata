@@ -13,19 +13,19 @@ public class ReplicateSnapshot {
 
     private final ReplicateConfig config;
     private final HBase srcDb;
-    private final HBase tgtDb;
+//    private final HBase tgtDb;
     private final String peer;
 
     public ReplicateSnapshot() throws IOException {
         this.config = ReplicateConfig.getInstance();
         // read hadoop/hbase config files directly
         this.srcDb = new HBase(config.getSourceHBaseConfPath(),
-                config.getSourceHbasePrincipal(),
-                config.getSourceHBaseConfPath() + "/" + config.getSourceHbaseKeytab());
-        this.tgtDb = new HBase(
-                config.getTargetHBaseQuorumHost(),
-                config.getTargetHBaseQuorumPort(),
-                config.getTargetHBaseQuorumPath());
+                config.getSourceHBasePrincipal(),
+                config.getSourceHBaseConfPath() + "/" + config.getSourceHBaseKeytab());
+//        this.tgtDb = new HBase(
+//                config.getTargetHBaseQuorumHost(),
+//                config.getTargetHBaseQuorumPort(),
+//                config.getTargetHBaseQuorumPath());
         this.peer = config.getReplicateServerPeer();
     }
 
@@ -57,11 +57,11 @@ public class ReplicateSnapshot {
         int rc = srcDb.exportSnapshot(snapshot, copyTo);
         LOG.debug("export snapshot({}) to {} return {}", rc, copyTo, rc);
 
-        if (rc == 0) {
-            String table2 = table + "_" + dateStr;
-            tgtDb.cloneSnapshot(snapshot, table2);
-            LOG.debug("snapshot({}) cloned to table({})", snapshot, table2);
-        }
+//        if (rc == 0) {
+//            String table2 = table + "_" + dateStr;
+//            tgtDb.cloneSnapshot(snapshot, table2);
+//            LOG.debug("snapshot({}) cloned to table({})", snapshot, table2);
+//        }
 
         return rc;
     }
@@ -80,7 +80,7 @@ public class ReplicateSnapshot {
         String copyTo = String.format("hdfs://%s:%d/hbase",
                 config.getTargetHadoopHdfsHost(),
                 config.getTargetHadoopHdfsPort());
-        HBase.changeUser(config.getTargetHadoopUser());
+//        HBase.changeUser(config.getTargetHadoopUser());
 
         for (String table: tables) {
             int rc = doSnapshot(table, copyTo);
@@ -88,7 +88,7 @@ public class ReplicateSnapshot {
     }
 
     public void close() throws IOException {
-        tgtDb.close();
+//        tgtDb.close();
         srcDb.close();
     }
 

@@ -8,16 +8,24 @@
         <value>centos3:10020</value>
     </property>
     <property>
+        <name>mapreduce.map.memory.mb</name>
+        <value>2048</value>
+    </property>
+    <property>
+        <name>mapred.child.java.opts</name>
+        <value>-Xmx1536m</value>
+    </property>
+    <property>
         <name>mapreduce.jobhistory.webapp.address</name>
         <value>centos3:19888</value>
     </property>
     <property>
-        <name>mapreduce.jobhistory.keytab</name>
-        <value>/opt/kerb5/keytabs/hadoop.keytab</value>
-    </property>
-    <property>
         <name>mapreduce.jobhistory.principal</name>
         <value>mapred/centos3@EXAMPLE.COM</value>
+    </property>
+    <property>
+        <name>mapreduce.jobhistory.keytab</name>
+        <value>/opt/kerb5/keytabs/hadoop.keytab</value>
     </property>
     <property>
         <name>mapreduce.jobhistory.http.policy</name>
