@@ -92,6 +92,9 @@ public class HBase implements AutoCloseable {
     }
 
     public HBase(String pathStr, String principal, String keytab) throws IOException {
+        if (!Files.isDirectory(Paths.get(pathStr))) {
+            throw new IOException(String.format("Path %s is not a directory", pathStr));
+        }
         conf = HBaseConfiguration.create();
         conf.addResource(new Path(pathStr, "core-site.xml"));
         conf.addResource(new Path(pathStr, "hdfs-site.xml"));

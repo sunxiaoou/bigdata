@@ -13,7 +13,7 @@ public class ReplicateSnapshot {
 
     private final ReplicateConfig config;
     private final HBase srcDb;
-//    private final HBase tgtDb;
+    private final HBase tgtDb;
     private final String peer;
 
     public ReplicateSnapshot() throws IOException {
@@ -22,10 +22,9 @@ public class ReplicateSnapshot {
         this.srcDb = new HBase(config.getSourceHBaseConfPath(),
                 config.getSourceHBasePrincipal(),
                 config.getSourceHBaseConfPath() + "/" + config.getSourceHBaseKeytab());
-//        this.tgtDb = new HBase(
-//                config.getTargetHBaseQuorumHost(),
-//                config.getTargetHBaseQuorumPort(),
-//                config.getTargetHBaseQuorumPath());
+        this.tgtDb = new HBase(config.getTargetHBaseConfPath(),
+                config.getTargetHBasePrincipal(),
+                config.getTargetHBaseConfPath() + "/" + config.getTargetHBaseKeytab());
         this.peer = config.getReplicateServerPeer();
     }
 
@@ -57,11 +56,11 @@ public class ReplicateSnapshot {
         int rc = srcDb.exportSnapshot(snapshot, copyTo);
         LOG.debug("export snapshot({}) to {} return {}", rc, copyTo, rc);
 
-//        if (rc == 0) {
-//            String table2 = table + "_" + dateStr;
-//            tgtDb.cloneSnapshot(snapshot, table2);
-//            LOG.debug("snapshot({}) cloned to table({})", snapshot, table2);
-//        }
+        if (rc == 0) {
+            String table2 = table + "_" + dateStr;
+            tgtDb.cloneSnapshot(snapshot, table2);
+            LOG.debug("snapshot({}) cloned to table({})", snapshot, table2);
+        }
 
         return rc;
     }
@@ -88,7 +87,7 @@ public class ReplicateSnapshot {
     }
 
     public void close() throws IOException {
-//        tgtDb.close();
+        tgtDb.close();
         srcDb.close();
     }
 
