@@ -152,7 +152,7 @@ public class Fruit {
                 .longOpt("action")
                 .hasArg()
                 .required()
-                .desc("Action to perform (e.g., create)").build());
+                .desc("Action (create|drop|put|add|delete|count|scan|isEmpty|truncate)").build());
         options.addOption(Option.builder("h")
                 .longOpt("host")
                 .hasArg()

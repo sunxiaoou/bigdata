@@ -117,17 +117,9 @@ public class HBase implements AutoCloseable {
         admin = conn.getAdmin();
     }
 
-//    public HBase(Path path) throws IOException {
-//        conf = HBaseConfiguration.create();
-//        conf.addResource(new Path(path, "core-site.xml"));
-//        conf.addResource(new Path(path, "hdfs-site.xml"));
-//        conf.addResource(new Path(path, "mapred-site.xml"));
-//        conf.addResource(new Path(path, "yarn-site.xml"));
-//        conf.addResource(new Path(path, "hbase-site.xml"));
-////        conf.forEach(entry -> System.out.println(entry.getKey() + "=" + entry.getValue()));
-//        conn = ConnectionFactory.createConnection(conf);
-//        admin = conn.getAdmin();
-//    }
+    public void setFallback(boolean fallback) {
+        conf.setBoolean("ipc.client.fallback-to-simple-auth-allowed", fallback);
+    }
 
     public void close() throws IOException {
         admin.close();
@@ -628,18 +620,20 @@ public class HBase implements AutoCloseable {
         admin.deleteSnapshot(snapshotName);
     }
 
-    public int exportSnapshot(String snapshotName, String copyTo) throws Exception {
-        if (!snapshotExists(snapshotName)) {
-            LOG.error("snapshot({}) doesn't exist", snapshotName);
-            return -1;
-        }
+    public int exportSnapshot(String snapshotName, String copyFrom, String copyTo) throws Exception {
+//        if (!snapshotExists(snapshotName)) {
+//            LOG.error("snapshot({}) doesn't exist", snapshotName);
+//            return -1;
+//        }
         List<String> opts = new ArrayList<>();
         opts.add("--snapshot");
         opts.add(snapshotName);
+        opts.add("--copy-from");
+        opts.add(copyFrom);
         opts.add("--copy-to");
         opts.add(copyTo);
         opts.add("--overwrite");
-        LOG.info("export --snapshot {} --copy-to {} --overwrite", snapshotName, copyTo);
+        LOG.info("export --snapshot {} --copy-from {} --copy-to {} --overwrite", snapshotName, copyFrom, copyTo);
         int rc = ToolRunner.run(conf, new ExportSnapshot(), opts.toArray(new String[0]));
         LOG.info("exported rc({})", rc);
         return rc;

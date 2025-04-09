@@ -10,21 +10,26 @@ public class Snapshot {
     private static final Logger LOG = LoggerFactory.getLogger(Snapshot.class);
     private static String dbStr;
     private static String dbStr2;
+    private static String principal = null;
+    private static String keytab = null;
+
     private static String table;
     private static String action;
 
     private static void usage() {
         System.out.println("Usage: snapshot [options]");
         System.out.println("Options:");
-        System.out.println("  --action <action>     Action to perform. One of:");
-        System.out.println("                           - list");
-        System.out.println("                           - create");
-        System.out.println("                           - delete");
-        System.out.println("                           - deleteAll");
-        System.out.println("                           - export");
-        System.out.println("                           - clone");
+        System.out.println("  --action <action>         Action to perform. One of:");
+        System.out.println("                                - list");
+        System.out.println("                                - create");
+        System.out.println("                                - delete");
+        System.out.println("                                - deleteAll");
+        System.out.println("                                - export");
+        System.out.println("                                - clone");
         System.out.println("  --db <srcDB>          HBase database.");
         System.out.println("  --db2 <tgtDB>         Target HBase database (required for export action).");
+        System.out.println("  --principle <principle>   HBase principal. (on target side in export action)");
+        System.out.println("  --keytab <keytab>         HBase keytab. (on target side in export action)");
         System.out.println("  --table <table>       Table name (not required for list|deleteAll action).");
         System.out.println("  --help                Show this help message.");
         System.out.println();
@@ -45,6 +50,12 @@ public class Snapshot {
                     break;
                 case "--db2":
                     dbStr2 = args[++i];
+                    break;
+                case "--principal":
+                    principal = args[++i];
+                    break;
+                case "--keytab":
+                    keytab = args[++i];
                     break;
                 case "--table":
                     table = args[++i];
@@ -71,9 +82,13 @@ public class Snapshot {
         HBase db2 = null;
         String snapshot = null;
         try {
-            db = new HBase(dbStr, null, null);
+            if ("export".equals(action)) {
+                db = new HBase(dbStr, null, null);
+            } else {
+                db = new HBase(dbStr, principal, keytab);
+            }
             if (dbStr2 != null) {
-                db2 = new HBase(dbStr2, null, null);
+                db2 = new HBase(dbStr2, principal, keytab);
             }
             if (table != null) {
                 SimpleDateFormat sdf = new SimpleDateFormat("yyMMdd");
@@ -102,9 +117,15 @@ public class Snapshot {
                     break;
                 case "export":
                     assert db2 != null;
-                    HBase.changeUser(db2.getUser());
+                    String copyFrom = db.getProperty("hbase.rootdir");
                     String copyTo = db2.getProperty("hbase.rootdir");
-                    if (db.exportSnapshot(snapshot, copyTo) == 0) {
+                    String auth = db2.getProperty("hbase.security.authentication");
+                    if (auth != null && auth.equals("kerberos")) {
+                        db2.setFallback(true);
+                    } else {
+                        HBase.changeUser(db2.getUser());
+                    }
+                    if (db2.exportSnapshot(snapshot, copyFrom, copyTo) == 0) {
                         LOG.info("Snapshot {} exported successfully.", snapshot);
                     } else {
                         LOG.warn("Failed to export snapshot {}.", snapshot);

@@ -15,7 +15,9 @@ public class SnapshotTest {
     public void listTableSnapshots() {
         String[] args = {
                 "--action", "list",
-                "--db", "hb_c2",
+                "--db", "hb_c3",
+                "--principal", "hbase/centos3@EXAMPLE.COM",
+                "--keytab", "hb_c3/hadoop.keytab",
                 "--table", "manga:fruit"};
         Snapshot.main(args);
     }
@@ -57,10 +59,33 @@ public class SnapshotTest {
     }
 
     @Test
+    public void exportSnapshot2() {
+        String[] args = {
+                "--action", "export",
+                "--db", "hb_u",
+                "--db2", "hb_c3",
+                "--principal", "hbase/centos3@EXAMPLE.COM",
+                "--keytab", "hb_c3/hadoop.keytab",
+                "--table", "manga:fruit"};
+        Snapshot.main(args);
+    }
+
+    @Test
     public void cloneSnapshot() {
         String[] args = {
                 "--action", "clone",
                 "--db", "hb_c2",
+                "--table", "manga:fruit"};
+        Snapshot.main(args);
+    }
+
+    @Test
+    public void cloneSnapshot2() {
+        String[] args = {
+                "--action", "clone",
+                "--db", "hb_c3",
+                "--principal", "hbase/centos3@EXAMPLE.COM",
+                "--keytab", "hb_c3/hadoop.keytab",
                 "--table", "manga:fruit"};
         Snapshot.main(args);
     }
