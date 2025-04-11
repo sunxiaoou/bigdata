@@ -58,7 +58,7 @@ public class Fruit {
             db = new HBase();
         } else if (Paths.get(host).toFile().exists()) {
             // use hadoop/hbase XMLs in the specified directory
-            db = new HBase(host, principal, keytab);
+            db = new HBase(host, principal, keytab, false);
         } else {
             // use the specified host
             db = new HBase(host, 2181, "/hbase");

@@ -14,55 +14,45 @@ public class ReplicateSnapshot {
     private final ReplicateConfig config;
     private final HBase srcDb;
     private final HBase tgtDb;
-    private final String peer;
+//    private final String peer;
 
     public ReplicateSnapshot() throws IOException {
         this.config = ReplicateConfig.getInstance();
-        // read hadoop/hbase config files directly
-        this.srcDb = new HBase(config.getSourceHBaseConfPath(),
-                config.getSourceHBasePrincipal(),
-                config.getSourceHBaseConfPath() + "/" + config.getSourceHBaseKeytab());
-        this.tgtDb = new HBase(config.getTargetHBaseConfPath(),
-                config.getTargetHBasePrincipal(),
-                config.getTargetHBaseConfPath() + "/" + config.getTargetHBaseKeytab());
-        this.peer = config.getReplicateServerPeer();
+        this.srcDb = new HBase(config.getSourceHBaseConfPath(), null, null, false);
+        this.tgtDb = new HBase(config.getTargetHBaseConfPath(), config.getTargetHBasePrincipal(),
+                config.getTargetHBaseKeytab(), true);
+//        this.peer = config.getReplicateServerPeer();
     }
 
-    public void addPeer() throws IOException {
-        String clusterKey = String.format("%s:%d:%s",
-                config.getReplicateServerQuorumHost(),
-                config.getReplicateServerQuorumPort(),
-                config.getReplicateServerRpcSvrZNode());
-        if ("table".equals(config.getSourceHBaseMapType())) {
-            srcDb.addPeer(peer, clusterKey, new ArrayList<>(config.getSourceHBaseMapTables().keySet()), false);
-        } else if ("user".equals(config.getSourceHBaseMapType())) {
-            srcDb.addPeer(peer, clusterKey, config.getSourceHBaseMapNamespaces().keySet(), false);
-        } else {
-            srcDb.addPeer(peer, clusterKey, false);
-        }
-    }
+//    public void addPeer() throws IOException {
+//        String clusterKey = String.format("%s:%d:%s",
+//                config.getReplicateServerQuorumHost(),
+//                config.getReplicateServerQuorumPort(),
+//                config.getReplicateServerRpcSvrZNode());
+//        if ("table".equals(config.getSourceHBaseMapType())) {
+//            srcDb.addPeer(peer, clusterKey, new ArrayList<>(config.getSourceHBaseMapTables().keySet()), false);
+//        } else if ("user".equals(config.getSourceHBaseMapType())) {
+//            srcDb.addPeer(peer, clusterKey, config.getSourceHBaseMapNamespaces().keySet(), false);
+//        } else {
+//            srcDb.addPeer(peer, clusterKey, false);
+//        }
+//    }
+//
+//    public void enablePeer() throws IOException {
+//        srcDb.setPeerState(peer, true);
+//    }
 
-    public void enablePeer() throws IOException {
-        srcDb.setPeerState(peer, true);
-    }
-
-    public int doSnapshot(String table, String copyTo) throws Exception {
+    public void doSnapshot(String copyFrom, String copyTo, String table) throws Exception {
         SimpleDateFormat sdf = new SimpleDateFormat("yyMMdd");
         String dateStr = sdf.format(new Date());
         String snapshot = table.replaceFirst(":", "-") + "_" + dateStr;
         srcDb.createSnapshot(table, snapshot);
-        LOG.debug("snapshot({}) from table({}) created", snapshot, table);
+        LOG.info("snapshot({}) from table({}) created", snapshot, table);
 
-        int rc = srcDb.exportSnapshot(snapshot, copyTo);
-        LOG.debug("export snapshot({}) to {} return {}", rc, copyTo, rc);
-
-        if (rc == 0) {
-            String table2 = table + "_" + dateStr;
-            tgtDb.cloneSnapshot(snapshot, table2);
-            LOG.debug("snapshot({}) cloned to table({})", snapshot, table2);
-        }
-
-        return rc;
+        tgtDb.distcpSnapshot(snapshot, copyFrom, copyTo);
+        String table2 = table + "_" + dateStr;
+        tgtDb.cloneSnapshot(snapshot, table2);
+        LOG.info("snapshot({}) cloned to table({})", snapshot, table2);
     }
 
     public void doSnapshots() throws Exception {
@@ -76,13 +66,12 @@ public class ReplicateSnapshot {
         } else {
             tables = srcDb.listTables(Pattern.compile(".*"));
         }
-        String copyTo = String.format("hdfs://%s:%d/hbase",
-                config.getTargetHadoopHdfsHost(),
-                config.getTargetHadoopHdfsPort());
 //        HBase.changeUser(config.getTargetHadoopUser());
 
+        String copyFrom = srcDb.getProperty("hbase.rootdir");
+        String copyTo = tgtDb.getProperty("hbase.rootdir");
         for (String table: tables) {
-            int rc = doSnapshot(table, copyTo);
+            doSnapshot(copyFrom, copyTo, table);
         }
     }
 

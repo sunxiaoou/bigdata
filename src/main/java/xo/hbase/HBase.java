@@ -12,11 +12,19 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
+import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.provider.SaslClientAuthenticationProvider;
+import org.apache.hadoop.hbase.security.provider.SaslClientAuthenticationProviders;
 import org.apache.hadoop.hbase.snapshot.ExportSnapshot;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Triple;
+import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.tools.DistCp;
+import org.apache.hadoop.tools.DistCpOptions;
 import org.apache.hadoop.util.ToolRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,10 +70,6 @@ public class HBase implements AutoCloseable {
         return snapshot.substring(0, snapshot.length() - 7).replaceFirst("-", ":");
     }
 
-//    static public Path getPath(String pathStr) {
-//        return new Path(pathStr);
-//    }
-
     static public void changeUser(String user) throws IOException {
         String current = UserGroupInformation.getCurrentUser().getShortUserName();
         if (!current.equals(user)) {
@@ -76,49 +80,68 @@ public class HBase implements AutoCloseable {
     }
 
     public HBase() throws IOException {
-        conf = HBaseConfiguration.create();
-        conn = ConnectionFactory.createConnection(conf);
-        admin = conn.getAdmin();
+        this.conf = HBaseConfiguration.create();
+        this.conn = ConnectionFactory.createConnection(conf);
+        this.admin = conn.getAdmin();
     }
 
-    public HBase(String host, int port, String znode) throws IOException {
+    public HBase(String host, int port, String zNode) throws IOException {
         conf = HBaseConfiguration.create();
         conf.set("hbase.zookeeper.quorum", host);
         conf.set("hbase.zookeeper.property.clientPort", "" + port);
-        conf.set("zookeeper.znode.parent", znode);
+        conf.set("zookeeper.zNode.parent", zNode);
         conn = ConnectionFactory.createConnection(conf);
         admin = conn.getAdmin();
-//        conf.forEach(entry -> LOG.info(entry.getKey() + "=" + entry.getValue()));
     }
 
-    public HBase(String pathStr, String principal, String keytab) throws IOException {
+    static private Configuration loadConf(String pathStr) throws IOException {
         if (!Files.isDirectory(Paths.get(pathStr))) {
             throw new IOException(String.format("Path %s is not a directory", pathStr));
         }
-        conf = HBaseConfiguration.create();
+        Configuration conf = HBaseConfiguration.create();
         conf.addResource(new Path(pathStr, "core-site.xml"));
         conf.addResource(new Path(pathStr, "hdfs-site.xml"));
         conf.addResource(new Path(pathStr, "mapred-site.xml"));
         conf.addResource(new Path(pathStr, "yarn-site.xml"));
         conf.addResource(new Path(pathStr, "hbase-site.xml"));
 //        conf.forEach(entry -> LOG.info(entry.getKey() + "=" + entry.getValue()));
+        LOG.info("Current user: {}", UserGroupInformation.getCurrentUser());
         LOG.info("default file system: {}", conf.get("fs.defaultFS"));
-        if ("kerberos".equals(conf.get("hadoop.security.authentication"))) {
-            if (principal != null && keytab != null) {
-                UserGroupInformation.setConfiguration(conf);
-                UserGroupInformation.loginUserFromKeytab(principal, keytab);
-            } else {
-                LOG.warn("Kerberos authentication requires principal and keytab");
+        return conf;
+    }
+
+    private static String getProviderName(Configuration conf) throws IOException {
+        SaslClientAuthenticationProviders providers = SaslClientAuthenticationProviders.getInstance(conf);
+        Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>> provider =
+                providers.selectProvider(conf.get("hbase.cluster.id", "default"), User.getCurrent());
+        return provider.getFirst().getClass().getSimpleName();
+    }
+
+    static private void login(Configuration conf, String principal, String keytab) throws IOException {
+        UserGroupInformation.reset();
+        UserGroupInformation.setConfiguration(conf);
+        UserGroupInformation.loginUserFromKeytab(principal, keytab);
+
+        LOG.info("Logged in as '{}'", UserGroupInformation.getLoginUser());
+        String provider = getProviderName(conf);
+        if (!"GssSaslClientAuthenticationProvider".equals(provider)) {
+            throw new RuntimeException("Unsupported authentication provider: " + provider);
+        }
+    }
+
+    public HBase(String pathStr, String principal, String keytab, boolean fallback) throws IOException {
+        this.conf = loadConf(pathStr);
+        if (principal != null && keytab != null) {
+            if (fallback) {
+                this.conf.setBoolean("ipc.client.fallback-to-simple-auth-allowed", true);
             }
-        } else {
-            LOG.info("Current user: {}", UserGroupInformation.getCurrentUser());
+            this.conf.set("mapreduce.map.memory.mb", "1536");
+            this.conf.set("mapred.child.java.opts", "-Xmx1024m");
+
+            login(conf, principal, keytab);
         }
         conn = ConnectionFactory.createConnection(conf);
         admin = conn.getAdmin();
-    }
-
-    public void setFallback(boolean fallback) {
-        conf.setBoolean("ipc.client.fallback-to-simple-auth-allowed", fallback);
     }
 
     public void close() throws IOException {
@@ -637,6 +660,28 @@ public class HBase implements AutoCloseable {
         int rc = ToolRunner.run(conf, new ExportSnapshot(), opts.toArray(new String[0]));
         LOG.info("exported rc({})", rc);
         return rc;
+    }
+
+    public void distcpSnapshot(String snapshotName, String copyFrom, String copyTo) throws Exception {
+        Path sourcePath = new Path(copyFrom + "/.hbase-snapshot/" + snapshotName);
+        Path targetPath = new Path(copyTo + "/.hbase-snapshot/" + snapshotName);
+        LOG.info("Copying snapshot from {} to {}", sourcePath, targetPath);
+
+        List<Path> srcPaths = Collections.singletonList(sourcePath);
+        DistCpOptions options = new DistCpOptions(srcPaths, targetPath);
+        options.setSyncFolder(true);
+        options.setDeleteMissing(true);
+
+        DistCp distCp = new DistCp(conf, options);
+        Job job = distCp.execute();
+        if (job.isSuccessful()) {
+            LOG.info("DistCp job {} completed successfully", job.getJobID());
+            LOG.info("Tracking URL: {}", job.getTrackingURL());
+        } else {
+            LOG.error("DistCp job {} failed", job.getJobID());
+            LOG.error("Reason: {}", job.getStatus().getFailureInfo());
+            throw new RuntimeException("DistCp failed");
+        }
     }
 
     public void renameTable(String name, String newName) throws IOException {
