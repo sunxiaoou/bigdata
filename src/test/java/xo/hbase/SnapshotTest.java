@@ -44,14 +44,24 @@ public class SnapshotTest {
     public void deleteAllSnapshots() {
         String[] args = {
                 "--action", "deleteAll",
-                "--db", "hb_u"};
+                "--db", "hb_c2"};
         Snapshot.main(args);
     }
 
     @Test
-    public void exportSnapshot() {
+    public void deleteAllSnapshots2() {
         String[] args = {
-                "--action", "export",
+                "--action", "deleteAll",
+                "--principal", "hbase/centos3@EXAMPLE.COM",
+                "--keytab", "hb_c3/hadoop.keytab",
+                "--db", "hb_c3"};
+        Snapshot.main(args);
+    }
+
+    @Test
+    public void distcpSnapshot() {
+        String[] args = {
+                "--action", "distcp",
                 "--db", "hb_u",
                 "--db2", "hb_c2",
                 "--table", "manga:fruit"};
@@ -59,9 +69,9 @@ public class SnapshotTest {
     }
 
     @Test
-    public void exportSnapshot2() {
+    public void distcpSnapshot2() {
         String[] args = {
-                "--action", "export",
+                "--action", "distcp",
                 "--db", "hb_u",
                 "--db2", "hb_c3",
                 "--principal", "hbase/centos3@EXAMPLE.COM",

@@ -21,7 +21,7 @@ public class ClusterTest {
 
     @BeforeClass
     public static void setupBeforeClass() throws IOException {
-        db = new HBase(confPath, null, null);
+        db = new HBase(confPath, null, null, false);
     }
 
     @AfterClass

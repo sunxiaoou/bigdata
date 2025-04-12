@@ -82,13 +82,13 @@ public class Snapshot {
         HBase db2 = null;
         String snapshot = null;
         try {
-            if ("export".equals(action)) {
-                db = new HBase(dbStr, null, null);
+            if ("distcp".equals(action)) {
+                db = new HBase(dbStr, null, null, false);
             } else {
-                db = new HBase(dbStr, principal, keytab);
+                db = new HBase(dbStr, principal, keytab, false);
             }
             if (dbStr2 != null) {
-                db2 = new HBase(dbStr2, principal, keytab);
+                db2 = new HBase(dbStr2, principal, keytab, true);
             }
             if (table != null) {
                 SimpleDateFormat sdf = new SimpleDateFormat("yyMMdd");
@@ -112,29 +112,23 @@ public class Snapshot {
                 case "deleteAll":
                     for (String s: db.listSnapshots(table)) {
                         db.deleteSnapshot(s);
-                        LOG.info("Snapshot {} deleted successfully.", s);
+                        LOG.info("Snapshot(s) {} deleted successfully.", s);
                     }
                     break;
-                case "export":
+                case "distcp":
                     assert db2 != null;
                     String copyFrom = db.getProperty("hbase.rootdir");
                     String copyTo = db2.getProperty("hbase.rootdir");
                     String auth = db2.getProperty("hbase.security.authentication");
-                    if (auth != null && auth.equals("kerberos")) {
-                        db2.setFallback(true);
-                    } else {
+                    if (!"kerberos".equals(auth)) {
                         HBase.changeUser(db2.getUser());
                     }
-                    if (db2.exportSnapshot(snapshot, copyFrom, copyTo) == 0) {
-                        LOG.info("Snapshot {} exported successfully.", snapshot);
-                    } else {
-                        LOG.warn("Failed to export snapshot {}.", snapshot);
-                    }
+                    db2.distcpSnapshot(snapshot, copyFrom, copyTo);
+                    LOG.info("Snapshot {} distcp to {} successfully.", snapshot, copyTo);
                     break;
                 case "clone":
-                    assert snapshot != null;
                     db.cloneSnapshot(snapshot, table);
-                    LOG.info("Snapshot {} cloned successfully to table {}.", snapshot, table);
+                    LOG.info("Snapshot {} cloned to table {}.", snapshot, table);
                     break;
                 default:
                     LOG.warn("Invalid action: {}", action);

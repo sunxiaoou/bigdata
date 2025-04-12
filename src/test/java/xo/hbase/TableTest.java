@@ -32,7 +32,7 @@ public class TableTest {
 //        db = new HBase();
 //        db = new HBase("node1", 2181, "/hbase");
 //        db = new HBase("hadoop2", 2181, "/hbase");
-        db = new HBase(confPath, null, null);
+        db = new HBase(confPath, null, null, false);
     }
 
     @AfterClass
