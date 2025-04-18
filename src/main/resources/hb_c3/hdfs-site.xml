@@ -5,19 +5,19 @@
     </property>
     <property>
         <name>dfs.namenode.http-address</name>
-        <value>centos3:50070</value>
+        <value>_HOST:50070</value>
     </property>
     <property>
         <name>dfs.datanode.address</name>
-        <value>centos3:50010</value>
+        <value>_HOST:50010</value>
     </property>
     <property>
         <name>dfs.datanode.http.address</name>
-        <value>centos3:50075</value>
+        <value>_HOST:50075</value>
     </property>
     <property>
         <name>dfs.datanode.ipc.address</name>
-        <value>centos3:50020</value>
+        <value>_HOST:50020</value>
     </property>
     <property>
         <name>dfs.block.access.token.enable</name>
@@ -25,7 +25,7 @@
     </property>
     <property>
         <name>dfs.namenode.kerberos.principal</name>
-        <value>hdfs/centos3@EXAMPLE.COM</value>
+        <value>hdfs/_HOST@EXAMPLE.COM</value>
     </property>
     <property>
         <name>dfs.namenode.keytab.file</name>
@@ -33,7 +33,7 @@
     </property>
     <property>
         <name>dfs.secondary.namenode.kerberos.principal</name>
-        <value>hdfs/centos3@EXAMPLE.COM</value>
+        <value>hdfs/_HOST@EXAMPLE.COM</value>
     </property>
     <property>
         <name>dfs.secondary.namenode.keytab.file</name>
@@ -41,7 +41,7 @@
     </property>
     <property>
         <name>dfs.datanode.kerberos.principal</name>
-        <value>hdfs/centos3@EXAMPLE.COM</value>
+        <value>hdfs/_HOST@EXAMPLE.COM</value>
     </property>
     <property>
         <name>dfs.datanode.keytab.file</name>
@@ -57,7 +57,7 @@
     </property>
     <property>
         <name>dfs.web.authentication.kerberos.principal</name>
-        <value>HTTP/centos3@EXAMPLE.COM</value>
+        <value>HTTP/_HOST@EXAMPLE.COM</value>
     </property>
     <property>
         <name>dfs.web.authentication.kerberos.keytab</name>
@@ -65,10 +65,10 @@
     </property>
     <property>
         <name>dfs.namenode.kerberos.internal.spnego.principal</name>
-        <value>HTTP/centos3@EXAMPLE.COM</value>
+        <value>HTTP/_HOST@EXAMPLE.COM</value>
     </property>
     <property>
         <name>dfs.secondary.namenode.kerberos.internal.spnego.principal</name>
-        <value>HTTP/centos3@EXAMPLE.COM</value>
+        <value>HTTP/_HOST@EXAMPLE.COM</value>
     </property>
 </configuration>

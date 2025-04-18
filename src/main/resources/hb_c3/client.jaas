@@ -1,8 +1,6 @@
 Client {
-  com.sun.security.auth.module.Krb5LoginModule required
-  storeKey=true
-  useKeyTab=true
-  useTicketCache=false
-  keyTab="hb_c3/hadoop.keytab"
-  principal="hbase/centos3@EXAMPLE.COM";
+com.sun.security.auth.module.Krb5LoginModule required
+useKeyTab=false
+useTicketCache=true
+debug=true;
 };
