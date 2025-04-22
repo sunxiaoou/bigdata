@@ -41,6 +41,7 @@ public class ReplicateConfig {
     private static final String TARGET_HADOOP_HDFS_HOST = "target.hadoop.hdfs.host";
     private static final String TARGET_HADOOP_HDFS_PORT = "target.hadoop.hdfs.port";
     private static final String TARGET_HBASE_CONFPATH = "target.hbase.confPath";
+    private static final String TARGET_ZOOKEEPER_PRINCIPAL = "target.hbase.zPrincipal";
     private static final String TARGET_HBASE_PRINCIPAL = "target.hbase.principal";
     private static final String TARGET_HBASE_KEYTAB = "target.hbase.keytab";
     private static final String TARGET_HBASE_QUORUM_HOST = "target.hbase.quorum.host";
@@ -186,6 +187,10 @@ public class ReplicateConfig {
 
     public String getTargetHBaseConfPath() {
         return properties.getProperty(TARGET_HBASE_CONFPATH);
+    }
+
+    public String getTargetZookeeperPrincipal() {
+        return properties.getProperty(TARGET_ZOOKEEPER_PRINCIPAL);
     }
 
     public String getTargetHBasePrincipal() {

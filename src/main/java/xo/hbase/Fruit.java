@@ -51,14 +51,14 @@ public class Fruit {
         return rows;
     }
 
-    private static void run(String op, String host, String table, String principal, String keytab) throws IOException {
+    private static void run(String op, String host, String table, String zPrincipal, String principal, String keytab) throws IOException {
         HBase db;
         if (host == null) {
             // use hadoop/hbase XMLs in classpath
             db = new HBase();
         } else if (Paths.get(host).toFile().exists()) {
             // use hadoop/hbase XMLs in the specified directory
-            db = new HBase(host, principal, keytab, false);
+            db = new HBase(host, zPrincipal, principal, keytab, false);
         } else {
             // use the specified host
             db = new HBase(host, 2181, "/hbase");
@@ -161,6 +161,10 @@ public class Fruit {
                 .longOpt("table")
                 .hasArg()
                 .desc("Table name").build());
+        options.addOption(Option.builder("z")
+                .longOpt("zPrincipal")
+                .hasArg()
+                .desc("Zookeeper Principal name").build());
         options.addOption(Option.builder("p")
                 .longOpt("principal")
                 .hasArg()
@@ -196,8 +200,9 @@ public class Fruit {
         String op = cmd.getOptionValue("action");
         String host = cmd.getOptionValue("host");
         String table = cmd.getOptionValue("table");
+        String zPrincipal = cmd.getOptionValue("zPrincipal");
         String principal = cmd.getOptionValue("principal");
         String keytab = cmd.getOptionValue("keytab");
-        run(op, host, table, principal, keytab);
+        run(op, host, table, zPrincipal, principal, keytab);
     }
 }

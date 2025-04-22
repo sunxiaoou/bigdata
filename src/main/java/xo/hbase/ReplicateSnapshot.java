@@ -18,9 +18,10 @@ public class ReplicateSnapshot {
 
     public ReplicateSnapshot() throws IOException {
         this.config = ReplicateConfig.getInstance();
-        this.srcDb = new HBase(config.getSourceHBaseConfPath(), null, null, false);
-        this.tgtDb = new HBase(config.getTargetHBaseConfPath(), config.getTargetHBasePrincipal(),
-                config.getTargetHBaseKeytab(), true);
+        this.tgtDb = new HBase(config.getTargetHBaseConfPath(), config.getTargetZookeeperPrincipal(),
+                config.getTargetHBasePrincipal(), config.getTargetHBaseKeytab(), true);
+        this.srcDb = new HBase(config.getSourceHBaseConfPath(), null, null, null,
+                false);
 //        this.peer = config.getReplicateServerPeer();
     }
 

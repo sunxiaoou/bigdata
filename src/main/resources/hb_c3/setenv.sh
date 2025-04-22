@@ -8,7 +8,7 @@ export KRB5_CONFIG=/etc/krb5.conf
 HBASE_CLIENT_OPTS="-Djava.security.krb5.conf=$KRB5_CONFIG\
  -Djavax.security.auth.useSubjectCredsOnly=false\
  -Dzookeeper.server.principal=zookeeper/centos3@EXAMPLE.COM\
- -Djava.security.auth.login.config=$HBASE_CONF_DIR/client.jaas\
+ -Djava.security.auth.login.config=$HBASE_CONF_DIR/zoo-client.jaas\
  -Dzookeeper.kinit=/usr/bin/kinit\
  -Djava.io.tmpdir=$WORK_DIR/tmp\
  -Dorg.xerial.snappy.tempdir=$WORK_DIR/tmp"

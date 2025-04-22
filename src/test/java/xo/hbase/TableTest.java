@@ -21,10 +21,18 @@ import java.util.regex.Pattern;
 public class TableTest {
     private static final Logger LOG = LoggerFactory.getLogger(TableTest.class);
 
-//    private static final String host = "hb_h2";
-    private static final String host = "hb_u";
-//    private static final String confPath = System.getProperty("user.dir") + "/src/main/resources/" + host;
+//    private static final String host = "hb_u";
+//    private static final String confPath = "src/main/resources/" + host;
+//    private static final String principal = null;
+//    private static final String keytab = null;
+//    private static final boolean fallback = false;
+
+    private static final String host = "hb_mrs";
     private static final String confPath = "src/main/resources/" + host;
+    private static final String principal = "loader_hive1@HADOOP.COM";
+    private static final String keytab = confPath + "/loader_hive1.keytab";
+    private static final boolean fallback = true;
+
     private static HBase db;
 
     @BeforeClass
@@ -32,7 +40,7 @@ public class TableTest {
 //        db = new HBase();
 //        db = new HBase("node1", 2181, "/hbase");
 //        db = new HBase("hadoop2", 2181, "/hbase");
-        db = new HBase(confPath, null, null, false);
+        db = new HBase(confPath, principal, principal, keytab, fallback);
     }
 
     @AfterClass
@@ -67,7 +75,7 @@ public class TableTest {
             writer.write(json);
             LOG.info("written column families to {}", fileName);
         } catch (IOException e) {
-            e.printStackTrace();
+            LOG.error("Error writing to file: {}", fileName, e);
         }
     }
 

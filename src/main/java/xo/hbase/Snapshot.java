@@ -10,6 +10,7 @@ public class Snapshot {
     private static final Logger LOG = LoggerFactory.getLogger(Snapshot.class);
     private static String dbStr;
     private static String dbStr2;
+    private static String zPrincipal = null;
     private static String principal = null;
     private static String keytab = null;
 
@@ -28,6 +29,7 @@ public class Snapshot {
         System.out.println("                                - clone");
         System.out.println("  --db <srcDB>          HBase database.");
         System.out.println("  --db2 <tgtDB>         Target HBase database (required for export action).");
+        System.out.println("  --zPrinciple <zPrinciple>   Zookeeper principal. (on target side in export action)");
         System.out.println("  --principle <principle>   HBase principal. (on target side in export action)");
         System.out.println("  --keytab <keytab>         HBase keytab. (on target side in export action)");
         System.out.println("  --table <table>       Table name (not required for list|deleteAll action).");
@@ -50,6 +52,9 @@ public class Snapshot {
                     break;
                 case "--db2":
                     dbStr2 = args[++i];
+                    break;
+                case "--zPrincipal":
+                    zPrincipal = args[++i];
                     break;
                 case "--principal":
                     principal = args[++i];
@@ -83,12 +88,10 @@ public class Snapshot {
         String snapshot = null;
         try {
             if ("distcp".equals(action)) {
-                db = new HBase(dbStr, null, null, false);
+                db2 = new HBase(dbStr2, zPrincipal, principal, keytab, true);
+                db = new HBase(dbStr, null, null, null, false);
             } else {
-                db = new HBase(dbStr, principal, keytab, false);
-            }
-            if (dbStr2 != null) {
-                db2 = new HBase(dbStr2, principal, keytab, true);
+                db = new HBase(dbStr, zPrincipal, principal, keytab, false);
             }
             if (table != null) {
                 SimpleDateFormat sdf = new SimpleDateFormat("yyMMdd");

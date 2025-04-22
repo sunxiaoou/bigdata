@@ -77,6 +77,11 @@ public class HBase implements AutoCloseable {
         }
     }
 
+    /* Attempt to load the configuration file from the following locations in sequence
+        $HBASE_CONF_DIR
+        $HBASE_HOME/conf
+        Other paths added through HBASE_CLASSPATH
+     */
     public HBase() throws IOException {
         this.conf = HBaseConfiguration.create();
         this.conn = ConnectionFactory.createConnection(conf);
@@ -127,9 +132,17 @@ public class HBase implements AutoCloseable {
         }
     }
 
-    public HBase(String pathStr, String principal, String keytab, boolean fallback) throws IOException {
+    public HBase(String pathStr, String zPrincipal, String principal, String keytab, boolean fallback)
+            throws IOException {
         this.conf = loadConf(pathStr);
         if (principal != null && keytab != null) {
+            if (Files.isReadable(Paths.get(pathStr + "/krb5.conf"))) {
+                System.setProperty("java.security.krb5.conf", pathStr + "/krb5.conf");
+                LOG.info("java.security.krb5.conf: {}", System.getProperty("java.security.krb5.conf"));
+            }
+            System.setProperty("zookeeper.server.principal", zPrincipal);
+            System.setProperty("java.security.auth.login.config", pathStr + "/zoo-client.jaas");
+            System.setProperty("javax.security.auth.useSubjectCredsOnly", "false");
             if (fallback) {
                 this.conf.setBoolean("ipc.client.fallback-to-simple-auth-allowed", true);
             }
@@ -137,6 +150,8 @@ public class HBase implements AutoCloseable {
             this.conf.set("mapred.child.java.opts", "-Xmx1024m");
 
             login(conf, principal, keytab);
+        } else {
+            System.setProperty("zookeeper.sasl.client", "false");
         }
         conn = ConnectionFactory.createConnection(conf);
         admin = conn.getAdmin();

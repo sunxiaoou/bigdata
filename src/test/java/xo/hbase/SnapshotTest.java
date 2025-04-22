@@ -16,8 +16,20 @@ public class SnapshotTest {
         String[] args = {
                 "--action", "list",
                 "--db", "hb_c3",
+                "--zPrincipal", "zookeeper/centos3@EXAMPLE.COM",
                 "--principal", "hbase/centos3@EXAMPLE.COM",
                 "--keytab", "hb_c3/hadoop.keytab",
+                "--table", "manga:fruit"};
+        Snapshot.main(args);
+    }
+
+    @Test
+    public void listTableSnapshots2() {
+        String[] args = {
+                "--action", "list",
+                "--db", "hb_mrs",
+                "--principal", "loader_hive1@HADOOP.COM",
+                "--keytab", "hb_mrs/loader_hive1.keytab",
                 "--table", "manga:fruit"};
         Snapshot.main(args);
     }
@@ -52,6 +64,7 @@ public class SnapshotTest {
     public void deleteAllSnapshots2() {
         String[] args = {
                 "--action", "deleteAll",
+                "--zPrincipal", "zookeeper/centos3@EXAMPLE.COM",
                 "--principal", "hbase/centos3@EXAMPLE.COM",
                 "--keytab", "hb_c3/hadoop.keytab",
                 "--db", "hb_c3"};
@@ -74,8 +87,21 @@ public class SnapshotTest {
                 "--action", "distcp",
                 "--db", "hb_u",
                 "--db2", "hb_c3",
+                "--zPrincipal", "zookeeper/centos3@EXAMPLE.COM",
                 "--principal", "hbase/centos3@EXAMPLE.COM",
                 "--keytab", "hb_c3/hadoop.keytab",
+                "--table", "manga:fruit"};
+        Snapshot.main(args);
+    }
+
+    @Test
+    public void distcpSnapshot3() {
+        String[] args = {
+                "--action", "distcp",
+                "--db", "hb_u",
+                "--db2", "hb_mrs",
+                "--principal", "loader_hive1@HADOOP.COM",
+                "--keytab", "hb_mrs/loader_hive1.keytab",
                 "--table", "manga:fruit"};
         Snapshot.main(args);
     }
@@ -94,6 +120,7 @@ public class SnapshotTest {
         String[] args = {
                 "--action", "clone",
                 "--db", "hb_c3",
+                "--zPrincipal", "zookeeper/centos3@EXAMPLE.COM",
                 "--principal", "hbase/centos3@EXAMPLE.COM",
                 "--keytab", "hb_c3/hadoop.keytab",
                 "--table", "manga:fruit"};
