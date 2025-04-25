@@ -3,7 +3,7 @@ package xo.hbase;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import xo.fastjson.JsonUtil;
-import xo.protobuf.ProtoBuf;
+//import xo.protobuf.ProtoBuf;
 
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
@@ -52,10 +52,12 @@ public class KafkaSink extends AbstractSink {
         List<WAL.Entry> entries = merge(entryProtos, cellScanner);
         for (WAL.Entry entry: entries) {
             String tableName = tableMap.get(entry.getKey().getTableName().getNameAsString());
-            byte[] key = isJson ? Bytes.toBytes(JsonUtil.key2Json(entry.getKey())):
-                    ProtoBuf.key2Proto(entry.getKey()).toByteArray();
-            byte[] edit = isJson ? Bytes.toBytes(JsonUtil.edit2Json(entry.getEdit())):
-                    ProtoBuf.edit2Proto(entry.getEdit()).toByteArray();
+//            byte[] key = isJson ? Bytes.toBytes(JsonUtil.key2Json(entry.getKey())):
+//                    ProtoBuf.key2Proto(entry.getKey()).toByteArray();
+//            byte[] edit = isJson ? Bytes.toBytes(JsonUtil.edit2Json(entry.getEdit())):
+//                    ProtoBuf.edit2Proto(entry.getEdit()).toByteArray();
+            byte[] key = Bytes.toBytes(JsonUtil.key2Json(entry.getKey()));
+            byte[] edit = Bytes.toBytes(JsonUtil.edit2Json(entry.getEdit()));
             ProducerRecord<byte[], byte[]> record = new ProducerRecord<>(tableName, key, edit);
             Future<RecordMetadata> result = producer.send(record);
             try {

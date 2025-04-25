@@ -2,8 +2,8 @@ package xo.hbase;
 
 import org.apache.hadoop.hbase.Cell;
 import xo.fastjson.JsonUtil;
-import xo.protobuf.EntryProto;
-import xo.protobuf.ProtoBuf;
+//import xo.protobuf.EntryProto;
+//import xo.protobuf.ProtoBuf;
 
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HConstants;
@@ -57,10 +57,12 @@ public class ReplicateConsumer {
         for (ConsumerRecord<byte[], byte[]> record : records) {
             Long offset = record.offset();
             LOG.debug("offset({})", offset);
-            WALKey key = isJson ? JsonUtil.json2Key(new String(record.key())):
-                    ProtoBuf.proto2Key(EntryProto.Key.parseFrom(record.key()));
-            WALEdit edit = isJson ? JsonUtil.json2Edit(new String(record.value())):
-                    ProtoBuf.proto2Edit(EntryProto.Edit.parseFrom(record.value()));
+//            WALKey key = isJson ? JsonUtil.json2Key(new String(record.key())):
+//                    ProtoBuf.proto2Key(EntryProto.Key.parseFrom(record.key()));
+//            WALEdit edit = isJson ? JsonUtil.json2Edit(new String(record.value())):
+//                    ProtoBuf.proto2Edit(EntryProto.Edit.parseFrom(record.value()));
+            WALKey key = JsonUtil.json2Key(new String(record.key()));
+            WALEdit edit = JsonUtil.json2Edit(new String(record.value()));
             WAL.Entry entry = new WAL.Entry((WALKeyImpl) key, edit);
             if (LOG.isDebugEnabled()) {
                 LOG.debug("entry: " + entry.toString());

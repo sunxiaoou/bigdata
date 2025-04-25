@@ -28,6 +28,7 @@ public class SnapshotTest {
         String[] args = {
                 "--action", "list",
                 "--db", "hb_mrs",
+                "--zPrincipal", "zookeeper/hadoop.hadoop.com",
                 "--principal", "loader_hive1@HADOOP.COM",
                 "--keytab", "hb_mrs/loader_hive1.keytab",
                 "--table", "manga:fruit"};
@@ -100,6 +101,7 @@ public class SnapshotTest {
                 "--action", "distcp",
                 "--db", "hb_u",
                 "--db2", "hb_mrs",
+                "--zPrincipal", "zookeeper/hadoop.hadoop.com",
                 "--principal", "loader_hive1@HADOOP.COM",
                 "--keytab", "hb_mrs/loader_hive1.keytab",
                 "--table", "manga:fruit"};

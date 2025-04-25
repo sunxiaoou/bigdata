@@ -8,7 +8,7 @@ import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
-import xo.protobuf.ProtoBuf;
+//import xo.protobuf.ProtoBuf;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -186,6 +186,6 @@ public class JsonUtil {
         System.out.println(entry);
         json = entry2Json(entry);
         System.out.println(json);
-        System.out.println(ProtoBuf.compareEntry(entry, json2Entry(json)));
+//        System.out.println(ProtoBuf.compareEntry(entry, json2Entry(json)));
     }
 }

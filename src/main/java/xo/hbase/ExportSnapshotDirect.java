@@ -89,9 +89,10 @@ public class ExportSnapshotDirect {
         LOG.info("Copying snapshot from {} to {}", sourcePath, targetPath);
 
         List<Path> srcPaths = Collections.singletonList(sourcePath);
-        DistCpOptions options = new DistCpOptions(srcPaths, targetPath);
-        options.setSyncFolder(true);
-        options.setDeleteMissing(true);
+        DistCpOptions options = new DistCpOptions.Builder(srcPaths, targetPath)
+                .withSyncFolder(true)
+                .withDeleteMissing(true)
+                .build();
 
         DistCp distCp = new DistCp(conf, options);
         Job job = distCp.execute();

@@ -3,7 +3,8 @@
 TAR_DIR="$HOME/Downloads/bigdata"
 ZOOKEEPER_TAR="apache-zookeeper-3.8.1-bin.tar.gz"
 KAFKA_TAR="kafka_2.13-3.3.1.tgz"
-HADOOP_TAR="hadoop-2.10.2.tar.gz"
+#HADOOP_TAR="hadoop-2.10.2.tar.gz"
+HADOOP_TAR="hadoop-3.3.6.tar.gz"
 HBASE_TAR="hbase-2.4.16-bin.tar.gz"
 DEFAULT_PARENT_DIR="$HOME/bigdata"
 GROUP=$(id -gn)
@@ -71,12 +72,19 @@ install_hadoop() {
 
     # Configure Hadoop environment
     ha_conf="$HADOOP_HOME/etc/hadoop"
-    orig.sh "$ha_conf/hadoop-env.sh" "$ha_conf/mapred-env.sh" "$ha_conf/yarn-env.sh"
-    sed -i -e "s|\${JAVA_HOME}|${JAVA_HOME}|" -e "s|\${HADOOP_PID_DIR}|${PID_DIR}|" \
+    orig.sh "$ha_conf/hadoop-env.sh"
+    sed -i -e "s|\${JAVA_HOME}|${JAVA_HOME}|" \
+        -e "s|# export JAVA_HOME=|export JAVA_HOME=${JAVA_HOME}|" \
+        -e "s|HADOOP_PID_DIR=\${HADOOP_PID_DIR}|HADOOP_PID_DIR=${PID_DIR}|" \
+        -e "s|# export HADOOP_PID_DIR=/tmp|export HADOOP_PID_DIR=${PID_DIR}|" \
+        -e "s|#export HADOOP_SECURE_PID_DIR|export HADOOP_SECURE_PID_DIR|" \
          "$ha_conf/hadoop-env.sh"
-    sed -i "s|#export HADOOP_MAPRED_PID_DIR=|export HADOOP_MAPRED_PID_DIR=${PID_DIR}|" \
-         "$ha_conf/mapred-env.sh"
-    sed -i "\$a\export YARN_PID_DIR=${PID_DIR}" "$ha_conf/yarn-env.sh"
+    if [ "2" == "$HADOOP_MAJOR" ]; then
+        orig.sh "$ha_conf/mapred-env.sh" "$ha_conf/yarn-env.sh"
+        sed -i "s|#export HADOOP_MAPRED_PID_DIR=|export HADOOP_MAPRED_PID_DIR=${PID_DIR}|" \
+             "$ha_conf/mapred-env.sh"
+        sed -i "\$a\export YARN_PID_DIR=${PID_DIR}" "$ha_conf/yarn-env.sh"
+    fi
     sudo mkdir -p $PID_DIR
     sudo chown -R "$USER:$GROUP" "$PID_DIR"
 
@@ -93,6 +101,25 @@ install_hadoop() {
 </configuration>
 EOL
 
+    local nn_http_port
+    local dn_port
+    local dn_http_port
+    local dn_ipc_port
+    if [ "2" == "$HADOOP_MAJOR" ]; then
+        nn_http_port=50070
+        dn_port=50010
+        dn_http_port=50075
+        dn_ipc_port=50020
+    elif [ "3" == "$HADOOP_MAJOR" ]; then
+        nn_http_port=9870
+        dn_port=9866
+        dn_http_port=9864
+        dn_ipc_port=9867
+    else
+        echo "Unsupported Hadoop version"
+        exit 1
+    fi
+
     cat > "$ha_conf/hdfs-site.xml" <<EOL
 <configuration>
     <property>
@@ -101,19 +128,19 @@ EOL
     </property>
     <property>
         <name>dfs.namenode.http-address</name>
-        <value>$HOSTNAME:50070</value>
+        <value>$HOSTNAME:$nn_http_port</value>
     </property>
     <property>
         <name>dfs.datanode.address</name>
-        <value>$HOSTNAME:50010</value>
+        <value>$HOSTNAME:$dn_port</value>
     </property>
     <property>
         <name>dfs.datanode.http.address</name>
-        <value>$HOSTNAME:50075</value>
+        <value>$HOSTNAME:$dn_http_port</value>
     </property>
     <property>
         <name>dfs.datanode.ipc.address</name>
-        <value>$HOSTNAME:50020</value>
+        <value>$HOSTNAME:$dn_ipc_port</value>
     </property>
 </configuration>
 EOL
@@ -131,6 +158,16 @@ EOL
     <property>
         <name>mapreduce.jobhistory.webapp.address</name>
         <value>$HOSTNAME:19888</value>
+    </property>
+    <property>
+        <name>mapreduce.application.classpath</name>
+        <value>
+            $HADOOP_HOME/etc/hadoop,
+            $HADOOP_HOME/share/hadoop/mapreduce/*,
+            $HADOOP_HOME/share/hadoop/mapreduce/lib/*,
+            $HADOOP_HOME/share/hadoop/common/*,
+            $HADOOP_HOME/share/hadoop/common/lib/*
+        </value>
     </property>
 </configuration>
 EOL
@@ -166,7 +203,15 @@ EOL
     "$HADOOP_HOME/sbin/start-dfs.sh"
     "$HADOOP_HOME/sbin/start-yarn.sh"
     "$HADOOP_HOME/bin/hdfs" dfs -mkdir -p /tmp/logs/
-    "$HADOOP_HOME/sbin/mr-jobhistory-daemon.sh" start historyserver
+    if [ "2" == "$HADOOP_MAJOR" ]; then
+        "$HADOOP_HOME/sbin/mr-jobhistory-daemon.sh" start historyserver
+    elif [ "3" == "$HADOOP_MAJOR" ]; then
+        "$HADOOP_HOME/bin/mapred" --daemon start historyserver
+    else
+        echo "Unsupported Hadoop version"
+        exit 1
+    fi
+
     if grep -P "ERROR|\tat" "$HADOOP_HOME"/logs/*.log; then
         echo "Error found in Hadoop logs"
         exit 1
@@ -260,21 +305,26 @@ main() {
         ver=$(echo $ZOOKEEPER_TAR | sed -n 's/.*\-\([0-9]\+\.[0-9]\+\.[0-9]\+\)\-.*/\1/p')
         ZOOKEEPER_HOME=$DEFAULT_PARENT_DIR/zookeeper-$ver
     fi
+    echo "ZOOKEEPER_HOME=$ZOOKEEPER_HOME"
 
     if [ -z "$KAFKA_HOME" ]; then
         ver=$(echo $KAFKA_TAR | sed -n 's/.*\-\([0-9]\+\.[0-9]\+\.[0-9]\+\).*/\1/p')
         KAFKA_HOME=$DEFAULT_PARENT_DIR/kafka-$ver
     fi
+    echo "KAFKA_HOME=$KAFKA_HOME"
 
     if [ -z "$HADOOP_HOME" ]; then
         ver=$(echo $HADOOP_TAR | sed -n 's/.*\-\([0-9]\+\.[0-9]\+\.[0-9]\+\).*/\1/p')
         HADOOP_HOME=$DEFAULT_PARENT_DIR/hadoop-$ver
     fi
+    echo "HADOOP_HOME=$HADOOP_HOME"
+    HADOOP_MAJOR=$(echo "$HADOOP_HOME" | sed -n 's/.*\-\([0-9]\+\).*/\1/p')
 
     if [ -z "$HBASE_HOME" ]; then
         ver=$(echo $HBASE_TAR | sed -n 's/.*\-\([0-9]\+\.[0-9]\+\.[0-9]\+\).*/\1/p')
         HBASE_HOME=$DEFAULT_PARENT_DIR/hbase-$ver
     fi
+    echo "HBASE_HOME=$HBASE_HOME"
 
     install_zookeeper
     install_kafka
@@ -284,7 +334,14 @@ main() {
 
     ip=$(hostname -I | awk '{print $1}')
     echo "HBase related urls"
-    echo "http://$ip:50070/explorer.html#/"
+    if [ "2" == "$HADOOP_MAJOR" ]; then
+        echo "http://$ip:50070/explorer.html#/"
+    elif [ "3" == "$HADOOP_MAJOR" ]; then
+        echo "http://$ip:9870/explorer.html#/"
+    else
+        echo "Unsupported Hadoop version"
+        exit 1
+    fi
     echo "http://$ip:8088/cluster"
     echo "http://$ip:16010/master-status"
 }

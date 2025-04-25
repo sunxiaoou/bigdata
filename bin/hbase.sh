@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 strt() {
     cd $ZOOKEEPER_HOME
@@ -23,7 +23,14 @@ strt() {
         kinit -kt $KERB5_HOME/keytabs/hadoop.keytab yarn/$HOSTNAME@EXAMPLE.COM
     fi
     sbin/start-yarn.sh
-    sbin/mr-jobhistory-daemon.sh start historyserver
+    if [ "2" == "$HADOOP_MAJOR" ]; then
+        sbin/mr-jobhistory-daemon.sh start historyserver
+    elif [ "3" == "$HADOOP_MAJOR" ]; then
+        bin/mapred --daemon start historyserver
+    else
+        echo "Unsupported Hadoop version"
+        exit 1
+    fi
 
     cd $HBASE_HOME
     rm -f logs/*
@@ -32,14 +39,21 @@ strt() {
 
 stop() {
     cd $HBASE_HOME
-    if [ $AUTH_TYPE = "kerberos" ]; then
+    if [ $AUTH_TYPE == "kerberos" ]; then
         echo "Kerberos enabled. Doing kinit..."
         kinit -kt $KERB5_HOME/keytabs/hadoop.keytab yarn/$HOSTNAME@EXAMPLE.COM
     fi
     bin/stop-hbase.sh
 
     cd $HADOOP_HOME
-    sbin/mr-jobhistory-daemon.sh stop historyserver
+    if [ "2" == "$HADOOP_MAJOR" ]; then
+        sbin/mr-jobhistory-daemon.sh stop historyserver
+    elif [ "3" == "$HADOOP_MAJOR" ]; then
+        bin/mapred --daemon stop historyserver
+    else
+        echo "Unsupported Hadoop version"
+        exit 1
+    fi
     sbin/stop-yarn.sh
     sbin/stop-dfs.sh
 
@@ -58,6 +72,7 @@ then
     exit 1
 fi
 
+HADOOP_MAJOR=$(echo "$HADOOP_HOME" | sed -n 's/.*\-\([0-9]\+\).*/\1/p')
 AUTH_TYPE=$(xmllint --xpath "string(//property[name='hadoop.security.authentication']/value)" $HADOOP_HOME/etc/hadoop/core-site.xml 2>/dev/null)
 echo $1
 $1
