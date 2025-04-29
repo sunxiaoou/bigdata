@@ -19,6 +19,13 @@ Server {
   principal="zookeeper/$HOSTNAME@EXAMPLE.COM";
 };
 EOF
+    local zooCfg="$ZOOKEEPER_HOME/conf/zoo.cfg"
+    orig.sh "$zooCfg"
+    sed '$a\
+authProvider.1=org.apache.zookeeper.server.auth.SASLAuthenticationProvider\
+requireClientAuthScheme=sasl\
+jaasLoginRenew=3600000' "$zooCfg.orig" > "$zooCfg"
+
     local zkEnv="$ZOOKEEPER_HOME/bin/zkEnv.sh"
     orig.sh "$zkEnv"
     sed "/export SERVER_JVMFLAGS=/i \\

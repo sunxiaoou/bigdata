@@ -85,9 +85,12 @@ public class Snapshot {
     private static void performAction() {
         HBase db;
         HBase db2 = null;
+        String copyFrom;
+        String copyTo;
+        String auth;
         String snapshot = null;
         try {
-            if ("distcp".equals(action)) {
+            if ("distcp".equals(action) || "export".equals(action)) {
                 db2 = new HBase(dbStr2, zPrincipal, principal, keytab, true);
                 db = new HBase(dbStr, null, null, null, false);
             } else {
@@ -120,14 +123,28 @@ public class Snapshot {
                     break;
                 case "distcp":
                     assert db2 != null;
-                    String copyFrom = db.getProperty("hbase.rootdir");
-                    String copyTo = db2.getProperty("hbase.rootdir");
-                    String auth = db2.getProperty("hbase.security.authentication");
+                    copyFrom = db.getProperty("hbase.rootdir");
+                    copyTo = db2.getProperty("hbase.rootdir");
+                    auth = db2.getProperty("hbase.security.authentication");
                     if (!"kerberos".equals(auth)) {
                         HBase.changeUser(db2.getUser());
                     }
                     db2.distcpSnapshot(snapshot, copyFrom, copyTo);
                     LOG.info("Snapshot {} distcp to {} successfully.", snapshot, copyTo);
+                    break;
+                case "export":
+                    assert db2 != null;
+                    copyFrom = db.getProperty("hbase.rootdir");
+                    copyTo = db2.getProperty("hbase.rootdir");
+                    auth = db2.getProperty("hbase.security.authentication");
+                    if (!"kerberos".equals(auth)) {
+                        HBase.changeUser(db2.getUser());
+                    }
+                    if (db2.exportSnapshot(snapshot, copyFrom, copyTo) == 0) {
+                        LOG.info("Snapshot {} exported successfully.", snapshot);
+                    } else {
+                        LOG.warn("Failed to export snapshot {}.", snapshot);
+                    }
                     break;
                 case "clone":
                     db.cloneSnapshot(snapshot, table);

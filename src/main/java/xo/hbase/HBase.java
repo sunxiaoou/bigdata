@@ -15,6 +15,7 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.provider.SaslClientAuthenticationProvider;
 import org.apache.hadoop.hbase.security.provider.SaslClientAuthenticationProviders;
+import org.apache.hadoop.hbase.snapshot.ExportSnapshot;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Triple;
@@ -24,6 +25,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.tools.DistCp;
 import org.apache.hadoop.tools.DistCpOptions;
+import org.apache.hadoop.util.ToolRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -677,6 +679,25 @@ public class HBase implements AutoCloseable {
             LOG.error("Reason: {}", job.getStatus().getFailureInfo());
             throw new RuntimeException("DistCp failed");
         }
+    }
+
+    public int exportSnapshot(String snapshotName, String copyFrom, String copyTo) throws Exception {
+//        if (!snapshotExists(snapshotName)) {
+//            LOG.error("snapshot({}) doesn't exist", snapshotName);
+//            return -1;
+//        }
+        List<String> opts = new ArrayList<>();
+        opts.add("--snapshot");
+        opts.add(snapshotName);
+        opts.add("--copy-from");
+        opts.add(copyFrom);
+        opts.add("--copy-to");
+        opts.add(copyTo);
+        opts.add("--overwrite");
+        LOG.info("export --snapshot {} --copy-from {} --copy-to {} --overwrite", snapshotName, copyFrom, copyTo);
+        int rc = ToolRunner.run(conf, new ExportSnapshot(), opts.toArray(new String[0]));
+        LOG.info("exported rc({})", rc);
+        return rc;
     }
 
     public void renameTable(String name, String newName) throws IOException {

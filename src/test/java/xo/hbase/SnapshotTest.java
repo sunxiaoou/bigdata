@@ -109,6 +109,29 @@ public class SnapshotTest {
     }
 
     @Test
+    public void exportSnapshot() {
+        String[] args = {
+                "--action", "export",
+                "--db", "hb_u",
+                "--db2", "hb_c2",
+                "--table", "manga:fruit"};
+        Snapshot.main(args);
+    }
+
+    @Test
+    public void exportSnapshot2() {
+        String[] args = {
+                "--action", "export",
+                "--db", "hb_u",
+                "--db2", "hb_mrs",
+                "--zPrincipal", "zookeeper/hadoop.hadoop.com",
+                "--principal", "loader_hive1@HADOOP.COM",
+                "--keytab", "hb_mrs/loader_hive1.keytab",
+                "--table", "manga:fruit"};
+        Snapshot.main(args);
+    }
+
+    @Test
     public void cloneSnapshot() {
         String[] args = {
                 "--action", "clone",
@@ -125,6 +148,18 @@ public class SnapshotTest {
                 "--zPrincipal", "zookeeper/centos3@EXAMPLE.COM",
                 "--principal", "hbase/centos3@EXAMPLE.COM",
                 "--keytab", "hb_c3/hadoop.keytab",
+                "--table", "manga:fruit"};
+        Snapshot.main(args);
+    }
+
+    @Test
+    public void cloneSnapshot3() {
+        String[] args = {
+                "--action", "clone",
+                "--db", "hb_mrs",
+                "--zPrincipal", "zookeeper/hadoop.hadoop.com",
+                "--principal", "loader_hive1@HADOOP.COM",
+                "--keytab", "hb_mrs/loader_hive1.keytab",
                 "--table", "manga:fruit"};
         Snapshot.main(args);
     }
