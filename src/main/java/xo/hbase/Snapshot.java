@@ -84,15 +84,18 @@ public class Snapshot {
 
     private static void performAction() {
         HBase db;
-        HBase db2 = null;
-        String copyFrom;
-        String copyTo;
-        String auth;
+        String copyFrom = null;
+        String copyTo = null;
         String snapshot = null;
         try {
             if ("distcp".equals(action) || "export".equals(action)) {
-                db2 = new HBase(dbStr2, zPrincipal, principal, keytab, true);
-                db = new HBase(dbStr, null, null, null, false);
+                copyFrom = HBase.loadConf(dbStr).get("hbase.rootdir");
+                db = new HBase(dbStr2, zPrincipal, principal, keytab, true);
+                copyTo = db.getProperty("hbase.rootdir");
+                String auth = db.getProperty("hbase.security.authentication");
+                if (!"kerberos".equals(auth)) {
+                    HBase.changeUser(db.getUser());
+                }
             } else {
                 db = new HBase(dbStr, zPrincipal, principal, keytab, false);
             }
@@ -122,25 +125,11 @@ public class Snapshot {
                     }
                     break;
                 case "distcp":
-                    assert db2 != null;
-                    copyFrom = db.getProperty("hbase.rootdir");
-                    copyTo = db2.getProperty("hbase.rootdir");
-                    auth = db2.getProperty("hbase.security.authentication");
-                    if (!"kerberos".equals(auth)) {
-                        HBase.changeUser(db2.getUser());
-                    }
-                    db2.distcpSnapshot(snapshot, copyFrom, copyTo);
+                    db.distcpSnapshot(snapshot, copyFrom, copyTo);
                     LOG.info("Snapshot {} distcp to {} successfully.", snapshot, copyTo);
                     break;
                 case "export":
-                    assert db2 != null;
-                    copyFrom = db.getProperty("hbase.rootdir");
-                    copyTo = db2.getProperty("hbase.rootdir");
-                    auth = db2.getProperty("hbase.security.authentication");
-                    if (!"kerberos".equals(auth)) {
-                        HBase.changeUser(db2.getUser());
-                    }
-                    if (db2.exportSnapshot(snapshot, copyFrom, copyTo) == 0) {
+                    if (db.exportSnapshot(snapshot, copyFrom, copyTo) == 0) {
                         LOG.info("Snapshot {} exported successfully.", snapshot);
                     } else {
                         LOG.warn("Failed to export snapshot {}.", snapshot);
@@ -153,11 +142,7 @@ public class Snapshot {
                 default:
                     LOG.warn("Invalid action: {}", action);
             }
-
             db.close();
-            if (db2 != null) {
-                db2.close();
-            }
         } catch (Exception e) {
             LOG.error("Error closing databases:", e);
         }

@@ -99,7 +99,7 @@ public class HBase implements AutoCloseable {
         admin = conn.getAdmin();
     }
 
-    static private Configuration loadConf(String pathStr) throws IOException {
+    static Configuration loadConf(String pathStr) throws IOException {
         if (!Files.isDirectory(Paths.get(pathStr))) {
             throw new IOException(String.format("Path %s is not a directory", pathStr));
         }
