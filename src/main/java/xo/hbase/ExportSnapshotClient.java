@@ -90,14 +90,12 @@ public class ExportSnapshotClient {
             LOG.info(client.exportSnapshotSync(
                     new ExportRequest("manga:fruit",
                             "manga-fruit_250502",
-                            "hdfs://ubuntu:8020/hbase",
-                            "hdfs://hacluster/hbase"),
+                            "hdfs://ubuntu:8020/hbase"),
                     300000).message);
             LOG.info(client.exportSnapshotSync(
                     new ExportRequest("peTable",
                             "peTable_250502",
-                            "hdfs://ubuntu:8020/hbase",
-                            "hdfs://hacluster/hbase"),
+                            "hdfs://ubuntu:8020/hbase"),
                     300000).message);
         } catch (Exception e) {
             LOG.error("Error during export snapshot: ", e);
@@ -111,14 +109,12 @@ class ExportRequest {
     public String table;
     public String snapshot;
     public String copyFrom;
-    public String copyTo;
 
     public ExportRequest() {}
 
-    public ExportRequest(String table, String snapshot, String copyFrom, String copyTo) {
+    public ExportRequest(String table, String snapshot, String copyFrom) {
         this.table = table;
         this.snapshot = snapshot;
         this.copyFrom = copyFrom;
-        this.copyTo = copyTo;
     }
 }

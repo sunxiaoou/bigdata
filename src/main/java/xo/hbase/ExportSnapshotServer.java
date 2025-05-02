@@ -8,39 +8,14 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.conf.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 public class ExportSnapshotServer {
     private static final Logger LOG = LoggerFactory.getLogger(ExportSnapshotServer.class);
-    private static final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
-
-//    public static void loginFromKeytab(String keytabPath, String principal) throws IOException {
-//        System.setProperty("java.security.krb5.conf", "hb_mrs/krb5.conf");
-//        Configuration conf = new Configuration();
-//        UserGroupInformation.setConfiguration(conf);
-//        UserGroupInformation.loginUserFromKeytab(principal, keytabPath);
-//        System.out.println("Kerberos login successful as " + principal);
-//    }
-
-//    public static void startTicketRenewal() {
-//        scheduler.scheduleAtFixedRate(() -> {
-//            try {
-//                UserGroupInformation.getLoginUser().checkTGTAndReloginFromKeytab();
-//                LOG.info("Kerberos ticket renewed successfully.");
-//            } catch (Exception e) {
-//                LOG.error("{}", e.getMessage());
-//            }
-//        }, 1, 1, TimeUnit.HOURS);
-//    }
 
     public static void start(int port) throws InterruptedException {
         EventLoopGroup bossGroup = new NioEventLoopGroup();
@@ -69,13 +44,6 @@ public class ExportSnapshotServer {
     }
 
     public static void main(String[] args) throws Exception {
-        // 1. Kerberos Login
-//        loginFromKeytab("hb_mrs/loader_hive1.keytab", "loader_hive1@HADOOP.COM");
-
-        // 2. Start Ticket Renewal Scheduler
-//        startTicketRenewal();
-
-        // 3. Start Netty Server
         start(31415);
     }
 }
@@ -104,7 +72,7 @@ class ExportSnapshotHandler extends SimpleChannelInboundHandler<String> {
             }
             ctx.writeAndFlush(mapper.writeValueAsString(response));
         } catch (Exception e) {
-            LOG.error("Error processing request: {}", e.getMessage());
+            LOG.error("Exception: ", e);
             ExportResponse response = new ExportResponse(false, "Exception: " + e.getMessage());
             ctx.writeAndFlush(mapper.writeValueAsString(response));
         }
@@ -127,12 +95,15 @@ class ExportSnapshotTask {
     private static final Logger LOG = LoggerFactory.getLogger(ExportSnapshotTask.class);
 
     private static final HBase db;
+    private static final String copyTo;
     static {
         try {
             db = new HBase("hb_mrs",
                     "zookeeper/hadoop.hadoop.com",
                     "loader_hive1@HADOOP.COM",
                     "hb_mrs/loader_hive1.keytab", true);
+            copyTo = db.getProperty("hbase.rootdir");
+            LOG.info("ExportSnapshotTask initialized with copyTo: {}", copyTo);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -140,14 +111,14 @@ class ExportSnapshotTask {
 
     public static boolean runExport(ExportRequest req) {
         try {
-            int rc = db.exportSnapshot(req.snapshot, req.copyFrom, req.copyTo);
+            int rc = db.exportSnapshot(req.snapshot, req.copyFrom, copyTo);
             if (rc == 0) {
                 db.cloneSnapshot(req.snapshot, req.table);
                 LOG.info("snapshot({}) cloned to table({})", req.snapshot, req.table);
             }
             return rc == 0;
         } catch (Exception e) {
-            LOG.error("ExportSnapshotTask failed: {}", e.getMessage());
+            LOG.error("ExportSnapshotTask: ", e);
             return false;
         }
     }

@@ -4,8 +4,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -107,22 +105,6 @@ public class Snapshot {
                     HBase.changeUser(HBase.getUser(conf));
                 }
                 String copyTo = conf.get("hbase.rootdir");
-
-                //                if (principal != null && keytab != null) {
-//                    if (Files.isReadable(Paths.get(dbStr2 + "/krb5.conf"))) {
-//                        System.setProperty("java.security.krb5.conf", dbStr2 + "/krb5.conf");
-//                        LOG.info("java.security.krb5.conf: {}", System.getProperty("java.security.krb5.conf"));
-//                    }
-//                    System.setProperty("zookeeper.server.principal", zPrincipal);
-////                    System.setProperty("java.security.auth.login.config", dbStr2 + "/zoo-client.jaas");
-//                    System.setProperty("javax.security.auth.useSubjectCredsOnly", "false");
-//                    conf.setBoolean("ipc.client.fallback-to-simple-auth-allowed", true);
-//                    conf.set("mapreduce.map.memory.mb", "1536");
-//                    conf.set("mapred.child.java.opts", "-Xmx1024m");
-//                    HBase.login(conf, principal, keytab);
-//                } else {
-//                    HBase.changeUser(HBase.getUser(conf));
-//                }
 
                 if ("distcp".equals(action)) {
                     HBase.distcpSnapshot(conf, snapshot, copyFrom, copyTo);
