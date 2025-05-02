@@ -1,6 +1,5 @@
 package xo.netty;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
@@ -11,59 +10,87 @@ import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
 
 import java.nio.charset.StandardCharsets;
-import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 public class ExportSnapshotClient {
 
-    public static void main(String[] args) throws InterruptedException, JsonProcessingException {
-        if (args.length != 4) {
-            System.out.println("Usage: java ExportSnapshotClient <port> <snapshot> <copyFrom> <copyTo>");
+    private final String host;
+    private final int port;
+    private final ObjectMapper mapper = new ObjectMapper();
+    private final EventLoopGroup group = new NioEventLoopGroup();
+    private Channel channel;
+
+    public ExportSnapshotClient(String host, int port) throws InterruptedException {
+        this.host = host;
+        this.port = port;
+        init();
+    }
+
+    private void init() throws InterruptedException {
+        Bootstrap b = new Bootstrap();
+        b.group(group)
+                .channel(NioSocketChannel.class)
+                .handler(new ChannelInitializer<SocketChannel>() {
+                    @Override
+                    protected void initChannel(SocketChannel ch) {
+                        ChannelPipeline p = ch.pipeline();
+                        p.addLast(new StringDecoder(StandardCharsets.UTF_8));
+                        p.addLast(new StringEncoder(StandardCharsets.UTF_8));
+                    }
+                });
+        this.channel = b.connect(host, port).sync().channel();
+    }
+
+    public CompletableFuture<ExportResponse> exportSnapshot(ExportRequest request) throws Exception {
+        CompletableFuture<ExportResponse> future = new CompletableFuture<>();
+
+        channel.pipeline().addLast(new SimpleChannelInboundHandler<String>() {
+            @Override
+            protected void channelRead0(ChannelHandlerContext ctx, String msg) throws Exception {
+                ExportResponse resp = mapper.readValue(msg, ExportResponse.class);
+                future.complete(resp);
+                ctx.pipeline().remove(this);
+            }
+
+            @Override
+            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                future.completeExceptionally(cause);
+                ctx.close();
+            }
+        });
+
+        String json = mapper.writeValueAsString(request);
+        channel.writeAndFlush(json);
+        return future;
+    }
+
+    public ExportResponse exportSnapshotSync(ExportRequest request, long timeoutMs) throws Exception {
+        return exportSnapshot(request).get(timeoutMs, TimeUnit.MILLISECONDS);
+    }
+
+    public void close() {
+        if (channel != null) {
+            channel.close();
+        }
+        group.shutdownGracefully();
+    }
+
+    public static void main(String[] args) throws Exception {
+        if (args.length != 5) {
+            System.out.println("Usage: java ExportSnapshotClient <host> <port> <snapshot> <copyFrom> <copyTo>");
             return;
         }
 
-        String host = "localhost";
-        int port = Integer.parseInt(args[0]);
-        ExportRequest request = new ExportRequest(args[1], args[2], args[3]);
-
-        CountDownLatch latch = new CountDownLatch(1);
-        ObjectMapper mapper = new ObjectMapper();
-
-        EventLoopGroup group = new NioEventLoopGroup();
+        ExportSnapshotClient client = new ExportSnapshotClient(args[0], Integer.parseInt(args[1]));
+        ExportRequest request = new ExportRequest(args[2], args[3], args[4]);
         try {
-            Bootstrap b = new Bootstrap();
-            b.group(group)
-                    .channel(NioSocketChannel.class)
-                    .handler(new ChannelInitializer<SocketChannel>() {
-                        @Override
-                        protected void initChannel(SocketChannel ch) throws Exception {
-                            ChannelPipeline p = ch.pipeline();
-                            p.addLast(new StringDecoder(StandardCharsets.UTF_8));
-                            p.addLast(new StringEncoder(StandardCharsets.UTF_8));
-                            p.addLast(new SimpleChannelInboundHandler<String>() {
-                                @Override
-                                protected void channelRead0(ChannelHandlerContext ctx, String msg) throws Exception {
-                                    ExportResponse resp = mapper.readValue(msg, ExportResponse.class);
-                                    System.out.println("Export result: " + (resp.success ? "✅ Success" : "❌ Failed") + " - " + resp.message);
-                                    latch.countDown();
-                                }
-
-                                @Override
-                                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-                                    cause.printStackTrace();
-                                    latch.countDown();
-                                    ctx.close();
-                                }
-                            });
-                        }
-                    });
-
-            Channel ch = b.connect(host, port).sync().channel();
-            String json = mapper.writeValueAsString(request);
-            ch.writeAndFlush(json);
-            latch.await();
-            ch.close();
+            ExportResponse resp = client.exportSnapshotSync(request, 300000); // 30s timeout
+            System.out.println("Export result: " + (resp.success ? "✅ Success" : "❌ Failed") + " - " + resp.message);
+        } catch (Exception e) {
+            e.printStackTrace();
         } finally {
-            group.shutdownGracefully();
+            client.close();
         }
     }
 }
