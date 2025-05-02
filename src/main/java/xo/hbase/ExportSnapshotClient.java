@@ -1,4 +1,4 @@
-package xo.netty;
+package xo.hbase;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.bootstrap.Bootstrap;
@@ -8,12 +8,15 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 public class ExportSnapshotClient {
+    private static final Logger LOG = LoggerFactory.getLogger(ExportSnapshotClient.class);
 
     private final String host;
     private final int port;
@@ -77,18 +80,27 @@ public class ExportSnapshotClient {
     }
 
     public static void main(String[] args) throws Exception {
-        if (args.length != 5) {
-            System.out.println("Usage: java ExportSnapshotClient <host> <port> <snapshot> <copyFrom> <copyTo>");
+        if (args.length < 1) {
+            LOG.error("Usage: java ExportSnapshotClient <port>");
             return;
         }
 
-        ExportSnapshotClient client = new ExportSnapshotClient(args[0], Integer.parseInt(args[1]));
-        ExportRequest request = new ExportRequest(args[2], args[3], args[4]);
+        ExportSnapshotClient client = new ExportSnapshotClient("localhost", Integer.parseInt(args[0]));
         try {
-            ExportResponse resp = client.exportSnapshotSync(request, 300000); // 30s timeout
-            System.out.println("Export result: " + (resp.success ? "✅ Success" : "❌ Failed") + " - " + resp.message);
+            LOG.info(client.exportSnapshotSync(
+                    new ExportRequest("manga:fruit",
+                            "manga-fruit_250502",
+                            "hdfs://ubuntu:8020/hbase",
+                            "hdfs://hacluster/hbase"),
+                    300000).message);
+            LOG.info(client.exportSnapshotSync(
+                    new ExportRequest("peTable",
+                            "peTable_250502",
+                            "hdfs://ubuntu:8020/hbase",
+                            "hdfs://hacluster/hbase"),
+                    300000).message);
         } catch (Exception e) {
-            e.printStackTrace();
+            LOG.error("Error during export snapshot: ", e);
         } finally {
             client.close();
         }
@@ -96,13 +108,15 @@ public class ExportSnapshotClient {
 }
 
 class ExportRequest {
+    public String table;
     public String snapshot;
     public String copyFrom;
     public String copyTo;
 
     public ExportRequest() {}
 
-    public ExportRequest(String snapshot, String copyFrom, String copyTo) {
+    public ExportRequest(String table, String snapshot, String copyFrom, String copyTo) {
+        this.table = table;
         this.snapshot = snapshot;
         this.copyFrom = copyFrom;
         this.copyTo = copyTo;

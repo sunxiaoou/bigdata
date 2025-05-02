@@ -13,15 +13,17 @@ public class ReplicateSnapshot {
 
     private final ReplicateConfig config;
     private final HBase srcDb;
-    private final HBase tgtDb;
+//    private final HBase tgtDb;
+    private final ExportSnapshotClient exportSnapshotClient;
 //    private final String peer;
 
-    public ReplicateSnapshot() throws IOException {
+    public ReplicateSnapshot() throws IOException, InterruptedException {
         this.config = ReplicateConfig.getInstance();
-        this.tgtDb = new HBase(config.getTargetHBaseConfPath(), config.getTargetZookeeperPrincipal(),
-                config.getTargetHBasePrincipal(), config.getTargetHBaseKeytab(), true);
+//        this.tgtDb = new HBase(config.getTargetHBaseConfPath(), config.getTargetZookeeperPrincipal(),
+//                config.getTargetHBasePrincipal(), config.getTargetHBaseKeytab(), true);
         this.srcDb = new HBase(config.getSourceHBaseConfPath(), null, null, null,
                 false);
+        this.exportSnapshotClient = new ExportSnapshotClient("localhost", 31415);
 //        this.peer = config.getReplicateServerPeer();
     }
 
@@ -50,34 +52,41 @@ public class ReplicateSnapshot {
         srcDb.createSnapshot(table, snapshot);
         LOG.info("snapshot({}) from table({}) created", snapshot, table);
 
-        tgtDb.distcpSnapshot(snapshot, copyFrom, copyTo);
-        String table2 = table + "_" + dateStr;
-        tgtDb.cloneSnapshot(snapshot, table2);
-        LOG.info("snapshot({}) cloned to table({})", snapshot, table2);
+//        tgtDb.distcpSnapshot(snapshot, copyFrom, copyTo);
+//        tgtDb.exportSnapshot(snapshot, copyFrom, copyTo);
+
+        LOG.info(exportSnapshotClient.exportSnapshotSync(
+                new ExportRequest(table +"_" + dateStr, snapshot, copyFrom, copyTo),
+                300000).message);
+//        String table2 = table + "_" + dateStr;
+//        tgtDb.cloneSnapshot(snapshot, table2);
+//        LOG.info("snapshot({}) cloned to table({})", snapshot, table2);
     }
 
     public void doSnapshots() throws Exception {
         List<String> tables = new ArrayList<>();
         if ("table".equals(config.getSourceHBaseMapType())) {
             tables.addAll(config.getSourceHBaseMapTables().keySet());
-        } else if ("user".equals(config.getSourceHBaseMapType())) {
-            for (String space: config.getSourceHBaseMapNamespaces().keySet()) {
-                tables.addAll(srcDb.listTables(space));
-            }
-        } else {
-            tables = srcDb.listTables(Pattern.compile(".*"));
+//        } else if ("user".equals(config.getSourceHBaseMapType())) {
+//            for (String space: config.getSourceHBaseMapNamespaces().keySet()) {
+//                tables.addAll(srcDb.listTables(space));
+//            }
+//        } else {
+//            tables = srcDb.listTables(Pattern.compile(".*"));
         }
-//        HBase.changeUser(config.getTargetHadoopUser());
 
-        String copyFrom = srcDb.getProperty("hbase.rootdir");
-        String copyTo = tgtDb.getProperty("hbase.rootdir");
+        String copyFrom = HBase.loadConf(config.getSourceHBaseConfPath()).get("hbase.rootdir");
+//        String copyFrom = srcDb.getProperty("hbase.rootdir");
+
+//        String copyTo = tgtDb.getProperty("hbase.rootdir");
         for (String table: tables) {
-            doSnapshot(copyFrom, copyTo, table);
+            doSnapshot(copyFrom, "hdfs://hacluster/hbase", table);
         }
     }
 
     public void close() throws IOException {
-        tgtDb.close();
+//        tgtDb.close();
+        exportSnapshotClient.close();
         srcDb.close();
     }
 

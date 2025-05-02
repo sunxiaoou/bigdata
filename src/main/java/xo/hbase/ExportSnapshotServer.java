@@ -1,4 +1,4 @@
-package xo.netty;
+package xo.hbase;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
@@ -10,7 +10,8 @@ import io.netty.handler.codec.string.StringEncoder;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.conf.Configuration;
-import xo.hbase.HBase;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -19,26 +20,27 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 public class ExportSnapshotServer {
+    private static final Logger LOG = LoggerFactory.getLogger(ExportSnapshotServer.class);
     private static final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
 
-    public static void loginFromKeytab(String keytabPath, String principal) throws IOException {
-        System.setProperty("java.security.krb5.conf", "hb_mrs/krb5.conf");
-        Configuration conf = new Configuration();
-        UserGroupInformation.setConfiguration(conf);
-        UserGroupInformation.loginUserFromKeytab(principal, keytabPath);
-        System.out.println("Kerberos login successful as " + principal);
-    }
+//    public static void loginFromKeytab(String keytabPath, String principal) throws IOException {
+//        System.setProperty("java.security.krb5.conf", "hb_mrs/krb5.conf");
+//        Configuration conf = new Configuration();
+//        UserGroupInformation.setConfiguration(conf);
+//        UserGroupInformation.loginUserFromKeytab(principal, keytabPath);
+//        System.out.println("Kerberos login successful as " + principal);
+//    }
 
-    public static void startTicketRenewal() {
-        scheduler.scheduleAtFixedRate(() -> {
-            try {
-                UserGroupInformation.getLoginUser().checkTGTAndReloginFromKeytab();
-                System.out.println("Kerberos ticket renewed successfully.");
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }, 1, 1, TimeUnit.HOURS);
-    }
+//    public static void startTicketRenewal() {
+//        scheduler.scheduleAtFixedRate(() -> {
+//            try {
+//                UserGroupInformation.getLoginUser().checkTGTAndReloginFromKeytab();
+//                LOG.info("Kerberos ticket renewed successfully.");
+//            } catch (Exception e) {
+//                LOG.error("{}", e.getMessage());
+//            }
+//        }, 1, 1, TimeUnit.HOURS);
+//    }
 
     public static void start(int port) throws InterruptedException {
         EventLoopGroup bossGroup = new NioEventLoopGroup();
@@ -58,7 +60,7 @@ public class ExportSnapshotServer {
                     });
 
             ChannelFuture f = b.bind(port).sync();
-            System.out.println("ExportSnapshotServer started on port: " + port);
+            LOG.info("ExportSnapshotServer started on port: {}", port);
             f.channel().closeFuture().sync();
         } finally {
             bossGroup.shutdownGracefully();
@@ -68,29 +70,41 @@ public class ExportSnapshotServer {
 
     public static void main(String[] args) throws Exception {
         // 1. Kerberos Login
-        loginFromKeytab("hb_mrs/loader_hive1.keytab", "loader_hive1@HADOOP.COM");
+//        loginFromKeytab("hb_mrs/loader_hive1.keytab", "loader_hive1@HADOOP.COM");
 
         // 2. Start Ticket Renewal Scheduler
-        startTicketRenewal();
+//        startTicketRenewal();
 
         // 3. Start Netty Server
-        start(7412);
+        start(31415);
     }
 }
 
 class ExportSnapshotHandler extends SimpleChannelInboundHandler<String> {
+    private static final Logger LOG = LoggerFactory.getLogger(ExportSnapshotHandler.class);
     private static final ObjectMapper mapper = new ObjectMapper();
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, String msg) throws Exception {
-        System.out.println("Received: " + msg);
+        LOG.info("Received: {}", msg);
         try {
             ExportRequest request = mapper.readValue(msg, ExportRequest.class);
             boolean success = ExportSnapshotTask.runExport(request);
-            ExportResponse response = new ExportResponse(success, success ? "Export completed." : "Export failed.");
+            String message = "Export " + request.snapshot + (success ? " completed." : " failed.");
+            ExportResponse response = new ExportResponse(success, message);
+            if (success) {
+                LOG.info(message);
+            } else {
+                LOG.error(message);
+            }
+            if (success) {
+                LOG.info("Export completed successfully.");
+            } else {
+                LOG.error("Export failed.");
+            }
             ctx.writeAndFlush(mapper.writeValueAsString(response));
         } catch (Exception e) {
-            e.printStackTrace();
+            LOG.error("Error processing request: {}", e.getMessage());
             ExportResponse response = new ExportResponse(false, "Exception: " + e.getMessage());
             ctx.writeAndFlush(mapper.writeValueAsString(response));
         }
@@ -110,6 +124,8 @@ class ExportResponse {
 }
 
 class ExportSnapshotTask {
+    private static final Logger LOG = LoggerFactory.getLogger(ExportSnapshotTask.class);
+
     private static final HBase db;
     static {
         try {
@@ -125,10 +141,13 @@ class ExportSnapshotTask {
     public static boolean runExport(ExportRequest req) {
         try {
             int rc = db.exportSnapshot(req.snapshot, req.copyFrom, req.copyTo);
-            System.out.println("ExportSnapshot completed with rc=" + rc);
+            if (rc == 0) {
+                db.cloneSnapshot(req.snapshot, req.table);
+                LOG.info("snapshot({}) cloned to table({})", req.snapshot, req.table);
+            }
             return rc == 0;
         } catch (Exception e) {
-            e.printStackTrace();
+            LOG.error("ExportSnapshotTask failed: {}", e.getMessage());
             return false;
         }
     }

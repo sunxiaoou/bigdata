@@ -1,8 +1,11 @@
 package xo.hbase;
 
+import org.apache.hadoop.conf.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -83,28 +86,58 @@ public class Snapshot {
     }
 
     private static void performAction() {
-        HBase db;
-        String copyFrom = null;
-        String copyTo = null;
+//        HBase db = null;
         String snapshot = null;
+        if (table != null) {
+            SimpleDateFormat sdf = new SimpleDateFormat("yyMMdd");
+            String dateStr = sdf.format(new Date());
+            snapshot = table.replaceFirst(":", "-") + "_" + dateStr;
+        }
+
         try {
             if ("distcp".equals(action) || "export".equals(action)) {
-                copyFrom = HBase.loadConf(dbStr).get("hbase.rootdir");
-                db = new HBase(dbStr2, zPrincipal, principal, keytab, true);
-                copyTo = db.getProperty("hbase.rootdir");
-                String auth = db.getProperty("hbase.security.authentication");
-                if (!"kerberos".equals(auth)) {
-                    HBase.changeUser(db.getUser());
+                String copyFrom = HBase.loadConf(dbStr).get("hbase.rootdir");
+//                db = new HBase(dbStr2, zPrincipal, principal, keytab, true);
+                Configuration conf;
+                if (principal != null && keytab != null) {
+                    conf = HBase.loadConf(dbStr2, zPrincipal, true);
+                    HBase.login(conf, principal, keytab);
+                } else {
+                    conf = HBase.loadConf(dbStr2);
+                    HBase.changeUser(HBase.getUser(conf));
                 }
-            } else {
-                db = new HBase(dbStr, zPrincipal, principal, keytab, false);
-            }
-            if (table != null) {
-                SimpleDateFormat sdf = new SimpleDateFormat("yyMMdd");
-                String dateStr = sdf.format(new Date());
-                snapshot = table.replaceFirst(":", "-") + "_" + dateStr;
+                String copyTo = conf.get("hbase.rootdir");
+
+                //                if (principal != null && keytab != null) {
+//                    if (Files.isReadable(Paths.get(dbStr2 + "/krb5.conf"))) {
+//                        System.setProperty("java.security.krb5.conf", dbStr2 + "/krb5.conf");
+//                        LOG.info("java.security.krb5.conf: {}", System.getProperty("java.security.krb5.conf"));
+//                    }
+//                    System.setProperty("zookeeper.server.principal", zPrincipal);
+////                    System.setProperty("java.security.auth.login.config", dbStr2 + "/zoo-client.jaas");
+//                    System.setProperty("javax.security.auth.useSubjectCredsOnly", "false");
+//                    conf.setBoolean("ipc.client.fallback-to-simple-auth-allowed", true);
+//                    conf.set("mapreduce.map.memory.mb", "1536");
+//                    conf.set("mapred.child.java.opts", "-Xmx1024m");
+//                    HBase.login(conf, principal, keytab);
+//                } else {
+//                    HBase.changeUser(HBase.getUser(conf));
+//                }
+
+                if ("distcp".equals(action)) {
+                    HBase.distcpSnapshot(conf, snapshot, copyFrom, copyTo);
+                    LOG.info("Snapshot {} distcp to {} successfully.", snapshot, copyTo);
+                } else {
+                    if (HBase.exportSnapshot(conf, snapshot, copyFrom, copyTo) == 0) {
+                        LOG.info("Snapshot {} exported successfully.", snapshot);
+                    } else {
+                        LOG.warn("Failed to export snapshot {}.", snapshot);
+                    }
+                }
+                return;
             }
 
+            HBase db = new HBase(dbStr, zPrincipal, principal, keytab, false);
             switch (action) {
                 case "list":
                     LOG.info("Snapshots: {}", db.listSnapshots(table));
@@ -122,17 +155,6 @@ public class Snapshot {
                     for (String s: db.listSnapshots(table)) {
                         db.deleteSnapshot(s);
                         LOG.info("Snapshot(s) {} deleted successfully.", s);
-                    }
-                    break;
-                case "distcp":
-                    db.distcpSnapshot(snapshot, copyFrom, copyTo);
-                    LOG.info("Snapshot {} distcp to {} successfully.", snapshot, copyTo);
-                    break;
-                case "export":
-                    if (db.exportSnapshot(snapshot, copyFrom, copyTo) == 0) {
-                        LOG.info("Snapshot {} exported successfully.", snapshot);
-                    } else {
-                        LOG.warn("Failed to export snapshot {}.", snapshot);
                     }
                     break;
                 case "clone":

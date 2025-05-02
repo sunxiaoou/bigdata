@@ -115,14 +115,31 @@ public class HBase implements AutoCloseable {
         return conf;
     }
 
-    private static String getProviderName(Configuration conf) throws IOException {
+    static Configuration loadConf(String pathStr, String zPrincipal, boolean fallback) throws IOException {
+        Configuration conf = loadConf(pathStr);
+        if (Files.isReadable(Paths.get(pathStr + "/krb5.conf"))) {
+            System.setProperty("java.security.krb5.conf", pathStr + "/krb5.conf");
+            LOG.info("java.security.krb5.conf: {}", System.getProperty("java.security.krb5.conf"));
+        }
+        System.setProperty("zookeeper.server.principal", zPrincipal);
+        System.setProperty("java.security.auth.login.config", pathStr + "/zoo-client.jaas");
+        System.setProperty("javax.security.auth.useSubjectCredsOnly", "false");
+        if (fallback) {
+            conf.setBoolean("ipc.client.fallback-to-simple-auth-allowed", true);
+        }
+        conf.set("mapreduce.map.memory.mb", "1536");
+        conf.set("mapred.child.java.opts", "-Xmx1024m");
+        return conf;
+    }
+
+    static private String getProviderName(Configuration conf) throws IOException {
         SaslClientAuthenticationProviders providers = SaslClientAuthenticationProviders.getInstance(conf);
         Pair<SaslClientAuthenticationProvider, Token<? extends TokenIdentifier>> provider =
                 providers.selectProvider(conf.get("hbase.cluster.id", "default"), User.getCurrent());
         return provider.getFirst().getClass().getSimpleName();
     }
 
-    static private void login(Configuration conf, String principal, String keytab) throws IOException {
+    static void login(Configuration conf, String principal, String keytab) throws IOException {
         UserGroupInformation.reset();
         UserGroupInformation.setConfiguration(conf);
         UserGroupInformation.loginUserFromKeytab(principal, keytab);
@@ -136,23 +153,11 @@ public class HBase implements AutoCloseable {
 
     public HBase(String pathStr, String zPrincipal, String principal, String keytab, boolean fallback)
             throws IOException {
-        this.conf = loadConf(pathStr);
         if (principal != null && keytab != null) {
-            if (Files.isReadable(Paths.get(pathStr + "/krb5.conf"))) {
-                System.setProperty("java.security.krb5.conf", pathStr + "/krb5.conf");
-                LOG.info("java.security.krb5.conf: {}", System.getProperty("java.security.krb5.conf"));
-            }
-            System.setProperty("zookeeper.server.principal", zPrincipal);
-            System.setProperty("java.security.auth.login.config", pathStr + "/zoo-client.jaas");
-            System.setProperty("javax.security.auth.useSubjectCredsOnly", "false");
-            if (fallback) {
-                this.conf.setBoolean("ipc.client.fallback-to-simple-auth-allowed", true);
-            }
-            this.conf.set("mapreduce.map.memory.mb", "1536");
-            this.conf.set("mapred.child.java.opts", "-Xmx1024m");
-
+            conf = loadConf(pathStr, zPrincipal, fallback);
             login(conf, principal, keytab);
         } else {
+            conf = loadConf(pathStr);
             System.setProperty("zookeeper.sasl.client", "false");
         }
         conn = ConnectionFactory.createConnection(conf);
@@ -190,7 +195,7 @@ public class HBase implements AutoCloseable {
         return new Triple<>(ips, port, zNode);
     }
 
-    public String getUser() throws IOException {
+    static public String getUser(Configuration conf) throws IOException {
         String root = conf.get("hbase.rootdir");
         if (root == null) {
             LOG.error("HBase root is not set in the configuration");
@@ -658,7 +663,8 @@ public class HBase implements AutoCloseable {
         admin.deleteSnapshot(snapshotName);
     }
 
-    public void distcpSnapshot(String snapshotName, String copyFrom, String copyTo) throws Exception {
+    static public void distcpSnapshot(Configuration conf, String snapshotName, String copyFrom, String copyTo)
+            throws Exception {
         Path sourcePath = new Path(copyFrom + "/.hbase-snapshot/" + snapshotName);
         Path targetPath = new Path(copyTo + "/.hbase-snapshot/" + snapshotName);
         LOG.info("Copying snapshot from {} to {}", sourcePath, targetPath);
@@ -681,11 +687,8 @@ public class HBase implements AutoCloseable {
         }
     }
 
-    public int exportSnapshot(String snapshotName, String copyFrom, String copyTo) throws Exception {
-//        if (!snapshotExists(snapshotName)) {
-//            LOG.error("snapshot({}) doesn't exist", snapshotName);
-//            return -1;
-//        }
+    static public int exportSnapshot(Configuration conf, String snapshotName, String copyFrom, String copyTo)
+            throws Exception {
         List<String> opts = new ArrayList<>();
         opts.add("--snapshot");
         opts.add(snapshotName);
@@ -698,6 +701,10 @@ public class HBase implements AutoCloseable {
         int rc = ToolRunner.run(conf, new ExportSnapshot(), opts.toArray(new String[0]));
         LOG.info("exported rc({})", rc);
         return rc;
+    }
+
+    public int exportSnapshot(String snapshotName, String copyFrom, String copyTo) throws Exception {
+        return exportSnapshot(conf, snapshotName, copyFrom, copyTo);
     }
 
     public void renameTable(String name, String newName) throws IOException {
