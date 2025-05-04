@@ -58,17 +58,12 @@ class ExportSnapshotHandler extends SimpleChannelInboundHandler<String> {
         try {
             ExportRequest request = mapper.readValue(msg, ExportRequest.class);
             boolean success = ExportSnapshotTask.runExport(request);
-            String message = "Export " + request.snapshot + (success ? " completed." : " failed.");
+            String message = "Export/Clone " + request.snapshot + (success ? " completed." : " failed.");
             ExportResponse response = new ExportResponse(success, message);
             if (success) {
                 LOG.info(message);
             } else {
                 LOG.error(message);
-            }
-            if (success) {
-                LOG.info("Export completed successfully.");
-            } else {
-                LOG.error("Export failed.");
             }
             ctx.writeAndFlush(mapper.writeValueAsString(response));
         } catch (Exception e) {
@@ -94,14 +89,15 @@ class ExportResponse {
 class ExportSnapshotTask {
     private static final Logger LOG = LoggerFactory.getLogger(ExportSnapshotTask.class);
 
+    private static final ReplicateConfig config = ReplicateConfig.getInstance();
     private static final HBase db;
     private static final String copyTo;
     static {
         try {
-            db = new HBase("hb_mrs",
-                    "zookeeper/hadoop.hadoop.com",
-                    "loader_hive1@HADOOP.COM",
-                    "hb_mrs/loader_hive1.keytab", true);
+            db = new HBase(config.getTargetHBaseConfPath(),
+                    config.getTargetZookeeperPrincipal(),
+                    config.getTargetHBasePrincipal(),
+                    config.getTargetHBaseKeytab(), true);
             copyTo = db.getProperty("hbase.rootdir");
             LOG.info("ExportSnapshotTask initialized with copyTo: {}", copyTo);
         } catch (IOException e) {

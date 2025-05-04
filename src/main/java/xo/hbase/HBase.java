@@ -94,7 +94,7 @@ public class HBase implements AutoCloseable {
         conf = HBaseConfiguration.create();
         conf.set("hbase.zookeeper.quorum", host);
         conf.set("hbase.zookeeper.property.clientPort", "" + port);
-        conf.set("zookeeper.zNode.parent", zNode);
+        conf.set("zookeeper.znode.parent", zNode);
         conn = ConnectionFactory.createConnection(conf);
         admin = conn.getAdmin();
     }
@@ -149,6 +149,18 @@ public class HBase implements AutoCloseable {
         if (!"GssSaslClientAuthenticationProvider".equals(provider)) {
             throw new RuntimeException("Unsupported authentication provider: " + provider);
         }
+    }
+
+    public HBase(String pathStr, String zPrincipal, boolean fallback)
+            throws IOException {
+        if (zPrincipal != null) {
+            conf = loadConf(pathStr, zPrincipal, fallback);
+        } else {
+            conf = loadConf(pathStr);
+            System.setProperty("zookeeper.sasl.client", "false");
+        }
+        conn = ConnectionFactory.createConnection(conf);
+        admin = conn.getAdmin();
     }
 
     public HBase(String pathStr, String zPrincipal, String principal, String keytab, boolean fallback)
