@@ -110,7 +110,6 @@ public class HBase implements AutoCloseable {
         conf.addResource(new Path(pathStr, "yarn-site.xml"));
         conf.addResource(new Path(pathStr, "hbase-site.xml"));
 //        conf.forEach(entry -> LOG.info(entry.getKey() + "=" + entry.getValue()));
-        LOG.info("Current user: {}", UserGroupInformation.getCurrentUser());
         LOG.info("default file system: {}", conf.get("fs.defaultFS"));
         return conf;
     }
@@ -153,7 +152,7 @@ public class HBase implements AutoCloseable {
 
     public HBase(String pathStr, String zPrincipal, boolean fallback)
             throws IOException {
-        if (zPrincipal != null) {
+        if (zPrincipal != null && !zPrincipal.isEmpty()) {
             conf = loadConf(pathStr, zPrincipal, fallback);
         } else {
             conf = loadConf(pathStr);
@@ -165,13 +164,15 @@ public class HBase implements AutoCloseable {
 
     public HBase(String pathStr, String zPrincipal, String principal, String keytab, boolean fallback)
             throws IOException {
-        if (principal != null && keytab != null) {
+        if (principal != null && !principal.isEmpty()) {
             conf = loadConf(pathStr, zPrincipal, fallback);
             login(conf, principal, keytab);
         } else {
             conf = loadConf(pathStr);
+            changeUser(getUser(conf));
             System.setProperty("zookeeper.sasl.client", "false");
         }
+        LOG.info("Current user: {}", UserGroupInformation.getCurrentUser());
         conn = ConnectionFactory.createConnection(conf);
         admin = conn.getAdmin();
     }
