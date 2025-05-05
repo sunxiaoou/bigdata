@@ -5,15 +5,15 @@
     </property>
     <property>
         <name>hbase.rootdir</name>
-        <value>hdfs://centos3:8020/hbase</value>
+        <value>hdfs://centos4:8020/hbase</value>
     </property>
     <property>
         <name>hbase.zookeeper.quorum</name>
-        <value>centos3</value>
+        <value>centos4</value>
     </property>
-        <property>
+    <property>
         <name>hbase.replication.cluster.id</name>
-        <value>centos3</value>
+        <value>centos4</value>
     </property>
     <property>
         <name>hbase.replication.bulkload.enabled</name>
@@ -24,8 +24,12 @@
         <value>kerberos</value>
     </property>
     <property>
+        <name>hbase.rpc.protection</name>
+        <value>authentication</value>
+    </property>
+    <property>
         <name>hbase.master.kerberos.principal</name>
-        <value>hbase/centos3@EXAMPLE.COM</value>
+        <value>hbase/centos4@EXAMPLE.COM</value>
     </property>
     <property>
         <name>hbase.master.keytab.file</name>
@@ -33,7 +37,7 @@
     </property>
     <property>
         <name>hbase.regionserver.kerberos.principal</name>
-        <value>hbase/centos3@EXAMPLE.COM</value>
+        <value>hbase/centos4@EXAMPLE.COM</value>
     </property>
     <property>
         <name>hbase.regionserver.keytab.file</name>

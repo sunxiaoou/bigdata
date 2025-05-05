@@ -87,10 +87,10 @@ public class SnapshotTest {
         String[] args = {
                 "--action", "distcp",
                 "--db", "hb_u",
-                "--db2", "hb_c3",
-                "--zPrincipal", "zookeeper/centos3@EXAMPLE.COM",
-                "--principal", "hbase/centos3@EXAMPLE.COM",
-                "--keytab", "hb_c3/hadoop.keytab",
+                "--db2", "hb_c4",
+                "--zPrincipal", "zookeeper/centos4@EXAMPLE.COM",
+                "--principal", "hbase/centos4@EXAMPLE.COM",
+                "--keytab", "hb_c4/hadoop.keytab",
                 "--table", "manga:fruit"};
         Snapshot.main(args);
     }
@@ -123,6 +123,19 @@ public class SnapshotTest {
         String[] args = {
                 "--action", "export",
                 "--db", "hb_u",
+                "--db2", "hb_c4",
+                "--zPrincipal", "zookeeper/centos4@EXAMPLE.COM",
+                "--principal", "hbase/centos4@EXAMPLE.COM",
+                "--keytab", "hb_c4/hadoop.keytab",
+                "--table", "manga:fruit"};
+        Snapshot.main(args);
+    }
+
+    @Test
+    public void exportSnapshot3() {
+        String[] args = {
+                "--action", "export",
+                "--db", "hb_u",
                 "--db2", "hb_mrs",
                 "--zPrincipal", "zookeeper/hadoop.hadoop.com",
                 "--principal", "loader_hive1@HADOOP.COM",
@@ -144,10 +157,10 @@ public class SnapshotTest {
     public void cloneSnapshot2() {
         String[] args = {
                 "--action", "clone",
-                "--db", "hb_c3",
-                "--zPrincipal", "zookeeper/centos3@EXAMPLE.COM",
-                "--principal", "hbase/centos3@EXAMPLE.COM",
-                "--keytab", "hb_c3/hadoop.keytab",
+                "--db", "hb_c4",
+                "--zPrincipal", "zookeeper/centos4@EXAMPLE.COM",
+                "--principal", "hbase/centos4@EXAMPLE.COM",
+                "--keytab", "hb_c4/hadoop.keytab",
                 "--table", "manga:fruit"};
         Snapshot.main(args);
     }

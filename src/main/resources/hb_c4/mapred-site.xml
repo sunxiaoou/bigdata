@@ -5,23 +5,25 @@
     </property>
     <property>
         <name>mapreduce.jobhistory.address</name>
-        <value>centos3:10020</value>
-    </property>
-    <property>
-        <name>mapreduce.map.memory.mb</name>
-        <value>2048</value>
-    </property>
-    <property>
-        <name>mapred.child.java.opts</name>
-        <value>-Xmx1536m</value>
+        <value>centos4:10020</value>
     </property>
     <property>
         <name>mapreduce.jobhistory.webapp.address</name>
-        <value>centos3:19888</value>
+        <value>centos4:19888</value>
+    </property>
+    <property>
+        <name>mapreduce.application.classpath</name>
+        <value>
+            /opt/hadoop-3.3.6/etc/hadoop,
+            /opt/hadoop-3.3.6/share/hadoop/mapreduce/*,
+            /opt/hadoop-3.3.6/share/hadoop/mapreduce/lib/*,
+            /opt/hadoop-3.3.6/share/hadoop/common/*,
+            /opt/hadoop-3.3.6/share/hadoop/common/lib/*
+        </value>
     </property>
     <property>
         <name>mapreduce.jobhistory.principal</name>
-        <value>mapred/centos3@EXAMPLE.COM</value>
+        <value>mapred/centos4@EXAMPLE.COM</value>
     </property>
     <property>
         <name>mapreduce.jobhistory.keytab</name>
@@ -33,7 +35,7 @@
     </property>
     <property>
         <name>mapreduce.jobhistory.webapp.https.principal</name>
-        <value>HTTP/centos3@EXAMPLE.COM</value>
+        <value>HTTP/centos4@EXAMPLE.COM</value>
     </property>
     <property>
         <name>mapreduce.jobhistory.webapp.https.keytab</name>

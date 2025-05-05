@@ -1,11 +1,11 @@
 <configuration>
     <property>
         <name>fs.defaultFS</name>
-        <value>hdfs://centos3:8020</value>
+        <value>hdfs://centos4:8020</value>
     </property>
     <property>
         <name>hadoop.tmp.dir</name>
-        <value>/opt/hadoop-2.10.2/data/tmp</value>
+        <value>/opt/hadoop-3.3.6/data/tmp</value>
     </property>
     <property>
         <name>hadoop.security.authentication</name>
@@ -16,8 +16,17 @@
         <value>true</value>
     </property>
     <property>
+        <name>hadoop.rpc.protection</name>
+        <!--value>privacy,integrity,authentication</value-->
+        <value>authentication</value>
+    </property>
+    <!--property>
+        <name>hadoop.security.sasl.qop</name>
+        <value>auth</value>
+    </property-->
+    <property>
         <name>hadoop.http.authentication.kerberos.principal</name>
-        <value>HTTP/centos3@EXAMPLE.COM</value>
+        <value>HTTP/centos4@EXAMPLE.COM</value>
     </property>
     <property>
         <name>hadoop.http.authentication.kerberos.keytab</name>

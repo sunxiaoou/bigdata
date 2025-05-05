@@ -5,19 +5,19 @@
     </property>
     <property>
         <name>dfs.namenode.http-address</name>
-        <value>_HOST:50070</value>
+        <value>centos4:9870</value>
     </property>
     <property>
         <name>dfs.datanode.address</name>
-        <value>_HOST:50010</value>
+        <value>centos4:9866</value>
     </property>
     <property>
         <name>dfs.datanode.http.address</name>
-        <value>_HOST:50075</value>
+        <value>centos4:9864</value>
     </property>
     <property>
         <name>dfs.datanode.ipc.address</name>
-        <value>_HOST:50020</value>
+        <value>centos4:9867</value>
     </property>
     <property>
         <name>dfs.block.access.token.enable</name>
@@ -25,7 +25,7 @@
     </property>
     <property>
         <name>dfs.namenode.kerberos.principal</name>
-        <value>hdfs/_HOST@EXAMPLE.COM</value>
+        <value>hdfs/centos4@EXAMPLE.COM</value>
     </property>
     <property>
         <name>dfs.namenode.keytab.file</name>
@@ -33,7 +33,7 @@
     </property>
     <property>
         <name>dfs.secondary.namenode.kerberos.principal</name>
-        <value>hdfs/_HOST@EXAMPLE.COM</value>
+        <value>hdfs/centos4@EXAMPLE.COM</value>
     </property>
     <property>
         <name>dfs.secondary.namenode.keytab.file</name>
@@ -41,7 +41,7 @@
     </property>
     <property>
         <name>dfs.datanode.kerberos.principal</name>
-        <value>hdfs/_HOST@EXAMPLE.COM</value>
+        <value>hdfs/centos4@EXAMPLE.COM</value>
     </property>
     <property>
         <name>dfs.datanode.keytab.file</name>
@@ -51,13 +51,18 @@
         <name>dfs.http.policy</name>
         <value>HTTPS_ONLY</value>
     </property>
+    <!--property>
+        <name>dfs.block.access.token.enable</name>
+        <value>true</value>
+    </property-->
     <property>
         <name>dfs.data.transfer.protection</name>
+        <!--value>privacy,integrity,authentication</value-->
         <value>authentication</value>
     </property>
     <property>
         <name>dfs.web.authentication.kerberos.principal</name>
-        <value>HTTP/_HOST@EXAMPLE.COM</value>
+        <value>HTTP/centos4@EXAMPLE.COM</value>
     </property>
     <property>
         <name>dfs.web.authentication.kerberos.keytab</name>
@@ -65,10 +70,10 @@
     </property>
     <property>
         <name>dfs.namenode.kerberos.internal.spnego.principal</name>
-        <value>HTTP/_HOST@EXAMPLE.COM</value>
+        <value>HTTP/centos4@EXAMPLE.COM</value>
     </property>
     <property>
         <name>dfs.secondary.namenode.kerberos.internal.spnego.principal</name>
-        <value>HTTP/_HOST@EXAMPLE.COM</value>
+        <value>HTTP/centos4@EXAMPLE.COM</value>
     </property>
 </configuration>
