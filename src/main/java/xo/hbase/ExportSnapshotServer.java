@@ -57,18 +57,20 @@ class ExportSnapshotHandler extends SimpleChannelInboundHandler<String> {
         LOG.info("Received: {}", msg);
         try {
             ExportRequest request = mapper.readValue(msg, ExportRequest.class);
-            boolean success = ExportSnapshotTask.runExport(request);
-            String message = "Export/Clone " + request.snapshot + (success ? " completed." : " failed.");
-            ExportResponse response = new ExportResponse(success, message);
-            if (success) {
-                LOG.info(message);
+            long rowCount = ExportSnapshotTask.runExport(request);
+            String message;
+            if (rowCount >= 0) {
+                message = String.format("Export/Clone (%s) to (%s) with (%d) rows.",
+                        request.snapshot, request.table, rowCount);
             } else {
-                LOG.error(message);
+                message = String.format("Export/Clone (%s) to (%s) failed.", request.snapshot, request.table);
             }
-            ctx.writeAndFlush(mapper.writeValueAsString(response));
+            LOG.info(message);
+            ctx.writeAndFlush(mapper.writeValueAsString(new ExportResponse(rowCount >= 0, message, rowCount)));
         } catch (Exception e) {
             LOG.error("Exception: ", e);
-            ExportResponse response = new ExportResponse(false, "Exception: " + e.getMessage());
+            ExportResponse response =
+                    new ExportResponse(false, "Exception: " + e.getMessage(), -1);
             ctx.writeAndFlush(mapper.writeValueAsString(response));
         }
     }
@@ -77,12 +79,14 @@ class ExportSnapshotHandler extends SimpleChannelInboundHandler<String> {
 class ExportResponse {
     public boolean success;
     public String message;
+    public long rowCount;
 
     public ExportResponse() {}
 
-    public ExportResponse(boolean success, String message) {
+    public ExportResponse(boolean success, String message, long rowCount) {
         this.success = success;
         this.message = message;
+        this.rowCount = rowCount;
     }
 }
 
@@ -105,17 +109,16 @@ class ExportSnapshotTask {
         }
     }
 
-    public static boolean runExport(ExportRequest req) {
+    public static long runExport(ExportRequest req) {
         try {
-            int rc = db.exportSnapshot(req.snapshot, req.copyFrom, copyTo);
-            if (rc == 0) {
+            if (0 == db.exportSnapshot(req.snapshot, req.copyFrom, copyTo)) {
                 db.cloneSnapshot(req.snapshot, req.table);
                 LOG.info("snapshot({}) cloned to table({})", req.snapshot, req.table);
             }
-            return rc == 0;
+            return db.countTableRows(req.table);
         } catch (Exception e) {
             LOG.error("ExportSnapshotTask: ", e);
-            return false;
+            return -1;
         }
     }
 }
