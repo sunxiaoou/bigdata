@@ -87,16 +87,28 @@ public class ExportSnapshotClient {
 
         ExportSnapshotClient client = new ExportSnapshotClient("localhost", Integer.parseInt(args[0]));
         try {
-            LOG.info(client.exportSnapshotSync(
-                    new ExportRequest("manga:fruit",
-                            "manga-fruit_250502",
-                            "hdfs://ubuntu:8020/hbase"),
-                    300000).message);
-            LOG.info(client.exportSnapshotSync(
-                    new ExportRequest("peTable",
-                            "peTable_250502",
-                            "hdfs://ubuntu:8020/hbase"),
-                    300000).message);
+//            db = new HBase(config.getTargetHBaseConfPath(),
+            ReplicateConfig config = ReplicateConfig.getInstance();
+            String uuid = "00000000-0000-0000-0000-000000000000";
+            ExportResponse response = client.exportSnapshotSync(
+                    new ExportRequest(uuid,
+                            config.getTargetHBaseConfPath(),
+                            config.getTargetZookeeperPrincipal(),
+                            config.getTargetHBasePrincipal(),
+                            config.getTargetHBaseKeytab()),
+                    300000);
+            LOG.info("ExportResponse: {}", response.message);
+            if (response.success) {
+                LOG.info(client.exportSnapshotSync(new ExportRequest(uuid,
+                        "manga:fruit",
+                        "manga-fruit_250502",
+                        "hdfs://ubuntu:8020/hbase"),
+                        300000).message);
+//                LOG.info(client.exportSnapshotSync( new ExportRequest("peTable",
+//                        "peTable_250502",
+//                        "hdfs://ubuntu:8020/hbase"),
+//                        300000).message);
+                }
         } catch (Exception e) {
             LOG.error("Error during export snapshot: ", e);
         } finally {
@@ -106,13 +118,29 @@ public class ExportSnapshotClient {
 }
 
 class ExportRequest {
-    public String table;
-    public String snapshot;
-    public String copyFrom;
+    public String uuid = null;
+
+    public String confPath = null;
+    public String zPrincipal = null;
+    public String principal = null;
+    public String keytab = null;
+
+    public String table = null;
+    public String snapshot = null;
+    public String copyFrom = null;
 
     public ExportRequest() {}
 
-    public ExportRequest(String table, String snapshot, String copyFrom) {
+    public ExportRequest(String uuid, String confPath, String zPrincipal, String principal, String keytab) {
+        this.uuid = uuid;
+        this.confPath = confPath;
+        this.zPrincipal = zPrincipal;
+        this.principal = principal;
+        this.keytab = keytab;
+    }
+
+    public ExportRequest(String uuid, String table, String snapshot, String copyFrom) {
+        this.uuid = uuid;
         this.table = table;
         this.snapshot = snapshot;
         this.copyFrom = copyFrom;
