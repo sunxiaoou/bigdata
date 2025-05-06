@@ -13,6 +13,7 @@ public class ReplicateSnapshot {
 
     private final ReplicateConfig config;
     private final HBase srcDb;
+    private final String uuid = "00000000-0000-0000-0000-000000000000";
     private final ExportSnapshotClient exportSnapshotClient;
 //    private final String peer;
 
@@ -49,7 +50,7 @@ public class ReplicateSnapshot {
         srcDb.createSnapshot(table, snapshot);
         LOG.info("snapshot({}) from table({}) created", snapshot, table);
         LOG.info(exportSnapshotClient.exportSnapshotSync(
-                new ExportRequest(table +"_" + dateStr, snapshot, copyFrom),
+                new ExportRequest(uuid, table +"_" + dateStr, snapshot, copyFrom),
                 300000).message);
     }
 
@@ -66,8 +67,18 @@ public class ReplicateSnapshot {
         }
 
         String copyFrom = srcDb.getProperty("hbase.rootdir");
-        for (String table: tables) {
-            doSnapshot(table, copyFrom);
+        ExportResponse response = exportSnapshotClient.exportSnapshotSync(
+                new ExportRequest(uuid,
+                        config.getTargetHBaseConfPath(),
+                        config.getTargetZookeeperPrincipal(),
+                        config.getTargetHBasePrincipal(),
+                        config.getTargetHBaseKeytab()),
+                300000);
+        LOG.info("ExportResponse: {}", response.message);
+        if (response.success) {
+            for (String table : tables) {
+                doSnapshot(table, copyFrom);
+            }
         }
     }
 
