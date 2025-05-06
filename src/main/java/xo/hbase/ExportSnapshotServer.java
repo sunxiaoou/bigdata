@@ -10,6 +10,7 @@ import io.netty.handler.codec.string.StringEncoder;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import xo.utility.Pair;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -92,18 +93,13 @@ class ExportSnapshotHandler extends SimpleChannelInboundHandler<String> {
 }
 
 class HBaseInstanceManager {
-    private static final ConcurrentHashMap<String, HBase> cache = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, Pair<HBase, String>> cache = new ConcurrentHashMap<>();
 
-    public static HBase getInstance(ExportRequest req) throws IOException {
+    public static Pair<HBase, String> getInstance(ExportRequest req) throws IOException {
         return cache.computeIfAbsent(req.uuid, k -> {
             try {
-                return new HBase(
-                        req.confPath,
-                        req.zPrincipal,
-                        req.principal,
-                        req.keytab,
-                        true
-                );
+                HBase db = new HBase(req.confPath, req.zPrincipal, req.principal, req.keytab, true);
+                return new Pair<>(db, db.getProperty("hbase.rootdir"));
             } catch (IOException e) {
                 throw new RuntimeException("HBase init failed", e);
             }
@@ -128,29 +124,17 @@ class ExportResponse {
 class ExportSnapshotTask {
     private static final Logger LOG = LoggerFactory.getLogger(ExportSnapshotTask.class);
 
-//    private static final ReplicateConfig config = ReplicateConfig.getInstance();
-//    private static final HBase db;
-//    private static final String copyTo;
-//    static {
-//        try {
-//            db = new HBase(config.getTargetHBaseConfPath(),
-//                    config.getTargetZookeeperPrincipal(),
-//                    config.getTargetHBasePrincipal(),
-//                    config.getTargetHBaseKeytab(), true);
-//            copyTo = db.getProperty("hbase.rootdir");
-//            LOG.info("ExportSnapshotTask initialized with copyTo: {}", copyTo);
-//        } catch (IOException e) {
-//            throw new RuntimeException(e);
-//        }
-//    }
-
     public static long runExport(ExportRequest req) {
         try {
-            HBase db = HBaseInstanceManager.getInstance(req);
-            String copyTo = db.getProperty("hbase.rootdir");
+            Pair<HBase, String> pair = HBaseInstanceManager.getInstance(req);
+            HBase db = pair.getFirst();
+            String copyTo = pair.getSecond();
             if (0 == db.exportSnapshot(req.snapshot, req.copyFrom, copyTo)) {
                 db.cloneSnapshot(req.snapshot, req.table);
                 LOG.info("snapshot({}) cloned to table({})", req.snapshot, req.table);
+            } else {
+                LOG.error("Failed to export snapshot {}.", req.snapshot);
+                return -1;
             }
             return db.countTableRows(req.table);
         } catch (Exception e) {
