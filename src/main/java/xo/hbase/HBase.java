@@ -19,6 +19,7 @@ import org.apache.hadoop.hbase.snapshot.ExportSnapshot;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Triple;
+import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -38,6 +39,8 @@ import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.regex.Pattern;
+
+import static org.apache.hadoop.hbase.mapreduce.RowCounter.createSubmittableJob;
 
 // refer to org.apache.hadoop.hbase.client sample in https://hbase.apache.org/apidocs/index.html
 public class HBase implements AutoCloseable {
@@ -487,6 +490,26 @@ public class HBase implements AutoCloseable {
                 return rowCount;
             }
         }
+    }
+
+    public long countRows(String tableName) throws IOException, InterruptedException, ClassNotFoundException {
+        // Optional: use local mode to avoid HDFS
+//        conf.set("mapreduce.framework.name", "local");
+//        conf.set("fs.defaultFS", "file:///");
+
+        String[] args = new String[] { tableName };
+        Job job = createSubmittableJob(conf, args);
+
+        boolean success = job.waitForCompletion(true);
+        if (!success) {
+            throw new RuntimeException("RowCounter job failed");
+        }
+
+        // 用字符串名获取 Counter，避免访问不可见枚举类
+        Counters counters = job.getCounters();
+        return counters.findCounter(
+                "org.apache.hadoop.hbase.mapreduce.RowCounter$RowCounterMapper$Counters",
+                "ROWS").getValue();
     }
 
     public String getCell(String space, String name, String pk, String cf, String col) throws IOException {

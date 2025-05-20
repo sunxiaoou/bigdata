@@ -22,13 +22,16 @@ public class TableTest {
     private static final Logger LOG = LoggerFactory.getLogger(TableTest.class);
 
 //    private static final String host = "hb_u";
+//    private static final String host = "hb_cdh";
 //    private static final String confPath = "src/main/resources/" + host;
+//    private static final String zPrincipal = null;
 //    private static final String principal = null;
 //    private static final String keytab = null;
 //    private static final boolean fallback = false;
 
     private static final String host = "hb_mrs";
     private static final String confPath = "src/main/resources/" + host;
+    private static final String zPrincipal = "zookeeper/hadoop.hadoop.com";
     private static final String principal = "loader_hive1@HADOOP.COM";
     private static final String keytab = confPath + "/loader_hive1.keytab";
     private static final boolean fallback = true;
@@ -40,7 +43,7 @@ public class TableTest {
 //        db = new HBase();
 //        db = new HBase("node1", 2181, "/hbase");
 //        db = new HBase("hadoop2", 2181, "/hbase");
-        db = new HBase(confPath, principal, principal, keytab, fallback);
+        db = new HBase(confPath, zPrincipal, principal, keytab, fallback);
     }
 
     @AfterClass
@@ -81,7 +84,7 @@ public class TableTest {
 
     @Test
     public void createTable() throws IOException {
-        String table = "manga:fruit2";
+        String table = "manga:fruit";
         Map<String, Object> cf = new HashMap<>();
         cf.put("blockCache", true);
         cf.put("blockSize", 65536);
@@ -139,6 +142,13 @@ public class TableTest {
     public void countTableRows() throws IOException {
         String name = "peTable";
         LOG.info("row({})", db.countTableRows(name));
+    }
+
+    @Test
+    public void countRows() throws Exception {
+//        String name = "manga:fruit";
+        String name = "peTable_250506";
+        LOG.info("countRows({})", db.countRows(name));
     }
 
     @Test
