@@ -234,6 +234,37 @@ public class HBase implements AutoCloseable {
         return spaces;
     }
 
+    public void createNamespace(String name) throws IOException {
+        NamespaceDescriptor namespaceDescriptor = NamespaceDescriptor.create(name).build();
+        try {
+            admin.createNamespace(namespaceDescriptor);
+        } catch (NamespaceExistException e) {
+            LOG.info("namespace({}) already exists", name);
+        }
+    }
+
+    public void dropNamespace(String name) throws IOException {
+        try {
+            admin.deleteNamespace(name);
+        } catch (NamespaceNotFoundException e) {
+            LOG.info("namespace({}) doesn't exist", name);
+        }
+    }
+
+    public List<String> listNamespaceTables(String space) throws IOException {
+        List<String> tables = new ArrayList<>();
+        try {
+            TableName[] tableNames = admin.listTableNamesByNamespace(space);
+            for (TableName tableName: tableNames) {
+                String name = tableName.getNameAsString();
+                tables.add(name);
+            }
+        } catch (NamespaceNotFoundException e) {
+            LOG.warn("namespace({}) doesn't exist", space);
+        }
+        return tables;
+    }
+
     public List<String> listTables(String space) throws IOException {
         List<String> tables = new ArrayList<>();
         List<TableDescriptor> descriptors = admin.listTableDescriptorsByNamespace(Bytes.toBytes(space));

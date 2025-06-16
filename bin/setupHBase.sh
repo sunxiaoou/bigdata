@@ -4,8 +4,9 @@ TAR_DIR="$HOME/Downloads/bigdata"
 ZOOKEEPER_TAR="apache-zookeeper-3.8.1-bin.tar.gz"
 KAFKA_TAR="kafka_2.13-3.3.1.tgz"
 #HADOOP_TAR="hadoop-2.10.2.tar.gz"
+#HBASE_TAR="hbase-2.4.16-bin.tar.gz"
 HADOOP_TAR="hadoop-3.3.6.tar.gz"
-HBASE_TAR="hbase-2.4.16-bin.tar.gz"
+HBASE_TAR="hbase-2.5.11-hadoop3-bin.tar.gz"
 DEFAULT_PARENT_DIR="$HOME/bigdata"
 GROUP=$(id -gn)
 PID_DIR=/run/hadoop
@@ -225,9 +226,14 @@ install_hbase() {
     # Extract HBase
     parent=$(dirname "$HBASE_HOME")
     sudo mkdir -p "$parent"
+    child=$(tar -tf "$TAR_DIR/$HBASE_TAR" | head -1 | cut -d'/' -f1)
     sudo tar xf "$TAR_DIR/$HBASE_TAR" -C "$parent"
+    if [ "$parent/$child" != "$HBASE_HOME" ]; then
+        sudo mv "$parent/$child" "$HBASE_HOME"
+    fi
     sudo chown -R "$USER:$GROUP" "$HBASE_HOME"
-    dup_jar=$HBASE_HOME/lib/client-facing-thirdparty/slf4j-reload4j-1.7.33.jar
+#    dup_jar=$HBASE_HOME/lib/client-facing-thirdparty/slf4j-reload4j-1.7.33.jar
+    dup_jar=$HBASE_HOME/lib/client-facing-thirdparty/log4j-slf4j-impl-2.17.2.jar
     if [ -f "$dup_jar" ]; then
         mv "$dup_jar" "$dup_jar".bak
     fi

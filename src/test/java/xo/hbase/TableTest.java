@@ -29,12 +29,19 @@ public class TableTest {
 //    private static final String keytab = null;
 //    private static final boolean fallback = false;
 
-    private static final String host = "hb_mrs";
+    private static final String host = "hb_c4";
     private static final String confPath = "src/main/resources/" + host;
-    private static final String zPrincipal = "zookeeper/hadoop.hadoop.com";
-    private static final String principal = "loader_hive1@HADOOP.COM";
-    private static final String keytab = confPath + "/loader_hive1.keytab";
+    private static final String zPrincipal = "zookeeper/centos4@EXAMPLE.COM";
+    private static final String principal = "hbase/centos4@EXAMPLE.COM";
+    private static final String keytab = confPath + "/hadoop.keytab";
     private static final boolean fallback = true;
+
+//    private static final String host = "hb_mrs";
+//    private static final String confPath = "src/main/resources/" + host;
+//    private static final String zPrincipal = "zookeeper/hadoop.hadoop.com";
+//    private static final String principal = "loader_hive1@HADOOP.COM";
+//    private static final String keytab = confPath + "/loader_hive1.keytab";
+//    private static final boolean fallback = true;
 
     private static HBase db;
 
@@ -54,6 +61,21 @@ public class TableTest {
     @Test
     public void listNamespaces() throws IOException {
         LOG.info("namespaces({})", db.listNameSpaces());
+    }
+
+    @Test
+    public void createNamespace() throws IOException {
+        db.createNamespace("new_space");
+    }
+
+    @Test
+    public void dropNamespace() throws IOException {
+        db.dropNamespace("new_space");
+    }
+
+    @Test
+    public void listNamespaceTables() throws IOException {
+        LOG.info("tables({})", db.listNamespaceTables("manga"));
     }
 
     @Test
