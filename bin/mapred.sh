@@ -14,4 +14,6 @@ mr() {
 
 ver=$(hadoop version | grep Hadoop | awk '{print $NF}')
 jarfile=$HADOOP_HOME/share/hadoop/mapreduce/hadoop-mapreduce-examples-$ver.jar
+"$HADOOP_HOME/bin/hdfs" dfs -mkdir -p "/user/$USER"
+"$HADOOP_HOME/bin/hdfs" dfs -ls -R "/user"
 mr
