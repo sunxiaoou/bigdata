@@ -92,12 +92,16 @@ public class BulkDataGeneratorTool {
   public static void main(String[] args) throws Exception {
     String pathStr = args[0];
     Configuration conf = HBaseConfiguration.create();
-    conf.addResource(pathStr + "/core-site.xml");
-    conf.addResource(pathStr + "/hdfs-site.xml");
-    conf.addResource(pathStr + "/mapred-site.xml");
-    conf.addResource(pathStr + "/yarn-site.xml");
-    conf.addResource(pathStr + "/hbase-site.xml");
-    HBase.changeUser(System.getenv("USER"));
+//    conf.addResource(pathStr + "/core-site.xml");
+//    conf.addResource(pathStr + "/hdfs-site.xml");
+//    conf.addResource(pathStr + "/mapred-site.xml");
+//    conf.addResource(pathStr + "/yarn-site.xml");
+//    conf.addResource(pathStr + "/hbase-site.xml");
+    conf.addResource(new Path(pathStr, "core-site.xml"));
+    conf.addResource(new Path(pathStr, "hdfs-site.xml"));
+    conf.addResource(new Path(pathStr, "hbase-site.xml"));
+//    HBase.changeUser(System.getenv("USER"));
+    HBase.changeUser("hdfs");
     BulkDataGeneratorTool bulkDataGeneratorTool = new BulkDataGeneratorTool();
     String[] newArgs = new String[args.length - 1];
     System.arraycopy(args, 1, newArgs, 0, args.length - 1);

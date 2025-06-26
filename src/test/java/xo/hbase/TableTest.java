@@ -168,8 +168,7 @@ public class TableTest {
 
     @Test
     public void countRows() throws Exception {
-//        String name = "manga:fruit";
-        String name = "peTable_250506";
+        String name = "peTable";
         LOG.info("countRows({})", db.countRows(name));
     }
 

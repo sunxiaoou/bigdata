@@ -55,4 +55,8 @@
         <name>hbase.zookeeper.property.kerberos.removeRealmFromPrincipal</name>
         <value>true</value>
     </property>
+    <property>
+        <name>hbase.coprocessor.region.classes</name>
+        <value>org.apache.hadoop.hbase.security.token.TokenProvider</value>
+    </property>
 </configuration>
