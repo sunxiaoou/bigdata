@@ -22,8 +22,8 @@ public class ODPWrapperTest {
     private static final String subscription = "tester";
     private static final String odpContext = "SLT~ODP01";
 //    private static final String odpName = "FRUIT2";
-    private static final String odpName = "VALUATION";
-//    private static final String odpName = "BALHDR";
+//    private static final String odpName = "VALUATION";
+    private static final String odpName = "BALHDR";
 
     private ODPWrapper odpWrapper;
 
@@ -135,7 +135,8 @@ public class ODPWrapperTest {
         LOG.info("rowData - {}", odpParser.parseRow2Json(rowData));
     }
 
-    private void fetchODP(String mode) throws Exception {
+    @Test
+    public void fetchFull() throws Exception {
         List<FieldMeta> fieldMetas = odpWrapper.getODPDetails(
                 subscriberType,
                 odpContext,
@@ -148,7 +149,7 @@ public class ODPWrapperTest {
                 subscription,
                 odpContext,
                 odpName,
-                mode);
+                "F");
         if (!fragments.isEmpty()) {
             LOG.info("got {} fragment(s)", fragments.size());
             List<byte[]> rows = ODPWrapper.mergeFragments(fragments, numOfFragment);
@@ -163,24 +164,7 @@ public class ODPWrapperTest {
     }
 
     @Test
-    public void fetchODPFull() throws Exception {
-        fetchODP("F");
-    }
-
-    @Test
-    public void fetchODPDelta() throws Exception {
-        odpWrapper.resetODP(
-                subscriberType,
-                subscriber,
-                subscription,
-                odpContext,
-                odpName
-        );
-        fetchODP("D");
-    }
-
-    @Test
-    public void preFetchODP() throws Exception {
+    public void preFetch() throws Exception {
         odpWrapper.resetODP(
                 subscriberType,
                 subscriber,
@@ -200,14 +184,33 @@ public class ODPWrapperTest {
     }
 
     @Test
-    public void preFetchAndFetchODP() throws Exception {
+    public void fetchDeltaInit() throws Exception {
         odpWrapper.resetODP(
                 subscriberType,
                 subscriber,
                 subscription,
                 odpContext,
                 odpName);
-        odpWrapper.preFetchAndFetchODP(
+        String pointer = odpWrapper.openExtractionSession(
+                subscriberType,
+                subscriber,
+                subscription,
+                odpContext,
+                odpName,
+                "D");
+        List<FieldMeta> fieldMetas = odpWrapper.getODPDetails(subscriberType, odpContext, odpName).getThird();
+        int numOfFragment = ODPWrapper.getNumOfFragment(fieldMetas);
+        List<String> packages = odpWrapper.preFetchODP(pointer, odpName);
+        for (String extractPackage : packages) {
+            List<byte[]> rows = odpWrapper.fetchODP(pointer, extractPackage, numOfFragment);
+            LOG.info("Got {} row(s) for package {}", rows.size(), extractPackage);
+        }
+        odpWrapper.closeExtractionSession(pointer);
+    }
+
+    @Test
+    public void fetchDelta() throws Exception {
+        odpWrapper.fetchODP(
                 subscriberType,
                 subscriber,
                 subscription,

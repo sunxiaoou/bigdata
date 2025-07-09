@@ -276,8 +276,7 @@ public class ODPWrapper {
     }
 
     public List<String> preFetchODP(String pointer, String odpName) throws JCoException {
-        List<String> newPackages = new ArrayList<>();
-        List<String> returnMessages = new ArrayList<>();
+        List<String> packages = new ArrayList<>();
         for (int i = 0; ; i++) {
             JCoFunction function = destination.getRepository().getFunction("RODPS_REPL_ODP_PREFETCH");
             if (function == null) {
@@ -291,70 +290,65 @@ public class ODPWrapper {
             if (!etReturn.isEmpty()) {
                 for (int j = 0; j < etReturn.getNumRows(); j++) {
                     etReturn.setRow(j);
-                    returnMessages.add(etReturn.getString("MESSAGE"));
-                    LOG.info(etReturn.getString("MESSAGE"));
+                    LOG.error(etReturn.getString("MESSAGE"));
                 }
+                break;
             }
-            boolean noMoreData = "X".equals(function.getExportParameterList().getString("E_NO_MORE_DATA"));
-            if (!returnMessages.isEmpty() || noMoreData) {
+            if ("X".equals(function.getExportParameterList().getString("E_NO_MORE_DATA"))) {
+                LOG.info("No more data to prefetch for pointer {}", pointer);
                 break;
             }
             String packageName = function.getExportParameterList().getString("E_PACKAGE");
-            newPackages.add(packageName);
+            packages.add(packageName);
             LOG.info("E_PACKAGE={}", packageName);
         }
-        return newPackages;
+        return packages;
     }
 
-    public void preFetchAndFetchODP(
-            String subscriberType,
-            String subscriberName,
-            String subscriberProcess,
-            String context,
-            String odpName,
-            String mode) throws JCoException {
-        String pointer =
-                openExtractionSession(subscriberType, subscriberName, subscriberProcess, context, odpName, mode);
-        List<String> packages = preFetchODP(pointer, odpName);
-        List<FieldMeta> fieldMetas = getODPDetails(subscriberType, context, odpName).getThird();
-        int numOfFragment = getNumOfFragment(fieldMetas);
-        for (String extractPackage : packages) {
-            LOG.info("Fetching package: {}", extractPackage);
-
-            JCoFunction function = destination.getRepository().getFunction("RODPS_REPL_ODP_FETCH");
-            if (function == null) {
-                throw new RuntimeException("Function RODPS_REPL_ODP_FETCH not found in SAP.");
+    public List<byte[]> fetchODP(String pointer, String extractPackage, int numOfFragment) throws JCoException {
+        List<byte[]> rows = new ArrayList<>();
+        JCoFunction function = destination.getRepository().getFunction("RODPS_REPL_ODP_FETCH");
+        if (function == null) {
+            throw new RuntimeException("Function RODPS_REPL_ODP_FETCH not found in SAP.");
+        }
+        function.getImportParameterList().setValue("I_POINTER", pointer);
+        function.getImportParameterList().setValue("I_PACKAGE", extractPackage);
+        function.getImportParameterList().setValue("I_REDO", "X");
+        function.execute(destination);
+        JCoTable etReturn = function.getTableParameterList().getTable("ET_RETURN");
+        if (!etReturn.isEmpty()) {
+            for (int j = 0; j < etReturn.getNumRows(); j++) {
+                etReturn.setRow(j);
+                LOG.info(etReturn.getString("MESSAGE"));
             }
-            function.getImportParameterList().setValue("I_POINTER", pointer);
-            function.getImportParameterList().setValue("I_PACKAGE", extractPackage);
-            function.getImportParameterList().setValue("I_REDO", "X");
-            function.execute(destination);
+        } else if ("X".equals(function.getExportParameterList().getString("E_NO_MORE_DATA"))) {
+            LOG.warn("No more data to fetch for package {}", extractPackage);
+        } else {
             JCoTable table = function.getTableParameterList().getTable("ET_DATA");
-            if (table.isEmpty()) {
-                break;
-            }
-            List<byte[]> fragments = new ArrayList<>();
-            do {
-                for (JCoField field : table) {
-                    if ("DATA".equals(field.getName())) {
-                        fragments.add(field.getByteArray());
-                        break;
+            if (!table.isEmpty()) {
+                List<byte[]> fragments = new ArrayList<>();
+                do {
+                    for (JCoField field : table) {
+                        if ("DATA".equals(field.getName())) {
+                            fragments.add(field.getByteArray());
+                            break;
+                        }
                     }
+                } while (table.nextRow());
+                if (fragments.isEmpty()) {
+                    LOG.warn("No fragment found for package {}", extractPackage);
+                } else {
+                    LOG.debug("Got {} fragment(s) for package {}", fragments.size(), extractPackage);
+                    rows = mergeFragments(fragments, numOfFragment);
                 }
-            } while (table.nextRow());
-            if (!fragments.isEmpty()) {
-                LOG.info("Got {} fragment(s) for package {}", fragments.size(), extractPackage);
-                List<byte[]> rows = mergeFragments(fragments, numOfFragment);
-                LOG.info("as {} row(s)", rows.size());
-            } else {
-                LOG.warn("No data found for package {}", extractPackage);
             }
         }
-        closeExtractionSession(pointer);
+        return rows;
     }
 
-    private List<byte[]> fetchODP(String pointer, String extractPackage) throws JCoException {
+    public List<byte[]> fetchODP(String pointer, int numOfFragment) throws JCoException {
         List<byte[]> fragments = new ArrayList<>();
+        String extractPackage = "";
         while (true) {
             JCoFunction function = destination.getRepository().getFunction("RODPS_REPL_ODP_FETCH");
             if (function == null) {
@@ -363,24 +357,39 @@ public class ODPWrapper {
             function.getImportParameterList().setValue("I_POINTER", pointer);
             function.getImportParameterList().setValue("I_PACKAGE", extractPackage);
             function.execute(destination);
+            JCoTable etReturn = function.getTableParameterList().getTable("ET_RETURN");
+            if (!etReturn.isEmpty()) {
+                for (int j = 0; j < etReturn.getNumRows(); j++) {
+                    etReturn.setRow(j);
+                    LOG.info(etReturn.getString("MESSAGE"));
+                }
+                break;
+            }
             if ("X".equals(function.getExportParameterList().getString("E_NO_MORE_DATA"))) {
+                LOG.info("No more data to fetch for package {}", extractPackage);
                 break;
             }
             extractPackage = function.getExportParameterList().getString("E_PACKAGE");
             JCoTable table = function.getTableParameterList().getTable("ET_DATA");
-            if (table.isEmpty()) {
-                break;
-            }
-            do {
-                for (JCoField field : table) {
-                    if ("DATA".equals(field.getName())) {
-                        fragments.add(field.getByteArray());
-                        break;
+            if (!table.isEmpty()) {
+                do {
+                    for (JCoField field : table) {
+                        if ("DATA".equals(field.getName())) {
+                            fragments.add(field.getByteArray());
+                            break;
+                        }
                     }
-                }
-            } while (table.nextRow());
+                } while (table.nextRow());
+            }
         }
-        return fragments;
+        List<byte[]> rows = new ArrayList<>();
+        if (fragments.isEmpty()) {
+            LOG.warn("No fragment found for package {}", extractPackage);
+        } else {
+            LOG.debug("Got {} fragment(s) for package {}", fragments.size(), extractPackage);
+            rows = mergeFragments(fragments, numOfFragment);
+        }
+        return rows;
     }
 
     public List<byte[]> fetchODP(
@@ -390,11 +399,19 @@ public class ODPWrapper {
             String context,
             String odpName,
             String mode) throws JCoException {
-        String pointer =
-                openExtractionSession(subscriberType, subscriberName, subscriberProcess, context, odpName, mode);
-        List<byte[]> fragments = fetchODP(pointer, "");
+        List<FieldMeta> fieldMetas = getODPDetails(subscriberType, context, odpName).getThird();
+        int numOfFragment = getNumOfFragment(fieldMetas);
+        String pointer = openExtractionSession(
+                subscriberType,
+                subscriberName,
+                subscriberProcess,
+                context,
+                odpName,
+                mode);
+        List<byte[]> rows = fetchODP(pointer, numOfFragment);
+        LOG.info("Got {} row(s) for pointer {}", rows.size(), pointer);
         closeExtractionSession(pointer);
-        return fragments;
+        return rows;
     }
 
     public static List<byte[]> mergeFragments(List<byte[]> fragments, int n) {
