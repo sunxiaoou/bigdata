@@ -132,11 +132,12 @@ public class ODPDaemon {
     public static void main(String[] args) throws JCoException {
         ODPDaemon ODPDaemon = new ODPDaemon(
                 "myTest",
-                readProperties("ABAP_MS.jcoDestination"),
+                readProperties("ABAP_AS1.jcoDestination"),
                 "RODPS_REPL_TEST",
                 "TestRepository_DoesNotExist",
                 "TestDataFlow_DoesNotExist",
-                Arrays.asList("SLT~ODP01.FRUIT2", "SLT~ODP01.FRUIT3"));
+                Arrays.asList("SLT~ODP01.FRUIT2"));
+//                Arrays.asList("SLT~ODP01.FRUIT2", "SLT~ODP01.FRUIT3"));
         ODPDaemon.start();
         ODPDaemon.waitForStopSignal();
         ODPDaemon.stopAndWaitWorkers();

@@ -18,11 +18,12 @@ public class ODPWrapperTest {
     private static final Logger LOG = LoggerFactory.getLogger(ODPWrapperTest.class);
 
     private static final String subscriberType = "RODPS_REPL_TEST";
-    private static final String subscriber = "TestRepository_DoesNotExist";
-    private static final String subscription = "TestDataFlow_DoesNotExist";
+    private static final String subscriber = "intellij";
+    private static final String subscription = "tester";
     private static final String odpContext = "SLT~ODP01";
 //    private static final String odpName = "FRUIT2";
     private static final String odpName = "VALUATION";
+//    private static final String odpName = "BALHDR";
 
     private ODPWrapper odpWrapper;
 
@@ -43,8 +44,8 @@ public class ODPWrapperTest {
 
     @Test
     public void getODPList() throws JCoException {
-//        LOG.info("{}", odpWrapper.getODPList(subscriberType, odpContext, "FRUIT*"));
-        LOG.info("{}", odpWrapper.getODPList(subscriberType, odpContext, "VAL*"));
+        LOG.info("{}", odpWrapper.getODPList(subscriberType, odpContext, "FRUIT*"));
+//        LOG.info("{}", odpWrapper.getODPList(subscriberType, odpContext, "VAL*"));
     }
 
     @Test
@@ -63,47 +64,6 @@ public class ODPWrapperTest {
     @Test
     public void closeExtractionSession() throws JCoException {
         odpWrapper.closeExtractionSession("20241202052351");
-    }
-
-    @Test
-    public void registerODPCallback() throws JCoException {
-        odpWrapper.registerODPCallback(
-                subscriberType,
-                "tester",
-                "EN",
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                "sap01");
-    }
-
-    @Test
-    public void createODPSubscriber() throws JCoException {
-        odpWrapper.createODPSubscriber(
-                subscriberType,
-                "ELDCLNT150",
-                "EN",
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                "sap01",
-                "SAPABAP1");
-    }
-
-    @Test
-    public void getODPSubscriptions() throws JCoException {
-        odpWrapper.getODPSubscriptions(
-                subscriberType,
-                "",
-                "",
-                "",
-                "");
     }
 
     public void getODPCursors(String mode) throws JCoException {
@@ -197,7 +157,7 @@ public class ODPWrapperTest {
                 if (LOG.isDebugEnabled()) {
                     HexDump.hexDump(row);
                 }
-                LOG.info("row - {}", odpParser.parseRow2Json(row));
+                LOG.debug("row - {}", odpParser.parseRow2Json(row));
             }
         }
     }
@@ -209,6 +169,50 @@ public class ODPWrapperTest {
 
     @Test
     public void fetchODPDelta() throws Exception {
+        odpWrapper.resetODP(
+                subscriberType,
+                subscriber,
+                subscription,
+                odpContext,
+                odpName
+        );
         fetchODP("D");
+    }
+
+    @Test
+    public void preFetchODP() throws Exception {
+        odpWrapper.resetODP(
+                subscriberType,
+                subscriber,
+                subscription,
+                odpContext,
+                odpName
+        );
+        String pointer = odpWrapper.openExtractionSession(
+                subscriberType,
+                subscriber,
+                subscription,
+                odpContext,
+                odpName,
+                "D");
+        LOG.info("{}", odpWrapper.preFetchODP(pointer, odpName));
+        odpWrapper.closeExtractionSession(pointer);
+    }
+
+    @Test
+    public void preFetchAndFetchODP() throws Exception {
+        odpWrapper.resetODP(
+                subscriberType,
+                subscriber,
+                subscription,
+                odpContext,
+                odpName);
+        odpWrapper.preFetchAndFetchODP(
+                subscriberType,
+                subscriber,
+                subscription,
+                odpContext,
+                odpName,
+                "D");
     }
 }

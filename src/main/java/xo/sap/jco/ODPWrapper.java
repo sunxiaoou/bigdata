@@ -151,101 +151,10 @@ public class ODPWrapper {
                 parseFieldMeta(getTableFields(function, "ET_FIELDS")));
     }
 
-    private void setOptionalValue(JCoParameterList parameters, String key, String value) {
-        if (value != null && !value.isEmpty()) {
-            parameters.setValue(key, value);
-        }
-    }
-
     public static int getNumOfFragment(List<FieldMeta> fieldMetas) {
         int lenOfRow = fieldMetas.stream().mapToInt(FieldMeta::getOutputLength).sum();
         int n = lenOfRow / lenOfFragment;
         return lenOfRow % lenOfFragment == 0 ? n : n + 1;
-    }
-
-    public void getODPSubscriptions(
-            String subscriberType,
-            String subscriberName,
-            String subscriberProcess,
-            String context,
-            String odpName) throws JCoException {
-        JCoFunction function = destination.getRepository().getFunction("RODPS_REPL_ODP_GET_SUBSCR");
-        if (function == null) {
-            throw new RuntimeException("Function RODPS_REPL_ODP_GET_SUBSCR not found in SAP.");
-        }
-        JCoParameterList parameters = function.getImportParameterList();
-        setOptionalValue(parameters, "I_SUBSCRIBER_TYPE", subscriberType);
-        setOptionalValue(parameters, "I_SUBSCRIBER_NAME", subscriberName);
-        setOptionalValue(parameters, "I_SUBSCRIBER_PROCESS", subscriberProcess);
-        setOptionalValue(parameters, "I_CONTEXT", context);
-        setOptionalValue(parameters, "I_ODPNAME", odpName);
-        JCoTable subscriptions = function.getTableParameterList().getTable("ET_SUBSCRIPTIONS");
-        if (subscriptions.getNumRows() > 0) {
-            LOG.info("{}", subscriptions.toJSON());
-        }
-    }
-
-    public void registerODPCallback(
-            String subscriberType,
-            String subscriberName,
-            String langu,
-            String client,
-            String appServer,
-            String systemId,
-            String systemNo,
-            String userName,
-            String password,
-            String dbHost) throws JCoException {
-        JCoFunction function = destination.getRepository().getFunction("RODPS_REPL_ODP_SUBSCRIBER_NEW");
-        if (function == null) {
-            throw new RuntimeException("Function RODPS_REPL_ODP_SUBSCRIBER_NEW not found in SAP.");
-        }
-        JCoParameterList parameters = function.getImportParameterList();
-        parameters.setValue("I_SUBSCRIBER_TYPE", subscriberType);
-        parameters.setValue("I_SUBSCRIBER_NAME", subscriberName);
-        setOptionalValue(parameters, "I_SUBSCRIBER_LANGU", langu);
-        setOptionalValue(parameters, "I_SUBSCRIBER_CLIENT", client);
-        setOptionalValue(parameters, "I_SUBSCRIBER_CLIENT", client);
-        setOptionalValue(parameters, "I_SUBSCRIBER_APPLSERVER", appServer);
-        setOptionalValue(parameters, "I_SUBSCRIBER_SYSTEMID", systemId);
-        setOptionalValue(parameters, "I_SUBSCRIBER_SYSTEMNO", systemNo);
-        setOptionalValue(parameters, "I_SUBSCRIBER_USER_NAME", userName);
-        setOptionalValue(parameters, "I_SUBSCRIBER_PASSWORD", password);
-        setOptionalValue(parameters, "I_SUBSCRIBER_DBHOST", dbHost);
-        function.execute(destination);
-        printError(function);
-    }
-
-    public void createODPSubscriber(
-            String subscriberType,
-            String subscriberName,
-            String langu,
-            String client,
-            String appServer,
-            String systemId,
-            String systemNo,
-            String userName,
-            String password,
-            String dbHost,
-            String dbSys) throws JCoException {
-        JCoFunction function = destination.getRepository().getFunction("RODPS_REPL_ODP_SUBSCRIBER_NEW");
-        if (function == null) {
-            throw new RuntimeException("Function RODPS_REPL_ODP_SUBSCRIBER_NEW not found in SAP.");
-        }
-        JCoParameterList parameters = function.getImportParameterList();
-        parameters.setValue("I_SUBSCRIBER_TYPE", subscriberType);
-        parameters.setValue("I_SUBSCRIBER_NAME", subscriberName);
-        setOptionalValue(parameters, "I_SUBSCRIBER_LANGU", langu);
-        setOptionalValue(parameters, "I_SUBSCRIBER_CLIENT", client);
-        setOptionalValue(parameters, "I_SUBSCRIBER_APPLSERVER", appServer);
-        setOptionalValue(parameters, "I_SUBSCRIBER_SYSTEMID", systemId);
-        setOptionalValue(parameters, "I_SUBSCRIBER_SYSTEMNO", systemNo);
-        setOptionalValue(parameters, "I_SUBSCRIBER_USER_NAME", userName);
-        setOptionalValue(parameters, "I_SUBSCRIBER_PASSWORD", password);
-        setOptionalValue(parameters, "I_SUBSCRIBER_DBHOST", dbHost);
-        setOptionalValue(parameters, "I_SUBSCRIBER_DBSYS", dbSys);
-        function.execute(destination);
-        printError(function);
     }
 
     public List<Map<String, String>> getODPCursors(
@@ -366,18 +275,82 @@ public class ODPWrapper {
         }
     }
 
-    private void getMeta(JCoTable jCoTable) {
-        System.out.println("Row Data:");
-        JCoRecordMetaData metaData = (JCoRecordMetaData) jCoTable.getMetaData();
-        for (int i = 0; i < metaData.getFieldCount(); i++) {
-            String fieldName = metaData.getName(i);         // 字段名称
-            String fieldType = metaData.getTypeAsString(i); // 字段类型
-            String fieldValue = jCoTable.getString(fieldName); // 获取字段值（这里用字符串读取）
-
-            System.out.println("  Field: " + fieldName);
-            System.out.println("    Type: " + fieldType);
-            System.out.println("    Value: " + fieldValue);
+    public List<String> preFetchODP(String pointer, String odpName) throws JCoException {
+        List<String> newPackages = new ArrayList<>();
+        List<String> returnMessages = new ArrayList<>();
+        for (int i = 0; ; i++) {
+            JCoFunction function = destination.getRepository().getFunction("RODPS_REPL_ODP_PREFETCH");
+            if (function == null) {
+                throw new RuntimeException("Function RODPS_REPL_ODP_PREFETCH not found in SAP.");
+            }
+            function.getImportParameterList().setValue("I_POINTER", pointer);
+            function.getImportParameterList().setValue("I_PACKAGE", String.format("%s_%04d", odpName, i));
+//            function.getImportParameterList().setValue("I_MAXPACKAGESIZE", 256);
+            function.execute(destination);
+            JCoTable etReturn = function.getTableParameterList().getTable("ET_RETURN");
+            if (!etReturn.isEmpty()) {
+                for (int j = 0; j < etReturn.getNumRows(); j++) {
+                    etReturn.setRow(j);
+                    returnMessages.add(etReturn.getString("MESSAGE"));
+                    LOG.info(etReturn.getString("MESSAGE"));
+                }
+            }
+            boolean noMoreData = "X".equals(function.getExportParameterList().getString("E_NO_MORE_DATA"));
+            if (!returnMessages.isEmpty() || noMoreData) {
+                break;
+            }
+            String packageName = function.getExportParameterList().getString("E_PACKAGE");
+            newPackages.add(packageName);
+            LOG.info("E_PACKAGE={}", packageName);
         }
+        return newPackages;
+    }
+
+    public void preFetchAndFetchODP(
+            String subscriberType,
+            String subscriberName,
+            String subscriberProcess,
+            String context,
+            String odpName,
+            String mode) throws JCoException {
+        String pointer =
+                openExtractionSession(subscriberType, subscriberName, subscriberProcess, context, odpName, mode);
+        List<String> packages = preFetchODP(pointer, odpName);
+        List<FieldMeta> fieldMetas = getODPDetails(subscriberType, context, odpName).getThird();
+        int numOfFragment = getNumOfFragment(fieldMetas);
+        for (String extractPackage : packages) {
+            LOG.info("Fetching package: {}", extractPackage);
+
+            JCoFunction function = destination.getRepository().getFunction("RODPS_REPL_ODP_FETCH");
+            if (function == null) {
+                throw new RuntimeException("Function RODPS_REPL_ODP_FETCH not found in SAP.");
+            }
+            function.getImportParameterList().setValue("I_POINTER", pointer);
+            function.getImportParameterList().setValue("I_PACKAGE", extractPackage);
+            function.getImportParameterList().setValue("I_REDO", "X");
+            function.execute(destination);
+            JCoTable table = function.getTableParameterList().getTable("ET_DATA");
+            if (table.isEmpty()) {
+                break;
+            }
+            List<byte[]> fragments = new ArrayList<>();
+            do {
+                for (JCoField field : table) {
+                    if ("DATA".equals(field.getName())) {
+                        fragments.add(field.getByteArray());
+                        break;
+                    }
+                }
+            } while (table.nextRow());
+            if (!fragments.isEmpty()) {
+                LOG.info("Got {} fragment(s) for package {}", fragments.size(), extractPackage);
+                List<byte[]> rows = mergeFragments(fragments, numOfFragment);
+                LOG.info("as {} row(s)", rows.size());
+            } else {
+                LOG.warn("No data found for package {}", extractPackage);
+            }
+        }
+        closeExtractionSession(pointer);
     }
 
     private List<byte[]> fetchODP(String pointer, String extractPackage) throws JCoException {
