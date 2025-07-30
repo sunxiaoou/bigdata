@@ -9,7 +9,8 @@ TOPIC_NAME=$3
 
 # 检查参数是否提供
 if [ -z "$KAFKA_HOSTNAME" ]; then
-  echo "Usage: $(basename $0) listTopics|showTopic|createTopic|deleteTopic|sendRecord|pollRecords hostname [topicName]"
+  echo "Usage: $(basename $0) listTopics|showTopic|createTopic|deleteTopic|sendRecord|countLag|pollRecords hostname \
+[topicName]"
   exit 1
 fi
 
@@ -73,6 +74,20 @@ EOF
     echo "Record sent to $TOPIC_NAME with key=$KEY and value=$VALUE."
     ;;
 
+  countLag)
+    if [ -z "$TOPIC_NAME" ]; then
+      echo "Usage: $0 hostname countLag topicName"
+      exit 1
+    fi
+    echo "Checking lag for consumer group '$USER' on topic '$TOPIC_NAME' at $KAFKA_HOSTNAME:$KAFKA_PORT"
+    $KAFKA_BIN/kafka-consumer-groups.sh --bootstrap-server $KAFKA_HOSTNAME:$KAFKA_PORT \
+      --describe --group $USER 2>/dev/null | \
+      awk -v topic="$TOPIC_NAME" '
+        $1 == topic { lag += $6 }
+        END { print "Total lag on topic \"" topic "\":", lag }
+      '
+    ;;
+
   pollRecords)
     # 从指定topic读取记录
     if [ -z "$TOPIC_NAME" ]; then
@@ -81,7 +96,7 @@ EOF
     fi
     # Do we need --max-messages 10 ?
     $KAFKA_BIN/kafka-console-consumer.sh --bootstrap-server $KAFKA_HOSTNAME:$KAFKA_PORT --topic $TOPIC_NAME \
-        --property "print.timestamp=true" --property "print.key=true" --from-beginning |
+        --group $USER --property "print.timestamp=true" --property "print.key=true" |
       while read -r LINE; do
         ts=$(echo $LINE | awk '{print $1}' | awk -F: '{print $2}')
         DS=$(date -r $(($ts / 1000)) "+%y%m%d-%H%M%S")
@@ -92,7 +107,7 @@ EOF
     ;;
 
   *)
-    echo "Invalid command. Usage: $0 {listTopics|showTopic|createTopic|deleteTopic|sendRecord|pollRecords}"
+    echo "Invalid command. Usage: $0 {listTopics|showTopic|createTopic|deleteTopic|sendRecord|countLag|pollRecords}"
     exit 1
     ;;
 esac

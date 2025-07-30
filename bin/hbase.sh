@@ -18,7 +18,7 @@ strt() {
     rm -f logs/*
     sbin/start-dfs.sh
 
-    if [ $AUTH_TYPE = "kerberos" ]; then
+    if [ $AUTH_TYPE == "kerberos" ]; then
         echo "Kerberos enabled. Doing kinit..."
         kinit -kt $KERB5_HOME/keytabs/hadoop.keytab yarn/$HOSTNAME@EXAMPLE.COM
     fi
@@ -73,6 +73,6 @@ then
 fi
 
 HADOOP_MAJOR=$(echo "$HADOOP_HOME" | sed -n 's/.*\-\([0-9]\+\).*/\1/p')
-AUTH_TYPE=$(xmllint --xpath "string(//property[name='hadoop.security.authentication']/value)" $HADOOP_HOME/etc/hadoop/core-site.xml 2>/dev/null)
+AUTH_TYPE=$(hbase org.apache.hadoop.hbase.util.HBaseConfTool hadoop.security.authentication)
 echo $1
 $1

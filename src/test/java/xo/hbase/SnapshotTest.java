@@ -15,10 +15,10 @@ public class SnapshotTest {
     public void listTableSnapshots() {
         String[] args = {
                 "--action", "list",
-                "--db", "hb_c3",
-                "--zPrincipal", "zookeeper/centos3@EXAMPLE.COM",
-                "--principal", "hbase/centos3@EXAMPLE.COM",
-                "--keytab", "hb_c3/hadoop.keytab",
+                "--db", "hb_u",
+                "--zPrincipal", "zookeeper/ubuntu@EXAMPLE.COM",
+                "--principal", "hbase/ubuntu@EXAMPLE.COM",
+                "--keytab", "hb_u/hadoop.keytab",
                 "--table", "manga:fruit"};
         Snapshot.main(args);
     }
@@ -45,6 +45,18 @@ public class SnapshotTest {
     }
 
     @Test
+    public void createSnapshot2() {
+        String[] args = {
+                "--action", "create",
+                "--db", "hb_u",
+                "--zPrincipal", "zookeeper/ubuntu@EXAMPLE.COM",
+                "--principal", "hbase/ubuntu@EXAMPLE.COM",
+                "--keytab", "hb_u/hadoop.keytab",
+                "--table", "manga:fruit"};
+        Snapshot.main(args);
+    }
+
+    @Test
     public void deleteSnapshot() {
         String[] args = {
                 "--action", "delete",
@@ -54,21 +66,22 @@ public class SnapshotTest {
     }
 
     @Test
-    public void deleteAllSnapshots() {
+    public void deleteSnapshots2() {
         String[] args = {
-                "--action", "deleteAll",
-                "--db", "hb_c2"};
+                "--action", "delete",
+                "--db", "hb_u",
+                "--zPrincipal", "zookeeper/ubuntu@EXAMPLE.COM",
+                "--principal", "hbase/ubuntu@EXAMPLE.COM",
+                "--keytab", "hb_u/hadoop.keytab",
+                "--table", "manga:fruit"};
         Snapshot.main(args);
     }
 
     @Test
-    public void deleteAllSnapshots2() {
+    public void deleteAllSnapshots() {
         String[] args = {
                 "--action", "deleteAll",
-                "--zPrincipal", "zookeeper/centos3@EXAMPLE.COM",
-                "--principal", "hbase/centos3@EXAMPLE.COM",
-                "--keytab", "hb_c3/hadoop.keytab",
-                "--db", "hb_c3"};
+                "--db", "hb_c2"};
         Snapshot.main(args);
     }
 

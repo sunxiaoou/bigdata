@@ -222,6 +222,10 @@ public class HBase implements AutoCloseable {
         return fileStatus.getOwner();
     }
 
+    public String getVersion() throws IOException {
+        return admin.getClusterMetrics().getHBaseVersion();
+    }
+
     public List<String> listNameSpaces() throws IOException {
         List<String> spaces = new ArrayList<>();
         NamespaceDescriptor[] descriptors = admin.listNamespaceDescriptors();
@@ -710,6 +714,12 @@ public class HBase implements AutoCloseable {
         if (!snapshotExists(snapshotName)) {
             LOG.error("snapshot({}) doesn't exist", snapshotName);
             return;
+        }
+        Pair<String, String> pair = tableName(tableName);
+        String namespace = pair.getFirst();
+        if (!listNameSpaces().contains(namespace)) {
+            LOG.warn("namespace({}) doesn't exist, creating...", namespace);
+            createNamespace(namespace);
         }
         TableName table = TableName.valueOf(tableName);
         if (admin.tableExists(table)) {
