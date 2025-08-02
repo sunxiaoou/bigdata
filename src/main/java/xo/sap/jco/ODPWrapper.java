@@ -5,6 +5,7 @@ import org.apache.commons.cli.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import xo.utility.HexDump;
+import xo.utility.Pair;
 import xo.utility.Triple;
 
 import java.util.*;
@@ -276,6 +277,7 @@ public class ODPWrapper {
     }
 
     public List<String> preFetchODP(String pointer, String odpName) throws JCoException {
+        LOG.info("Pre-fetching pointer {} ...", pointer);
         List<String> packages = new ArrayList<>();
         for (int i = 0; ; i++) {
             JCoFunction function = destination.getRepository().getFunction("RODPS_REPL_ODP_PREFETCH");
@@ -283,7 +285,7 @@ public class ODPWrapper {
                 throw new RuntimeException("Function RODPS_REPL_ODP_PREFETCH not found in SAP.");
             }
             function.getImportParameterList().setValue("I_POINTER", pointer);
-            function.getImportParameterList().setValue("I_PACKAGE", String.format("%s_%04d", odpName, i));
+//            function.getImportParameterList().setValue("I_PACKAGE", String.format("%s_%04d", odpName, i));
 //            function.getImportParameterList().setValue("I_MAXPACKAGESIZE", 256);
             function.execute(destination);
             JCoTable etReturn = function.getTableParameterList().getTable("ET_RETURN");
@@ -300,7 +302,7 @@ public class ODPWrapper {
             }
             String packageName = function.getExportParameterList().getString("E_PACKAGE");
             packages.add(packageName);
-            LOG.info("E_PACKAGE={}", packageName);
+            LOG.info("Package{}={}",  String.format("%04d", i + 1), packageName);
         }
         return packages;
     }
@@ -335,18 +337,17 @@ public class ODPWrapper {
                         }
                     }
                 } while (table.nextRow());
-                if (fragments.isEmpty()) {
-                    LOG.warn("No fragment found for package {}", extractPackage);
-                } else {
+                if (!fragments.isEmpty()) {
                     LOG.debug("Got {} fragment(s) for package {}", fragments.size(), extractPackage);
                     rows = mergeFragments(fragments, numOfFragment);
+                    LOG.info("Got {} row(s) for package {}", rows.size(), extractPackage);
                 }
             }
         }
         return rows;
     }
 
-    public List<byte[]> fetchODP(String pointer, int numOfFragment) throws JCoException {
+    public Pair<String, List<byte[]>> fetchODP(String pointer, int numOfFragment) throws JCoException {
         List<byte[]> fragments = new ArrayList<>();
         String extractPackage = "";
         while (true) {
@@ -383,16 +384,15 @@ public class ODPWrapper {
             }
         }
         List<byte[]> rows = new ArrayList<>();
-        if (fragments.isEmpty()) {
-            LOG.warn("No fragment found for package {}", extractPackage);
-        } else {
-            LOG.debug("Got {} fragment(s) for package {}", fragments.size(), extractPackage);
+        if (!fragments.isEmpty()) {
+            LOG.debug("Got {} fragment(s) for pointer {}", fragments.size(), pointer);
             rows = mergeFragments(fragments, numOfFragment);
+            LOG.info("Got {} row(s) for pointer {}", rows.size(), pointer);
         }
-        return rows;
+        return new Pair<>(pointer + "-" + extractPackage, rows);
     }
 
-    public List<byte[]> fetchODP(
+    public Pair<String, List<byte[]>> fetchODP(
             String subscriberType,
             String subscriberName,
             String subscriberProcess,
@@ -408,10 +408,9 @@ public class ODPWrapper {
                 context,
                 odpName,
                 mode);
-        List<byte[]> rows = fetchODP(pointer, numOfFragment);
-        LOG.info("Got {} row(s) for pointer {}", rows.size(), pointer);
+        Pair<String, List<byte[]>> pair = fetchODP(pointer, numOfFragment);
         closeExtractionSession(pointer);
-        return rows;
+        return pair;
     }
 
     public static List<byte[]> mergeFragments(List<byte[]> fragments, int n) {
@@ -507,19 +506,16 @@ public class ODPWrapper {
                             cmd.getOptionValue("subscriberType"),
                             cmd.getOptionValue("contextName"),
                             odpName).getThird();
-                    int numOfFragment = getNumOfFragment(fieldMetas);
                     ODPParser odpParser = new ODPParser(odpName, fieldMetas);
-                    List<byte[]> fragments = odpWrapper.fetchODP(
+                    Pair<String, List<byte[]>> pair = odpWrapper.fetchODP(
                             cmd.getOptionValue("subscriberType"),
                             cmd.getOptionValue("subscriberName"),
                             cmd.getOptionValue("subscriberProcess"),
                             cmd.getOptionValue("contextName"),
                             odpName,
                             cmd.getOptionValue("extractMode"));
-                    if (!fragments.isEmpty()) {
-                        LOG.info("got {} fragment(s)", fragments.size());
-                        List<byte[]> rows = mergeFragments(fragments, numOfFragment);
-                        LOG.info("as {} row(s)", rows.size());
+                    List<byte[]> rows = pair.getSecond();
+                    if (!rows.isEmpty()) {
                         for (byte[] row : rows) {
                             if (LOG.isDebugEnabled()) {
                                 HexDump.hexDump(row);

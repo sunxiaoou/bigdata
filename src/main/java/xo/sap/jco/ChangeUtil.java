@@ -2,7 +2,6 @@ package xo.sap.jco;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import xo.hbase.OneRowChange;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
@@ -45,8 +44,8 @@ public class ChangeUtil {
         abapToSqlTypeMap.put("DATS", Types.DATE);
         abapToSqlTypeMap.put("DEC", Types.DECIMAL);
         abapToSqlTypeMap.put("FLTP", Types.DOUBLE);
-        abapToSqlTypeMap.put("INT1", Types.TINYINT);
-        abapToSqlTypeMap.put("INT2", Types.SMALLINT);
+        abapToSqlTypeMap.put("INT1", Types.INTEGER);
+        abapToSqlTypeMap.put("INT2", Types.INTEGER);
         abapToSqlTypeMap.put("INT4", Types.INTEGER);
         abapToSqlTypeMap.put("INT8", Types.BIGINT);
         abapToSqlTypeMap.put("LANG", Types.VARCHAR);
@@ -117,7 +116,12 @@ public class ChangeUtil {
     private static Date parseDate(String dateStr) {
         if (dateStr.length() == 8) {
             String formatted = dateStr.substring(0, 4) + "-" + dateStr.substring(4, 6) + "-" + dateStr.substring(6, 8);
-            return Date.valueOf(formatted);
+            try {
+                return Date.valueOf(formatted);
+            } catch (IllegalArgumentException e) {
+                LOG.warn("Date({}) is invalid", formatted);
+                return null;
+            }
         }
         throw new IllegalArgumentException("Invalid date format: " + dateStr);
     }
@@ -136,11 +140,12 @@ public class ChangeUtil {
         }
         rawValue = rawValue.trim(); // Trim spaces
         try {
+            if ((Types.INTEGER == sqlType || Types.BIGINT == sqlType || Types.DECIMAL == sqlType)
+                    && rawValue.endsWith("-")) {
+                rawValue = "-" + rawValue.substring(0, rawValue.length() - 1);
+            }
+
             switch (sqlType) {
-                case Types.TINYINT:
-                    return Byte.parseByte(rawValue); // INT1
-                case Types.SMALLINT:
-                    return Short.parseShort(rawValue); // INT2
                 case Types.INTEGER:
                     return Integer.parseInt(rawValue); // INT4
                 case Types.BIGINT:
@@ -167,6 +172,31 @@ public class ChangeUtil {
         }
     }
 
+    private static Serializable empty(int sqlType) {
+        switch (sqlType) {
+            case Types.INTEGER:    // INT4
+            case Types.BIGINT:     // INT8
+                return 0;  // Default for numeric types
+            case Types.DOUBLE:     // FLTP
+                return 0.0;
+            case Types.DECIMAL:    // CURR, DEC
+                return BigDecimal.ZERO;  // Default for decimal types
+
+            case Types.DATE:       // DATS (YYYYMMDD)
+            case Types.TIME:       // TIMS (HHMMSS)
+            case Types.BINARY:     // RAW
+            case Types.BLOB:
+                return null;  // Default for binary types is null (or empty byte array)
+
+            case Types.VARCHAR:    // CHAR, NUMC, STRING, etc.
+            case Types.CLOB:
+                return "";  // Default for string types is empty string
+
+            default:
+                return null;  // For unknown types, return null
+        }
+    }
+
     public static OneRowChange odpRow2OneRowChange(
             byte[] odpRow,
             String odpContext,
@@ -177,24 +207,37 @@ public class ChangeUtil {
         change.setTableName(odpName);
         change.setTableId(-1);
 
-        ArrayList<OneRowChange.ColumnSpec> specs = change.getColumnSpec();
+        ArrayList<OneRowChange.ColumnSpec> specs = new ArrayList<>();
         ArrayList<OneRowChange.ColumnVal> values = new ArrayList<>();
-        change.getColumnValues().add(values);
+        ArrayList<OneRowChange.ColumnVal> zeros = new ArrayList<>();
         int offset = 0;
+        StringBuilder sb = new StringBuilder();
+        OneRowChange.ActionType actionType = null;
         for (int i = 0; i < fieldMetas.size(); i ++) {
+            LOG.debug("i - ({})", i);
             FieldMeta fieldMeta = fieldMetas.get(i);
             int sqlType = abapTypeMapping(fieldMeta.getType());
             int length = fieldMeta.getOutputLength();
             if (Types.VARCHAR == sqlType || Types.CLOB == sqlType) {
                 length = getUtf8BytesLength(odpRow, offset, length);
             }
+            if (offset + length > odpRow.length) {
+                LOG.error("offset({}) + length({}) > odpRow.length({})", offset, length, odpRow.length);
+                break;
+            }
             String rawValue = new String(odpRow, offset, length, StandardCharsets.UTF_8).trim();
             offset += length;
             Serializable serializable = convertValue(rawValue, sqlType);
             String name = fieldMeta.getName();
-            if ("ODQ_CHANGEMODE".equalsIgnoreCase(name)) {
-                change.setAction(actionMapping(((String) serializable).charAt(0)));
+
+            if ("ODQ_CHANGEMODE".equals(name)) {
+                actionType = actionMapping(((String) serializable).charAt(0));
+                continue;
             }
+            if ("ODQ_ENTITYCNTR".equals(name)) {
+                continue;
+            }
+
             OneRowChange.ColumnSpec spec = change.new ColumnSpec();
             spec.setIndex(i + 1);
             spec.setName(name);
@@ -203,7 +246,42 @@ public class ChangeUtil {
             OneRowChange.ColumnVal value = change.new ColumnVal();
             value.setValue(serializable);
             values.add(value);
+            OneRowChange.ColumnVal zero = change.new ColumnVal();
+            if (fieldMeta.getKeyFlag()) {
+                zero.setValue(serializable);
+                if (sb.length() > 0) {
+                    sb.append(",");
+                }
+                sb.append(name);
+            } else {
+                zero.setValue(empty(sqlType));
+            }
+            zeros.add(zero);
         }
+
+        change.setAction(actionType);
+        switch (actionType.name()) {
+            case "INSERT":
+                change.setColumnSpec(specs);
+                change.getColumnValues().add(values);
+                break;
+            case "DELETE":
+                change.setKeySpec(specs);
+                change.getKeyValues().add(values);
+                break;
+            case "UPDATE":
+                change.setColumnSpec(specs);
+                change.getColumnValues().add(values);
+                change.setKeySpec(specs);
+                change.getKeyValues().add(zeros);
+                break;
+        }
+
+        if (sb.length() > 0) {
+            change.setOnlyPrimaryKeyNames(sb.toString());
+            change.setPrimaryKeyName(sb.toString());
+        }
+
         return change;
     }
 }

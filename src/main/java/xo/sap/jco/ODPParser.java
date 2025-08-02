@@ -5,6 +5,7 @@ import com.alibaba.fastjson.util.TypeUtils;
 import javassist.*;
 
 import java.lang.reflect.Field;
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
@@ -31,6 +32,9 @@ public class ODPParser {
                 case "INT4":
                     fieldType = "int";
                     break;
+                case "INT8":
+                    fieldType = "long";
+                    break;
                 case "CHAR":
                     fieldType = "java.lang.String";
                     break;
@@ -38,7 +42,7 @@ public class ODPParser {
                     fieldType = "double";
                     break;
                 case "DEC":
-                    fieldType = "long";
+                    fieldType = "java.math.BigDecimal";
                     break;
                 default:
                     fieldType = "java.lang.String"; // Default to String for unknown types
@@ -121,14 +125,22 @@ public class ODPParser {
             Field field = pojoClass.getDeclaredField(fieldName);
             field.setAccessible(true);
 
+            if ("INT4".equalsIgnoreCase(fieldType) || "INT8".equalsIgnoreCase(fieldType) || "DEC".equalsIgnoreCase(fieldType)) {
+                if (rawValue.endsWith("-")) {
+                    rawValue = "-" + rawValue.substring(0, rawValue.length() - 1);
+                }
+            }
             if ("INT4".equalsIgnoreCase(fieldType)) {
                 field.set(instance, Integer.parseInt(rawValue));
-            } else if ("CHAR".equalsIgnoreCase(fieldType)) {
+            } else if ("INT8".equalsIgnoreCase(fieldType)) {
+                field.set(instance, Long.parseLong(rawValue));
+            }
+            else if ("CHAR".equalsIgnoreCase(fieldType)) {
                 field.set(instance, rawValue);
             } else if ("FLTP".equalsIgnoreCase(fieldType)) {
                 field.set(instance, Double.parseDouble(rawValue));
             } else if ("DEC".equalsIgnoreCase(fieldType)) {
-                field.set(instance, Long.parseLong(rawValue));
+                field.set(instance, new BigDecimal(rawValue));
             } else {
                 field.set(instance, rawValue); // Default to String for unknown types
             }

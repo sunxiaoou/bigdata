@@ -7,6 +7,7 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import xo.utility.HexDump;
+import xo.utility.Pair;
 import xo.utility.Triple;
 
 import java.util.List;
@@ -21,16 +22,17 @@ public class ODPWrapperTest {
     private static final String subscriber = "intellij";
     private static final String subscription = "tester";
     private static final String odpContext = "SLT~ODP01";
-//    private static final String odpName = "FRUIT2";
+    private static final String odpName = "MYTYPE";
+//    private static final String odpName = "FRUIT4";
 //    private static final String odpName = "VALUATION";
-    private static final String odpName = "BALHDR";
+//    private static final String odpName = "BALHDR";
 
     private ODPWrapper odpWrapper;
 
     @Before
     public void setUp() throws Exception {
+//        odpWrapper = new ODPWrapper(DestinationConcept.SomeSampleDestinations.ABAP_AS1);
         odpWrapper = new ODPWrapper(DestinationConcept.SomeSampleDestinations.ABAP_AS1);
-//        odpWrapper = new ODPWrapper(DestinationConcept.SomeSampleDestinations.ABAP_MS);
     }
 
     @After
@@ -137,28 +139,23 @@ public class ODPWrapperTest {
 
     @Test
     public void fetchFull() throws Exception {
-        List<FieldMeta> fieldMetas = odpWrapper.getODPDetails(
-                subscriberType,
-                odpContext,
-                odpName).getThird();
-        int numOfFragment = ODPWrapper.getNumOfFragment(fieldMetas);
+        List<FieldMeta> fieldMetas;
+        fieldMetas = odpWrapper.getODPDetails(subscriberType, odpContext, odpName).getThird();
         ODPParser odpParser = new ODPParser(odpName, fieldMetas);
-        List<byte[]> fragments = odpWrapper.fetchODP(
+        Pair<String, List<byte[]>> pair = odpWrapper.fetchODP(
                 subscriberType,
                 subscriber,
                 subscription,
                 odpContext,
                 odpName,
                 "F");
-        if (!fragments.isEmpty()) {
-            LOG.info("got {} fragment(s)", fragments.size());
-            List<byte[]> rows = ODPWrapper.mergeFragments(fragments, numOfFragment);
-            LOG.info("as {} row(s)", rows.size());
+        List<byte[]> rows = pair.getSecond();
+        if (!rows.isEmpty()) {
             for (byte[] row : rows) {
                 if (LOG.isDebugEnabled()) {
                     HexDump.hexDump(row);
                 }
-                LOG.debug("row - {}", odpParser.parseRow2Json(row));
+                LOG.info("row - {}", odpParser.parseRow2Json(row));
             }
         }
     }
@@ -198,11 +195,21 @@ public class ODPWrapperTest {
                 odpContext,
                 odpName,
                 "D");
-        List<FieldMeta> fieldMetas = odpWrapper.getODPDetails(subscriberType, odpContext, odpName).getThird();
+        List<FieldMeta> fieldMetas;
+        fieldMetas = odpWrapper.getODPDetails(subscriberType, odpContext, odpName).getThird();
+        ODPParser odpParser = new ODPParser(odpName, fieldMetas);
         int numOfFragment = ODPWrapper.getNumOfFragment(fieldMetas);
         List<String> packages = odpWrapper.preFetchODP(pointer, odpName);
         for (String extractPackage : packages) {
             List<byte[]> rows = odpWrapper.fetchODP(pointer, extractPackage, numOfFragment);
+            if (!rows.isEmpty()) {
+                for (byte[] row : rows) {
+//                    if (LOG.isDebugEnabled()) {
+                        HexDump.hexDump(row);
+//                    }
+                    LOG.info("row - {}", odpParser.parseRow2Json(row));
+                }
+            }
             LOG.info("Got {} row(s) for package {}", rows.size(), extractPackage);
         }
         odpWrapper.closeExtractionSession(pointer);

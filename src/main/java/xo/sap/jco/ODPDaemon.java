@@ -3,6 +3,7 @@ package xo.sap.jco;
 import com.sap.conn.jco.JCoException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import xo.utility.Pair;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -51,23 +52,22 @@ public class ODPDaemon {
                     context,
                     queue
             );
-            List<FieldMeta> fieldMetas = odpWrapper.getODPDetails(
-                    subscriberType,
-                    context,
-                    queue).getThird();
+            List<FieldMeta> fieldMetas;
+            fieldMetas= odpWrapper.getODPDetails(subscriberType, context, queue).getThird();
             ODPParser odpParser = new ODPParser(queue, fieldMetas);
             while (running) {
                 try {
-                    List<byte[]> rows = odpWrapper.fetchODP(
+                    Pair<String, List<byte[]>> pair = odpWrapper.fetchODP(
                             subscriberType,
                             subscriberName,
                             subscriberProcess,
                             context,
                             queue,
                             "D");
+                    List<byte[]> rows = pair.getSecond();
                     if (!rows.isEmpty()) {
                         for (byte[] rowData : rows) {
-                            //                        HexDump.hexDump(rowData);
+                            // HexDump.hexDump(rowData);
                             LOG.info("row - {}", odpParser.parseRow2Json(rowData));
                         }
                     } else {
