@@ -4,6 +4,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
@@ -18,7 +19,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
 public class EntryConvertTest {
     private static final Logger LOG = LoggerFactory.getLogger(EntryConvertTest.class);
@@ -93,5 +94,38 @@ public class EntryConvertTest {
     public void entry2Change() {
         OneRowChange change = ChangeUtil.entry2OneRowChange(entry);
         System.out.println(change);
+    }
+
+    @Test
+    public void testToHBasePut() {
+        OneRowChange orc = new OneRowChange();
+        orc.setSchemaName("manga");
+        orc.setTableName("fruit");
+        orc.setAction(OneRowChange.ActionType.INSERTONDUP);
+        orc.setTableId(-1);
+
+        ArrayList<OneRowChange.ColumnSpec> specs = new ArrayList<>();
+        specs.add(orc.new ColumnSpec("ROW", 1, 0, 0, null, false));
+        specs.add(orc.new ColumnSpec("cf.name", 2, java.sql.Types.VARBINARY, 0, null, false));
+        specs.add(orc.new ColumnSpec("cf.price", 3, java.sql.Types.VARBINARY, 0, null, false));
+        orc.setColumnSpec(specs);
+
+        ArrayList<OneRowChange.ColumnVal> vals = new ArrayList<>();
+        OneRowChange.ColumnVal val = orc.new ColumnVal();
+        val.setValue("107"); // ROW
+        vals.add(val);
+        val = orc.new ColumnVal();
+        val.setValue("🍐"); // cf.name
+        vals.add(val);
+        val = orc.new ColumnVal();
+        val.setValue("115"); // cf.price
+        vals.add(val);
+        ArrayList<ArrayList<OneRowChange.ColumnVal>> colVals = new ArrayList<>();
+        colVals.add(vals);
+        orc.setColumnValues(colVals);
+        Put put = ChangeUtil.toHBasePut(orc);
+        assertArrayEquals("107".getBytes(), put.getRow());
+        assertTrue(put.has("cf".getBytes(), "name".getBytes(), "🍐".getBytes()));
+        assertTrue(put.has("cf".getBytes(), "price".getBytes(), "115".getBytes()));
     }
 }

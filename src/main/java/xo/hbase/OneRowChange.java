@@ -68,6 +68,28 @@ public class OneRowChange implements Serializable , Cloneable
             this.signed = true;
             this.blob = false;
         }
+
+        public ColumnSpec(String name, int index, int type, int length, String typeDescription, boolean notNull)
+        {
+            this.index = index;
+            this.name = name;
+            this.type = type;
+            this.length = length;
+            this.notNull = notNull;
+            this.signed = true;
+            this.blob = false;
+            this.typeDescription = typeDescription;
+        }
+
+        {
+            this.name = null;
+            this.type = java.sql.Types.NULL;
+            this.length = 0;
+            this.notNull = false;
+            this.signed = true;
+            this.blob = false;
+        }
+
         public ColumnSpec(ColumnSpec spec)
         {
             this();
@@ -479,5 +501,25 @@ public class OneRowChange implements Serializable , Cloneable
         repl.setStartRowNo(this.startRowNo);
         repl.setEndRowNo(this.endRowNo);
         return repl;
-    }   
+    }
+
+    @Override
+    public String toString() {
+        return "OneRowChange{" +
+                "schemaName='" + schemaName + '\'' +
+                ", tableName='" + tableName + '\'' +
+                ", priName='" + priName + '\'' +
+                ", onlyPrimaryKeyNames='" + onlyPrimaryKeyNames + '\'' +
+                ", action=" + action +
+                ", keySpec=" + keySpec +
+                ", columnSpec=" + columnSpec +
+                ", keyValues=" + keyValues +
+                ", columnValues=" + columnValues +
+                ", tableId=" + tableId +
+                ", startRowNo=" + startRowNo +
+                ", endRowNo=" + endRowNo +
+                ", isAuditTable4DMLTrack=" + isAuditTable4DMLTrack +
+                ", baseTableName='" + baseTableName + '\'' +
+                '}';
+    }
 }
