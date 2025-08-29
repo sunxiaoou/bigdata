@@ -1,48 +1,5 @@
 #! /bin/sh
 
-put() {
-psql -h$host $db -U$user << EOF
-    INSERT INTO fruit VALUES (101,'🍉',800),(102,'🍓',150),(103,'🍎',120),(104,'🍋',200),(105,'🍊',115),(106,'🍌',110)
-EOF
-}
-
-add() {
-psql -h$host $db -U$user << EOF
-    INSERT INTO fruit VALUES (107,'🍐',115);
-EOF
-}
-
-update() {
-psql -h$host $db -U$user << EOF
-    UPDATE fruit SET price = price + 1 WHERE fruit_id = 107
-EOF
-}
-
-delete() {
-psql -h$host $db -U$user << EOF
-    DELETE FROM fruit WHERE fruit_id = 107
-EOF
-}
-
-count() {
-psql -h$host $db -U$user << EOF
-    SELECT COUNT(*) FROM $1;
-EOF
-}
-
-scan() {
-psql -h$host $db -U$user << EOF
-    SELECT * FROM $1
-EOF
-}
-
-truncate()
-{
-psql -h$host $db -U$user << EOF
-    TRUNCATE TABLE $1;
-EOF
-}
-
 run() {
     op=$1
     host=$2
@@ -59,40 +16,69 @@ run() {
     case $op in
     "put")
         if [ "fruit" = $table ]; then
-            put
+            data="(101,'🍉',800),(102,'🍓',150),(103,'🍎',120),(104,'🍋',200),(105,'🍊',115),(106,'🍌',110)"
+        elif [ "types" = $table ]; then
+            data="(1, 1234567890123, 3.14159, 12345.67, '2025-07-31 12:34:56'),(2, 9876543210987, 2.71828, 76543.21, '2024-12-31 23:59:59')"
         else
-            echo "Can only put to \"fruit\""
+            echo "Can only put to \"fruit\" or \"types\""
+            exit 1
         fi
+psql -h$host $db -U$user << EOF
+    INSERT INTO $table VALUES $data;
+EOF
         ;;
     "add")
         if [ "fruit" = $table ]; then
-            add
+            data="(107,'🍐',115)"
+        elif [ "types" = $table ]; then
+            data="(-1, -9876543210987, -2.71828, -98765.43, '2025-07-31 23:45:01')"
         else
-            echo "Can only add to \"fruit\""
+            echo "Can only add to \"fruit\" or \"types\""
+            exit 1
         fi
+psql -h$host $db -U$user << EOF
+    INSERT INTO $table VALUES $data;
+EOF
         ;;
     "update")
         if [ "fruit" = $table ]; then
-            update
+            dml="UPDATE $table SET price = price + 1 WHERE fruit_id = 107"
+        elif [ "types" = $table ]; then
+            dml="UPDATE $table SET float_val = float_val + 0.00001 WHERE id = -1"
         else
-            echo "Can only update to \"fruit\""
+            echo "Can only update to \"fruit\" or \"types\""
+            exit 1
         fi
+psql -h$host $db -U$user << EOF
+    $dml
+EOF
         ;;
     "delete")
         if [ "fruit" = $table ]; then
-            delete
+            dml="DELETE FROM $table WHERE fruit_id = 107"
+        elif [ "types" = $table ]; then
+            dml="DELETE FROM $table WHERE id = -1"
         else
-            echo "Can only delete from \"fruit\""
+            echo "Can only delete from \"fruit\" or \"types\""
         fi
+psql -h$host $db -U$user << EOF
+    $dml
+EOF
         ;;
     "count")
-        count $table
+psql -h$host $db -U$user << EOF
+    SELECT COUNT(*) FROM $table;
+EOF
         ;;
     "scan")
-        scan $table
+psql -h$host $db -U$user << EOF
+    SELECT * FROM $table;
+EOF
         ;;
     "truncate")
-        truncate $table
+psql -h$host $db -U$user << EOF
+    TRUNCATE TABLE $table;
+EOF
         ;;
     *)
         echo "Unknown op: $op"    
