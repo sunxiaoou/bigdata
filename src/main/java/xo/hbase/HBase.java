@@ -38,6 +38,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static org.apache.hadoop.hbase.mapreduce.RowCounter.createSubmittableJob;
@@ -117,13 +118,62 @@ public class HBase implements AutoCloseable {
         return conf;
     }
 
+    static private String extractPrincipal(String zServerJaas) throws IOException {
+        Pattern pattern = Pattern.compile("\\bprincipal\\s*=\\s*\"([^\"]+)\"");
+        for (String line : Files.readAllLines(Paths.get(zServerJaas))) {
+            Matcher matcher = pattern.matcher(line.trim());
+            if (matcher.find()) {
+                return matcher.group(1);
+            }
+        }
+        return null;
+    }
+
+    static private void updateKeytabPathInJaas(String pathStr) throws IOException {
+        String jaasFilePath = pathStr + "/zoo-client.jaas";
+        java.nio.file.Path path = Paths.get(jaasFilePath);
+        List<String> lines = Files.readAllLines(path);
+        List<String> newLines = new ArrayList<>();
+        Pattern pattern = Pattern.compile("(\\s*keyTab\\s*=\\s*\")(.+/)([^/\"\\s]+)(\".*)");
+        boolean updated = false;
+
+        for (String line : lines) {
+            Matcher matcher = pattern.matcher(line);
+            if (matcher.matches()) {
+                String oldPath = matcher.group(2);
+                oldPath = oldPath.endsWith("/") ? oldPath.substring(0, oldPath.length() - 1) : oldPath;
+                if (!oldPath.equals(pathStr)) {
+                    String newLine = matcher.group(1) + pathStr + "/" + matcher.group(3) + matcher.group(4);
+                    newLines.add(newLine);
+                    updated = true;
+                } else {
+                    newLines.add(line);
+                }
+            } else {
+                newLines.add(line);
+            }
+        }
+        if (updated) {
+            Files.write(path, newLines, StandardCharsets.UTF_8);
+            LOG.info("Updated keyTab path in {}", jaasFilePath);
+        }
+    }
+
     static Configuration loadConf(String pathStr, String zPrincipal, boolean fallback) throws IOException {
         Configuration conf = loadConf(pathStr);
         if (Files.isReadable(Paths.get(pathStr + "/krb5.conf"))) {
             System.setProperty("java.security.krb5.conf", pathStr + "/krb5.conf");
             LOG.info("java.security.krb5.conf: {}", System.getProperty("java.security.krb5.conf"));
         }
+        if (zPrincipal == null || zPrincipal.isEmpty()) {
+            zPrincipal = extractPrincipal(pathStr + "/zoo-server.jaas");
+            if (zPrincipal == null) {
+                throw new IOException("zookeeper principal is not set");
+            }
+            LOG.info("extracted zookeeper principal from zoo-server.jaas: {}", zPrincipal);
+        }
         System.setProperty("zookeeper.server.principal", zPrincipal);
+        updateKeytabPathInJaas(pathStr);
         System.setProperty("java.security.auth.login.config", pathStr + "/zoo-client.jaas");
         System.setProperty("javax.security.auth.useSubjectCredsOnly", "false");
         if (fallback) {

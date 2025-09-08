@@ -299,11 +299,9 @@ modify_hbase() {
     cat > "$HBASE_HOME/conf/client.jaas" << EOF
 Client {
   com.sun.security.auth.module.Krb5LoginModule required
-  storeKey=true
-  useKeyTab=true
-  useTicketCache=false
-  keyTab="$KERB5_HOME/keytabs/hadoop.keytab"
-  principal="hbase/$HOSTNAME@EXAMPLE.COM";
+  useKeyTab=false
+  useTicketCache=true
+  debug=true;
 };
 EOF
     cat > "$HBASE_HOME/conf/server.jaas" << EOF

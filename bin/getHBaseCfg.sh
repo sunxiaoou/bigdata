@@ -7,6 +7,7 @@ main() {
         exit 1
     fi
 
+    rm -rf /tmp/hbcfg
     mkdir -p /tmp/hbcfg
 
     AUTH_TYPE=$(hbase org.apache.hadoop.hbase.util.HBaseConfTool hadoop.security.authentication)
@@ -17,8 +18,13 @@ main() {
         fi
         cp -p /etc/krb5.conf /tmp/hbcfg
         cp -p $KERB5_HOME/keytabs/hadoop.keytab /tmp/hbcfg
-        cd $ZOOKEEPER_HOME/conf
-        sed -e "s|Server|Client|" zoo-server.jaas > /tmp/hbcfg/zoo-client.jaas
+        cd $ZOOKEEPER_HOME
+        cp -p bin/zkEnv.sh /tmp/hbcfg
+        cp -p conf/zoo.cfg conf/zoo-server.jaas /tmp/hbcfg
+        sed -e "s|Server|Client|" \
+            -e "s|zookeeper/|hbase/|" \
+            -e "s|\".*/hadoop.keytab|\"myPath/hadoop.keytab|" \
+            conf/zoo-server.jaas > /tmp/hbcfg/zoo-client.jaas
     fi
 
     cd $HADOOP_HOME/etc/hadoop

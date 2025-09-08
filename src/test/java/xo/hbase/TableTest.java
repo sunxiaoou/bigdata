@@ -29,19 +29,20 @@ public class TableTest {
 //    private static final String keytab = null;
 //    private static final boolean fallback = false;
 
-//    private static final String host = "hb_c4";
-//    private static final String confPath = "src/main/resources/" + host;
-//    private static final String zPrincipal = "zookeeper/centos4@EXAMPLE.COM";
-//    private static final String principal = "hbase/centos4@EXAMPLE.COM";
-//    private static final String keytab = confPath + "/hadoop.keytab";
-//    private static final boolean fallback = true;
-
-    private static final String host = "hb_mrs";
+    private static final String host = "hbk_c5";
     private static final String confPath = "src/main/resources/" + host;
-    private static final String zPrincipal = "zookeeper/hadoop.hadoop.com";
-    private static final String principal = "loader_hive1@HADOOP.COM";
-    private static final String keytab = confPath + "/loader_hive1.keytab";
+//    private static final String zPrincipal = "zookeeper/centos5@EXAMPLE.COM";
+    private static final String zPrincipal = null;
+    private static final String principal = "hbase/centos5@EXAMPLE.COM";
+    private static final String keytab = confPath + "/hadoop.keytab";
     private static final boolean fallback = true;
+
+//    private static final String host = "hb_mrs";
+//    private static final String confPath = "src/main/resources/" + host;
+//    private static final String zPrincipal = "zookeeper/hadoop.hadoop.com";
+//    private static final String principal = "loader_hive1@HADOOP.COM";
+//    private static final String keytab = confPath + "/loader_hive1.keytab";
+//    private static final boolean fallback = true;
 
     private static HBase db;
 
