@@ -30,11 +30,11 @@ public class TableTest {
 //    private static final boolean fallback = false;
 
     private static final String host = "hbk_c5";
-    private static final String confPath = "src/main/resources/" + host;
-//    private static final String zPrincipal = "zookeeper/centos5@EXAMPLE.COM";
-    private static final String zPrincipal = null;
+    private static String confPath = null;
+
+    private static final String zPrincipal = "zookeeper/centos5@EXAMPLE.COM";
     private static final String principal = "hbase/centos5@EXAMPLE.COM";
-    private static final String keytab = confPath + "/hadoop.keytab";
+    private static final String keytab = "hadoop.keytab";
     private static final boolean fallback = true;
 
 //    private static final String host = "hb_mrs";
@@ -51,7 +51,11 @@ public class TableTest {
 //        db = new HBase();
 //        db = new HBase("node1", 2181, "/hbase");
 //        db = new HBase("hadoop2", 2181, "/hbase");
-        db = new HBase(confPath, zPrincipal, principal, keytab, fallback);
+        if (confPath == null || confPath.isEmpty()) {
+            confPath = TableTest.class.getClassLoader().getResource(host).getPath();
+            LOG.info("Using configuration path: {}", confPath);
+        }
+        db = new HBase(confPath, zPrincipal, principal, confPath + "/" + keytab, fallback);
     }
 
     @AfterClass
