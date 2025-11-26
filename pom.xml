@@ -19,7 +19,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.source>1.8</maven.compiler.source>
     <maven.compiler.target>1.8</maven.compiler.target>
-    <!--protobuf-java.version>3.21.7</protobuf-java.version-->
+    <protobuf-java.version>3.25.5</protobuf-java.version>
     <slf4j.version>1.7.36</slf4j.version>
     <hadoop.version>3.3.6</hadoop.version>
     <hbase.version>2.5.11-hadoop3</hbase.version>
@@ -38,7 +38,11 @@
       <artifactId>commons-cli</artifactId>
       <version>1.5.0</version>
     </dependency>
-
+    <dependency>
+      <groupId>com.google.protobuf</groupId>
+      <artifactId>protobuf-java</artifactId>
+      <version>${protobuf-java.version}</version>
+    </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-log4j12</artifactId>
@@ -147,7 +151,7 @@
     <dependency>
       <groupId>com.sap.conn.jco</groupId>
       <artifactId>sapjco3</artifactId>
-      <version>3.1.10</version>
+      <version>3.1.13</version>
       <scope>system</scope>
       <systemPath>${project.basedir}/lib/sapjco3.jar</systemPath>
     </dependency>
