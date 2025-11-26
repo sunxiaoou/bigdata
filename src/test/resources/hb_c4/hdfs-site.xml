@@ -1,0 +1,22 @@
+<configuration>
+    <property>
+        <name>dfs.replication</name>
+        <value>1</value>
+    </property>
+    <property>
+        <name>dfs.namenode.http-address</name>
+        <value>centos4:9870</value>
+    </property>
+    <property>
+        <name>dfs.datanode.address</name>
+        <value>centos4:9866</value>
+    </property>
+    <property>
+        <name>dfs.datanode.http.address</name>
+        <value>centos4:9864</value>
+    </property>
+    <property>
+        <name>dfs.datanode.ipc.address</name>
+        <value>centos4:9867</value>
+    </property>
+</configuration>

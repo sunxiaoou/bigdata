@@ -1,0 +1,100 @@
+
+$ rpm -qa | grep krb
+krb5-server-1.15.1-55.el7_9.x86_64
+krb5-libs-1.15.1-55.el7_9.x86_64
+krb5-workstation-1.15.1-55.el7_9.x86_64
+
+$ klist -V
+  Kerberos 5 version 1.15.1
+
+$ sudo cat /var/kerberos/krb5kdc/kdc.conf		# server config
+[kdcdefaults]
+ kdc_ports = 88
+ kdc_tcp_ports = 88
+
+[realms]
+ EXAMPLE.COM = {
+  #master_key_type = aes256-cts
+  acl_file = /var/kerberos/krb5kdc/kadm5.acl
+  dict_file = /usr/share/dict/words
+  max_renewable_life = 7d 0h 0m 0s
+  admin_keytab = /var/kerberos/krb5kdc/kadm5.keytab
+  supported_enctypes = aes256-cts:normal aes128-cts:normal
+ }
+
+$ cat /etc/krb5.conf                            # client config
+# Configuration snippets may be placed in this directory as well
+includedir /etc/krb5.conf.d/
+
+[logging]
+ default = FILE:/opt/kerb5/log/krb5libs.log
+ kdc = FILE:/opt/kerb5/log/krb5kdc.log
+ admin_server = FILE:/opt/kerb5/log/kadmind.log
+
+[libdefaults]
+ dns_lookup_realm = false
+ ticket_lifetime = 24h
+ renew_lifetime = 7d
+ forwardable = true
+ rdns = false
+ pkinit_anchors = FILE:/etc/pki/tls/certs/ca-bundle.crt
+ default_realm = EXAMPLE.COM
+# default_ccache_name = KEYRING:persistent:%{uid}
+
+[realms]
+ EXAMPLE.COM = {
+  kdc = centos4
+  admin_server = centos4
+ }
+
+[domain_realm]
+# .example.com = EXAMPLE.COM
+# example.com = EXAMPLE.COM
+
+$ sudo mkdir -p $KERB5_HOME/log
+$ sudo kdb5_util create -s
+
+$ sudo systemctl restart krb5kdc kadmin
+$ sudo systemctl enable krb5kdc kadmin
+$ systemctl status krb5kdc kadmin
+
+$ sudo cat /var/kerberos/krb5kdc/kadm5.acl
+$ sudo kadmin.local -q "listprincs"
+Authenticating as principal root/admin@EXAMPLE.COM with password.
+K/M@EXAMPLE.COM
+kadmin/admin@EXAMPLE.COM
+kadmin/changepw@EXAMPLE.COM
+krbtgt/EXAMPLE.COM@EXAMPLE.COM
+
+$ sudo kadmin.local -q "?"
+$ sudo kadmin.local
+$ sudo kadmin.local -q "change_password kadmin/admin@EXAMPLE.COM"
+$ kinit kadmin/admin@EXAMPLE.COM
+$ klist
+$ kdestroy
+$ klist
+
+
+
+
+sudo kadmin.local -q "addprinc -randkey hdfs/$HOSTNAME@EXAMPLE.COM"
+sudo kadmin.local -q "addprinc -randkey yarn/$HOSTNAME@EXAMPLE.COM"
+sudo kadmin.local -q "addprinc -randkey mapred/$HOSTNAME@EXAMPLE.COM"
+sudo kadmin.local -q "addprinc -randkey HTTP/$HOSTNAME@EXAMPLE.COM"
+sudo kadmin.local -q "addprinc -randkey hbase/$HOSTNAME@EXAMPLE.COM"
+sudo kadmin.local -q "addprinc -randkey zookeeper/$HOSTNAME@EXAMPLE.COM"
+sudo kadmin.local -q "listprincs" | grep $HOSTNAME
+
+$ sudo mkdir -p $KERB5_HOME/keytabs
+$ sudo kadmin.local -q "ktadd -k $KERB5_HOME/keytabs/$HOSTNAME.keytab \
+	hdfs/$HOSTNAME@EXAMPLE.COM \
+	yarn/$HOSTNAME@EXAMPLE.COM \
+	mapred/$HOSTNAME@EXAMPLE.COM \
+	HTTP/$HOSTNAME@EXAMPLE.COM \
+	hbase/$HOSTNAME@EXAMPLE.COM \
+	zookeeper/$HOSTNAME@EXAMPLE.COM"
+$ sudo chown -R root:$USER $KERB5_HOME/keytabs
+$ sudo chmod 440 $KERB5_HOME/keytabs/$HOSTNAME.keytab
+
+$ klist -kt $KERB5_HOME/keytabs/$HOSTNAME.keytab
+

@@ -1,0 +1,8 @@
+Server {
+  com.sun.security.auth.module.Krb5LoginModule required
+  useKeyTab=true
+  keyTab="/opt/krb5/keytabs/hadoop.keytab"
+  storeKey=true
+  useTicketCache=false
+  principal="zookeeper/centos5@EXAMPLE.COM";
+};

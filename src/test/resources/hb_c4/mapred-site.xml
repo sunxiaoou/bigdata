@@ -1,0 +1,24 @@
+<configuration>
+    <property>
+        <name>mapreduce.framework.name</name>
+        <value>yarn</value>
+    </property>
+    <property>
+        <name>mapreduce.jobhistory.address</name>
+        <value>centos4:10020</value>
+    </property>
+    <property>
+        <name>mapreduce.jobhistory.webapp.address</name>
+        <value>centos4:19888</value>
+    </property>
+    <property>
+        <name>mapreduce.application.classpath</name>
+        <value>
+            /usr/local/hadoop-3.3.6/etc/hadoop,
+            /usr/local/hadoop-3.3.6/share/hadoop/mapreduce/*,
+            /usr/local/hadoop-3.3.6/share/hadoop/mapreduce/lib/*,
+            /usr/local/hadoop-3.3.6/share/hadoop/common/*,
+            /usr/local/hadoop-3.3.6/share/hadoop/common/lib/*
+        </value>
+    </property>
+</configuration>
