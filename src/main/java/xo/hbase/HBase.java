@@ -215,6 +215,28 @@ public class HBase implements AutoCloseable {
         admin = conn.getAdmin();
     }
 
+    private void checkNet() {
+        String quorum = conf.get("hbase.zookeeper.quorum");
+        String clientPort = conf.get("hbase.zookeeper.property.clientPort");
+        LOG.info("quorum({}), clientPort({})", quorum, clientPort);
+        try {
+            java.net.InetAddress[] addrs = java.net.InetAddress.getAllByName(quorum);
+            for (java.net.InetAddress a : addrs) {
+                LOG.info("Resolved " + quorum + " -> " + a.getHostAddress());
+            }
+        } catch (Exception e) {
+            LOG.warn("Failed to resolve quorum host " + quorum, e);
+        }
+        LOG.info("java.version=" + System.getProperty("java.version") +
+                ", java.vendor=" + System.getProperty("java.vendor") +
+                ", os.arch=" + System.getProperty("os.arch"));
+        LOG.info("java.net.preferIPv4Stack=" +
+                System.getProperty("java.net.preferIPv4Stack"));
+        LOG.info("java.net.preferIPv6Addresses=" +
+                System.getProperty("java.net.preferIPv6Addresses"));
+
+    }
+
     public HBase(String pathStr, String zPrincipal, String principal, String keytab, boolean fallback)
             throws IOException {
         if (principal != null && !principal.isEmpty()) {
@@ -226,6 +248,7 @@ public class HBase implements AutoCloseable {
             System.setProperty("zookeeper.sasl.client", "false");
         }
         LOG.info("Current user: {}", UserGroupInformation.getCurrentUser());
+        checkNet();
         conn = ConnectionFactory.createConnection(conf);
         admin = conn.getAdmin();
     }

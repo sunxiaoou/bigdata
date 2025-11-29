@@ -1,8 +1,0 @@
-Client {
-    com.sun.security.auth.module.Krb5LoginModule required
-    useKeyTab=true
-    keyTab="hb_c4/hadoop.keytab"
-    principal="zookeeper/centos4@EXAMPLE.COM"
-    storeKey=true
-    useTicketCache=false;
-};
