@@ -199,6 +199,10 @@ process_site_file() {
         <value>kerberos</value>\\
     </property>\\
     <property>\\
+        <name>hbase.rpc.protection</name>\\
+        <value>authentication</value>\\
+    </property>\\
+    <property>\\
         <name>hbase.master.kerberos.principal</name>\\
         <value>hbase/$HOSTNAME@EXAMPLE.COM</value>\\
     </property>\\
@@ -225,6 +229,10 @@ process_site_file() {
     <property>\\
         <name>hbase.zookeeper.property.kerberos.removeRealmFromPrincipal</name>\\
         <value>true</value>\\
+    </property>\\
+    <property>\\
+        <name>hbase.coprocessor.region.classes</name>\\
+        <value>org.apache.hadoop.hbase.security.token.TokenProvider</value>\\
     </property>"\
     "${file}.orig" > "${file}"
         ;;

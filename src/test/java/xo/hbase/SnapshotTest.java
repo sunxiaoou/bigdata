@@ -136,10 +136,10 @@ public class SnapshotTest {
         String[] args = {
                 "--action", "export",
                 "--db", "hb_u",
-                "--db2", "hb_c4",
-                "--zPrincipal", "zookeeper/centos4@EXAMPLE.COM",
-                "--principal", "hbase/centos4@EXAMPLE.COM",
-                "--keytab", "hb_c4/hadoop.keytab",
+                "--db2", "hbk_c5",
+                "--zPrincipal", "zookeeper/centos5@EXAMPLE.COM",
+                "--principal", "hbase/centos5@EXAMPLE.COM",
+                "--keytab", "hbk_c5/hadoop.keytab",
                 "--table", "manga:fruit"};
         Snapshot.main(args);
     }

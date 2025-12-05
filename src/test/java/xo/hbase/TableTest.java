@@ -21,28 +21,19 @@ import java.util.regex.Pattern;
 public class TableTest {
     private static final Logger LOG = LoggerFactory.getLogger(TableTest.class);
 
+    private static String confPath = null;
+
 //    private static final String host = "hb_u";
-//    private static final String host = "hb_cdh";
-//    private static final String confPath = "src/main/resources/" + host;
 //    private static final String zPrincipal = null;
 //    private static final String principal = null;
 //    private static final String keytab = null;
 //    private static final boolean fallback = false;
 
     private static final String host = "hbk_c5";
-    private static String confPath = null;
-
     private static final String zPrincipal = "zookeeper/centos5@EXAMPLE.COM";
     private static final String principal = "hbase/centos5@EXAMPLE.COM";
     private static final String keytab = "hadoop.keytab";
     private static final boolean fallback = true;
-
-//    private static final String host = "hb_mrs";
-//    private static final String confPath = "src/main/resources/" + host;
-//    private static final String zPrincipal = "zookeeper/hadoop.hadoop.com";
-//    private static final String principal = "loader_hive1@HADOOP.COM";
-//    private static final String keytab = confPath + "/loader_hive1.keytab";
-//    private static final boolean fallback = true;
 
     private static HBase db;
 
@@ -172,13 +163,13 @@ public class TableTest {
 
     @Test
     public void countTableRows() throws IOException {
-        String name = "peTable";
+        String name = "manga:fruit";
         LOG.info("row({})", db.countTableRows(name));
     }
 
     @Test
     public void countRows() throws Exception {
-        String name = "peTable";
+        String name = "manga:fruit";
         LOG.info("countRows({})", db.countRows(name));
     }
 
