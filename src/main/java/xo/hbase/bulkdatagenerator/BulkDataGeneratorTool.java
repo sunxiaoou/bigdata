@@ -39,7 +39,6 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import xo.hbase.HBase;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -92,16 +91,11 @@ public class BulkDataGeneratorTool {
   public static void main(String[] args) throws Exception {
     String pathStr = args[0];
     Configuration conf = HBaseConfiguration.create();
-//    conf.addResource(pathStr + "/core-site.xml");
-//    conf.addResource(pathStr + "/hdfs-site.xml");
-//    conf.addResource(pathStr + "/mapred-site.xml");
-//    conf.addResource(pathStr + "/yarn-site.xml");
-//    conf.addResource(pathStr + "/hbase-site.xml");
     conf.addResource(new Path(pathStr, "core-site.xml"));
     conf.addResource(new Path(pathStr, "hdfs-site.xml"));
+    conf.addResource(new Path(pathStr, "mapred-site.xml"));
+    conf.addResource(new Path(pathStr, "yarn-site.xml"));
     conf.addResource(new Path(pathStr, "hbase-site.xml"));
-//    HBase.changeUser(System.getenv("USER"));
-    HBase.changeUser("hdfs");
     BulkDataGeneratorTool bulkDataGeneratorTool = new BulkDataGeneratorTool();
     String[] newArgs = new String[args.length - 1];
     System.arraycopy(args, 1, newArgs, 0, args.length - 1);
@@ -111,6 +105,7 @@ public class BulkDataGeneratorTool {
   public boolean run(Configuration conf, String[] args) throws IOException {
     // Read CLI arguments
     CommandLine line = null;
+    Configuration conf2 = HBaseConfiguration.create(conf);
     try {
       Parser parser = new GnuParser();
       line = parser.parse(getOptions(), args);
@@ -133,28 +128,21 @@ public class BulkDataGeneratorTool {
     Preconditions.checkArgument(rowsPerMapper > 0, "Rows per mapper must be greater than 0");
 
     Path outputDirectory = generateOutputDirectory();
-    logger.info("HFiles will be generated at " + outputDirectory.toString());
+      logger.info("HFiles will be generated at {}", outputDirectory.toString());
 
     try (Connection connection = ConnectionFactory.createConnection(conf)) {
       final Admin admin = connection.getAdmin();
       final TableName tableName = TableName.valueOf(table);
-      if (admin.tableExists(tableName)) {
-        if (deleteTableIfExist) {
-          logger.info(
-            "Deleting the table since it already exist and delete-if-exist flag is set to true");
+      if (deleteTableIfExist && admin.tableExists(tableName)) {
+          logger.info("Deleting the table {}", table);
           Utility.deleteTable(admin, table);
-        } else {
-          logger.info("Table already exists, cannot generate HFiles for existing table.");
-          return false;
-        }
+      }
+      if (!admin.tableExists(tableName)) {
+          Utility.createTable(admin, table, splitCount, tableOptions);
+          logger.info("{} created successfully", table);
       }
 
-      // Creating the pre-split table
-      Utility.createTable(admin, table, splitCount, tableOptions);
-      logger.info(table + " created successfully");
-
       Job job = createSubmittableJob(conf);
-
       Table hbaseTable = connection.getTable(tableName);
 
       // Auto configure partitioner and reducer
@@ -166,7 +154,7 @@ public class BulkDataGeneratorTool {
 
       if (result) {
         logger.info("HFiles generated successfully. Starting bulk load to " + table);
-        BulkLoadHFilesTool bulkLoadHFilesTool = new BulkLoadHFilesTool(conf);
+        BulkLoadHFilesTool bulkLoadHFilesTool = new BulkLoadHFilesTool(conf2);
         Map<BulkLoadHFiles.LoadQueueItem, ByteBuffer> bulkLoadedHFiles =
           bulkLoadHFilesTool.bulkLoad(tableName, outputDirectory);
         boolean status = !bulkLoadedHFiles.isEmpty();
@@ -180,7 +168,7 @@ public class BulkDataGeneratorTool {
       logger.error("Failed to generate data", e);
       return false;
     } finally {
-      FileSystem.get(conf).deleteOnExit(outputDirectory);
+      FileSystem.get(conf2).deleteOnExit(outputDirectory);
     }
   }
 
