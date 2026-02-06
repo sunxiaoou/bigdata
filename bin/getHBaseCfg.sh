@@ -18,6 +18,7 @@ main() {
         fi
         cp -p /etc/krb5.conf /tmp/hbcfg
         cp -p $KERB5_HOME/keytabs/hadoop.keytab /tmp/hbcfg
+        chmod 644 /tmp/hbcfg/hadoop.keytab
         cd $ZOOKEEPER_HOME
         cp -p bin/zkEnv.sh /tmp/hbcfg
         cp -p conf/zoo.cfg conf/zoo-server.jaas /tmp/hbcfg
@@ -32,8 +33,8 @@ main() {
     if [[ "$AUTH_TYPE" == "kerberos" ]]; then
         cp -p ssl-client.xml ssl-server.xml /tmp/hbcfg
         sudo cp -p container-executor.cfg /tmp/hbcfg
-        user=$USER
-        sudo chown $user /tmp/hbcfg/container-executor.cfg
+        sudo chown $USER /tmp/hbcfg/container-executor.cfg
+        chmod 644 /tmp/hbcfg/container-executor.cfg
     fi
 
     cd $HBASE_HOME/conf

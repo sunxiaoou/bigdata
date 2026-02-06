@@ -75,26 +75,36 @@ $ kdestroy
 $ klist
 
 
+host=hadoop4
+domain=XO.COM
+hostname=$host@$domain
 
+sudo kadmin.local -q "delprinc -force hdfs/hadoop4@EXAMPLE.COM"
+sudo kadmin.local -q "delprinc -force yarn/hadoop4@EXAMPLE.COM"
+sudo kadmin.local -q "delprinc -force mapred/hadoop4@EXAMPLE.COM"
+sudo kadmin.local -q "delprinc -force HTTP/hadoop4@EXAMPLE.COM"
+sudo kadmin.local -q "delprinc -force hbase/hadoop4@EXAMPLE.COM"
+sudo kadmin.local -q "delprinc -force zookeeper/hadoop4@EXAMPLE.COM"
+sudo kadmin.local -q "listprincs" | grep $host
 
-sudo kadmin.local -q "addprinc -randkey hdfs/$HOSTNAME@EXAMPLE.COM"
-sudo kadmin.local -q "addprinc -randkey yarn/$HOSTNAME@EXAMPLE.COM"
-sudo kadmin.local -q "addprinc -randkey mapred/$HOSTNAME@EXAMPLE.COM"
-sudo kadmin.local -q "addprinc -randkey HTTP/$HOSTNAME@EXAMPLE.COM"
-sudo kadmin.local -q "addprinc -randkey hbase/$HOSTNAME@EXAMPLE.COM"
-sudo kadmin.local -q "addprinc -randkey zookeeper/$HOSTNAME@EXAMPLE.COM"
-sudo kadmin.local -q "listprincs" | grep $HOSTNAME
+sudo kadmin.local -q "addprinc -randkey hdfs/$hostname"
+sudo kadmin.local -q "addprinc -randkey yarn/$hostname"
+sudo kadmin.local -q "addprinc -randkey mapred/$hostname"
+sudo kadmin.local -q "addprinc -randkey HTTP/$hostname"
+sudo kadmin.local -q "addprinc -randkey hbase/$hostname"
+sudo kadmin.local -q "addprinc -randkey zookeeper/$hostname"
+sudo kadmin.local -q "listprincs" | grep $host
 
-$ sudo mkdir -p $KERB5_HOME/keytabs
-$ sudo kadmin.local -q "ktadd -k $KERB5_HOME/keytabs/$HOSTNAME.keytab \
-	hdfs/$HOSTNAME@EXAMPLE.COM \
-	yarn/$HOSTNAME@EXAMPLE.COM \
-	mapred/$HOSTNAME@EXAMPLE.COM \
-	HTTP/$HOSTNAME@EXAMPLE.COM \
-	hbase/$HOSTNAME@EXAMPLE.COM \
-	zookeeper/$HOSTNAME@EXAMPLE.COM"
+$ sudo mkdir -p /opt/krb5/keytabs
+$ sudo kadmin.local -q "ktadd -k /opt/krb5/keytabs/$host.keytab \
+	hdfs/$hostname \
+	yarn/$hostname \
+	mapred/$hostname \
+	HTTP/$hostname \
+	hbase/$hostname \
+	zookeeper/$hostname"
 $ sudo chown -R root:$USER $KERB5_HOME/keytabs
-$ sudo chmod 440 $KERB5_HOME/keytabs/$HOSTNAME.keytab
+$ sudo chmod 440 $KERB5_HOME/keytabs/$host.keytab
 
-$ klist -kt $KERB5_HOME/keytabs/$HOSTNAME.keytab
+$ klist -kt $KERB5_HOME/keytabs/$host.keytab
 

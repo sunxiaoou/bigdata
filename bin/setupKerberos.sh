@@ -16,7 +16,7 @@ Server {
   keyTab="$KERB5_HOME/keytabs/hadoop.keytab"
   storeKey=true
   useTicketCache=false
-  principal="zookeeper/$HOSTNAME@EXAMPLE.COM";
+  principal="zookeeper/$HOSTNAME@$DOMAIN";
 };
 EOF
     local zooCfg="$ZOOKEEPER_HOME/conf/zoo.cfg"
@@ -58,7 +58,7 @@ process_site_file() {
     </property>\\
     <property>\\
         <name>hadoop.http.authentication.kerberos.principal</name>\\
-        <value>HTTP/$HOSTNAME@EXAMPLE.COM</value>\\
+        <value>HTTP/$HOSTNAME@$DOMAIN</value>\\
     </property>\\
     <property>\\
         <name>hadoop.http.authentication.kerberos.keytab</name>\\
@@ -67,10 +67,10 @@ process_site_file() {
     <property>\\
         <name>hadoop.security.auth_to_local</name>\\
         <value>\\
-            RULE:[2:\$1/\$2@\$0](hdfs\\\/.*@EXAMPLE\\\.COM)s/.*/$USER/\\
-            RULE:[2:\$1/\$2@\$0](yarn\\\/.*@EXAMPLE\\\.COM)s/.*/$USER/\\
-            RULE:[2:\$1/\$2@\$0](mapred\\\/.*@EXAMPLE\\\.COM)s/.*/$USER/\\
-            RULE:[2:\$1/\$2@\$0](hbase\\\/.*@EXAMPLE\\\.COM)s/.*/$USER/\\
+            RULE:[2:\$1/\$2@\$0](hdfs\\\/.*@$DM_PREFIX\\\.COM)s/.*/$USER/\\
+            RULE:[2:\$1/\$2@\$0](yarn\\\/.*@$DM_PREFIX\\\.COM)s/.*/$USER/\\
+            RULE:[2:\$1/\$2@\$0](mapred\\\/.*@$DM_PREFIX\\\.COM)s/.*/$USER/\\
+            RULE:[2:\$1/\$2@\$0](hbase\\\/.*@$DM_PREFIX\\\.COM)s/.*/$USER/\\
             DEFAULT\\
         </value>\\
     </property>" \
@@ -84,7 +84,7 @@ process_site_file() {
     </property>\\
     <property>\\
         <name>dfs.namenode.kerberos.principal</name>\\
-        <value>hdfs/$HOSTNAME@EXAMPLE.COM</value>\\
+        <value>hdfs/$HOSTNAME@$DOMAIN</value>\\
     </property>\\
     <property>\\
         <name>dfs.namenode.keytab.file</name>\\
@@ -92,7 +92,7 @@ process_site_file() {
     </property>\\
     <property>\\
         <name>dfs.secondary.namenode.kerberos.principal</name>\\
-        <value>hdfs/$HOSTNAME@EXAMPLE.COM</value>\\
+        <value>hdfs/$HOSTNAME@$DOMAIN</value>\\
     </property>\\
     <property>\\
         <name>dfs.secondary.namenode.keytab.file</name>\\
@@ -100,7 +100,7 @@ process_site_file() {
     </property>\\
     <property>\\
         <name>dfs.datanode.kerberos.principal</name>\\
-        <value>hdfs/$HOSTNAME@EXAMPLE.COM</value>\\
+        <value>hdfs/$HOSTNAME@$DOMAIN</value>\\
     </property>\\
     <property>\\
         <name>dfs.datanode.keytab.file</name>\\
@@ -116,7 +116,7 @@ process_site_file() {
     </property>\\
     <property>\\
         <name>dfs.web.authentication.kerberos.principal</name>\\
-        <value>HTTP/$HOSTNAME@EXAMPLE.COM</value>\\
+        <value>HTTP/$HOSTNAME@$DOMAIN</value>\\
     </property>\\
     <property>\\
         <name>dfs.web.authentication.kerberos.keytab</name>\\
@@ -124,11 +124,11 @@ process_site_file() {
     </property>\\
     <property>\\
         <name>dfs.namenode.kerberos.internal.spnego.principal</name>\\
-        <value>HTTP/$HOSTNAME@EXAMPLE.COM</value>\\
+        <value>HTTP/$HOSTNAME@$DOMAIN</value>\\
     </property>\\
     <property>\\
         <name>dfs.secondary.namenode.kerberos.internal.spnego.principal</name>\\
-        <value>HTTP/$HOSTNAME@EXAMPLE.COM</value>\\
+        <value>HTTP/$HOSTNAME@$DOMAIN</value>\\
     </property>" \
     "${file}.orig" > "${file}"
         ;;
@@ -136,7 +136,7 @@ process_site_file() {
         sed "/<\/configuration>/i \\
     <property>\\
         <name>mapreduce.jobhistory.principal</name>\\
-        <value>mapred/$HOSTNAME@EXAMPLE.COM</value>\\
+        <value>mapred/$HOSTNAME@$DOMAIN</value>\\
     </property>\\
     <property>\\
         <name>mapreduce.jobhistory.keytab</name>\\
@@ -148,7 +148,7 @@ process_site_file() {
     </property>\\
     <property>\\
         <name>mapreduce.jobhistory.webapp.https.principal</name>\\
-        <value>HTTP/$HOSTNAME@EXAMPLE.COM</value>\\
+        <value>HTTP/$HOSTNAME@$DOMAIN</value>\\
     </property>\\
     <property>\\
         <name>mapreduce.jobhistory.webapp.https.keytab</name>\\
@@ -160,7 +160,7 @@ process_site_file() {
         sed "/<\/configuration>/i \\
     <property>\\
         <name>yarn.resourcemanager.principal</name>\\
-        <value>yarn/$HOSTNAME@EXAMPLE.COM</value>\\
+        <value>yarn/$HOSTNAME@$DOMAIN</value>\\
     </property>\\
     <property>\\
         <name>yarn.resourcemanager.keytab</name>\\
@@ -168,7 +168,7 @@ process_site_file() {
     </property>\\
     <property>\\
         <name>yarn.nodemanager.principal</name>\\
-        <value>yarn/$HOSTNAME@EXAMPLE.COM</value>\\
+        <value>yarn/$HOSTNAME@$DOMAIN</value>\\
     </property>\\
     <property>\\
         <name>yarn.nodemanager.keytab</name>\\
@@ -176,7 +176,7 @@ process_site_file() {
     </property>\\
     <property>\\
         <name>yarn.nodemanager.webapp.https.principal</name>\\
-        <value>HTTP/$HOSTNAME@EXAMPLE.COM</value>\\
+        <value>HTTP/$HOSTNAME@$DOMAIN</value>\\
     </property>\\
     <property>\\
         <name>yarn.nodemanager.webapp.https.keytab</name>\\
@@ -204,7 +204,7 @@ process_site_file() {
     </property>\\
     <property>\\
         <name>hbase.master.kerberos.principal</name>\\
-        <value>hbase/$HOSTNAME@EXAMPLE.COM</value>\\
+        <value>hbase/$HOSTNAME@$DOMAIN</value>\\
     </property>\\
     <property>\\
         <name>hbase.master.keytab.file</name>\\
@@ -212,7 +212,7 @@ process_site_file() {
     </property>\\
     <property>\\
         <name>hbase.regionserver.kerberos.principal</name>\\
-        <value>hbase/$HOSTNAME@EXAMPLE.COM</value>\\
+        <value>hbase/$HOSTNAME@$DOMAIN</value>\\
     </property>\\
     <property>\\
         <name>hbase.regionserver.keytab.file</name>\\
@@ -286,13 +286,13 @@ modify_hadoop() {
     sed -e "s|^yarn.nodemanager.linux-container-executor.group=|yarn.nodemanager.linux-container-executor.group=$GROUP |" \
         "${file}.orig" > "${file}"
 
-    sudo chown root:$USER $HADOOP_HOME/
-    sudo chown root:$USER $HADOOP_HOME/bin
-    sudo chown root:$USER $HADOOP_HOME/bin/container-executor
+    sudo chown root:$GROUP $HADOOP_HOME/
+    sudo chown root:$GROUP $HADOOP_HOME/bin
+    sudo chown root:$GROUP $HADOOP_HOME/bin/container-executor
     sudo chmod 6050 $HADOOP_HOME/bin/container-executor
-    sudo chown root:$USER $HADOOP_HOME/etc/
-    sudo chown root:$USER $HADOOP_HOME/etc/hadoop/
-    sudo chown root:$USER $HADOOP_HOME/etc/hadoop/container-executor.cfg
+    sudo chown root:$GROUP $HADOOP_HOME/etc/
+    sudo chown root:$GROUP $HADOOP_HOME/etc/hadoop/
+    sudo chown root:$GROUP $HADOOP_HOME/etc/hadoop/container-executor.cfg
     sudo chmod 400 $HADOOP_HOME/etc/hadoop/container-executor.cfg
 }
 
@@ -318,7 +318,7 @@ Server {
   useKeyTab=true
   useTicketCache=false
   keyTab="$KERB5_HOME/keytabs/hadoop.keytab"
-  principal="hbase/$HOSTNAME@EXAMPLE.COM";
+  principal="hbase/$HOSTNAME@$DOMAIN";
 };
 EOF
 
@@ -347,6 +347,8 @@ main() {
     KEYSTORE="$KERB5_HOME/ca/keystore"
     PASSWORD="maXiaoc1"
     GROUP=$(id -gn)
+    DOMAIN="XO.COM"
+    DM_PREFIX=${DOMAIN%%.*}
 
     modify_zookeeper
     modify_hadoop

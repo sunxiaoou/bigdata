@@ -1,26 +1,28 @@
 #!/bin/bash
 
 strt() {
+    pidDir=/run/hadoop
+    if [ ! -d $pidDir ]; then
+        sudo mkdir -p $pidDir
+        sudo chown $USER:$(id -gn) $pidDir
+    elif [ -f $pidDir/hadoop-sunxo-namenode.pid ]; then
+        echo "Hadoop seems to be running. Please stop it first."
+        exit 1
+    fi
+
     cd $ZOOKEEPER_HOME
     bin/zkServer.sh start
 
     cd $KAFKA_HOME
     bin/kafka-server-start.sh -daemon config/server.properties
 
-    pidDir=/run/hadoop
-    if [ ! -d $pidDir ]
-    then
-        sudo mkdir -p $pidDir
-        sudo chown $USER:$USER $pidDir
-    fi
-
     cd $HADOOP_HOME
     rm -f logs/*
     sbin/start-dfs.sh
 
-    if [ $AUTH_TYPE == "kerberos" ]; then
+    if [ $AUTH == "kerberos" ]; then
         echo "Kerberos enabled. Doing kinit..."
-        kinit -kt $KERB5_HOME/keytabs/hadoop.keytab yarn/$HOSTNAME@EXAMPLE.COM
+        kinit -kt $KERB5_HOME/keytabs/hadoop.keytab yarn/$HOSTNAME@$DOMAIN
     fi
     sbin/start-yarn.sh
     if [ "2" == "$HADOOP_MAJOR" ]; then
@@ -39,9 +41,9 @@ strt() {
 
 stop() {
     cd $HBASE_HOME
-    if [ $AUTH_TYPE == "kerberos" ]; then
+    if [ $AUTH == "kerberos" ]; then
         echo "Kerberos enabled. Doing kinit..."
-        kinit -kt $KERB5_HOME/keytabs/hadoop.keytab yarn/$HOSTNAME@EXAMPLE.COM
+        kinit -kt $KERB5_HOME/keytabs/hadoop.keytab yarn/$HOSTNAME@$DOMAIN
     fi
     bin/stop-hbase.sh
 
@@ -73,6 +75,8 @@ then
 fi
 
 HADOOP_MAJOR=$(echo "$HADOOP_HOME" | sed -n 's/.*\-\([0-9]\+\).*/\1/p')
-AUTH_TYPE=$(hbase org.apache.hadoop.hbase.util.HBaseConfTool hadoop.security.authentication)
+AUTH=$(hbase org.apache.hadoop.hbase.util.HBaseConfTool hadoop.security.authentication)
+principal=$(hbase org.apache.hadoop.hbase.util.HBaseConfTool hbase.master.kerberos.principal)
+DOMAIN=${principal##*@}
 echo $1
 $1
