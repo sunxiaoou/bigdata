@@ -63,7 +63,7 @@ public class Fruit {
             // use the specified host
             db = new HBase(host, 2181, "/hbase");
         }
-        String regex = "^manga:fruit.*";
+        String regex = ".*:fruit.*";
         String name = "manga:fruit";
         if (table == null) {
             System.out.println(db.listNameSpaces());

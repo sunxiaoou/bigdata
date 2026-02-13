@@ -1,44 +1,44 @@
 #! /bin/sh
 
 put() {
-mysql -h$host -u$user -p$passwd $db << EOF 
+mysql $param -h$host -u$user -p$passwd $db << EOF 
     INSERT INTO fruit VALUES (101,'🍉',800),(102,'🍓',150),(103,'🍎',120),(104,'🍋',200),(105,'🍊',115),(106,'🍌',110)
 EOF
 }
 
 add() {
-mysql -h$host -u$user -p$passwd $db << EOF 
+mysql $param -h$host -u$user -p$passwd $db << EOF 
     INSERT INTO fruit VALUES (107,'🍐',115);
 EOF
 }
 
 update() {
-mysql -h$host -u$user -p$passwd $db << EOF
+mysql $param -h$host -u$user -p$passwd $db << EOF
     UPDATE fruit SET price = price + 1 WHERE fruit_id = 107
 EOF
 }
 
 delete() {
-mysql -h$host -u$user -p$passwd $db << EOF 
+mysql $param -h$host -u$user -p$passwd $db << EOF 
     DELETE FROM fruit WHERE fruit_id = 107
 EOF
 }
 
 count() {
-mysql -h$host -u$user -p$passwd $db << EOF 
+mysql $param -h$host -u$user -p$passwd $db << EOF 
     SELECT COUNT(*) FROM $1;
 EOF
 }
 
 scan() {
-mysql -h$host -u$user -p$passwd $db << EOF 
+mysql $param -h$host -u$user -p$passwd $db << EOF 
     SELECT * FROM $1
 EOF
 }
 
 truncate()
 {
-mysql -h$host -u$user -p$passwd $db << EOF 
+mysql $param -h$host -u$user -p$passwd $db << EOF 
     TRUNCATE TABLE $1;
 EOF
 }
@@ -107,6 +107,7 @@ run() {
 user=manga
 passwd=manga
 db=manga
+param=--default-character-set=utf8mb4
 
 if [ "$#" -gt 2 ]; then
     run "$1" "$2" "$3"
