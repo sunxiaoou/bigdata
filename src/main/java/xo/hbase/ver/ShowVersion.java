@@ -51,7 +51,9 @@ public class ShowVersion {
                 System.setProperty("java.security.krb5.conf", pathStr + "/krb5.conf");
                 LOG.info("java.security.krb5.conf: {}", System.getProperty("java.security.krb5.conf"));
             }
-//            System.setProperty("zookeeper.server.principal", zPrincipal);
+            if (zPrincipal != null && !zPrincipal.isEmpty()) {
+                System.setProperty("zookeeper.server.principal", zPrincipal);
+            }
             System.setProperty("java.security.auth.login.config", pathStr + "/zoo-client.jaas");
             System.setProperty("javax.security.auth.useSubjectCredsOnly", "false");
             if (fallback) {
@@ -141,7 +143,6 @@ public class ShowVersion {
         options.addOption(Option.builder("z")
                 .longOpt("zPrincipal")
                 .hasArg()
-                .required()
                 .desc("Zookeeper Principal name").build());
         options.addOption(Option.builder("p")
                 .longOpt("principal")
