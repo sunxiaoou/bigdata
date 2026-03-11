@@ -1,7 +1,7 @@
 Client {
   com.sun.security.auth.module.Krb5LoginModule required
   useKeyTab=true
-  keyTab="myPath/hadoop.keytab"
+  keyTab="doc/HBase/hbk_h4/hadoop.keytab"
   storeKey=true
   useTicketCache=false
   principal="hbase/hadoop4@XO.COM";
