@@ -46,10 +46,16 @@ EOF
 run() {
     op=$1
     host=$2
-    table=$3
-
     if [ -z "$host" ]; then
         host=`hostname`
+    fi
+
+    IFS='.' read -r part1 part2 <<< $3
+    if [ -z "$part2" ]; then
+        table=$part1
+    else
+        db=$part1
+        table=$part2
     fi
 
     if [ -z "$table" ]; then
