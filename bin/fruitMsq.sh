@@ -14,13 +14,19 @@ EOF
 
 update() {
 mysql $param -h$host -u$user -p$passwd $db << EOF
-    UPDATE fruit SET price = price + 1 WHERE fruit_id = 107
+    UPDATE fruit SET price = price + 1 WHERE HEX(name) = 'F09F8D90'
+EOF
+}
+
+updPK() {
+mysql $param -h$host -u$user -p$passwd $db << EOF
+    UPDATE fruit SET fruit_id = fruit_id + 10 WHERE HEX(name) = 'F09F8D90'
 EOF
 }
 
 delete() {
 mysql $param -h$host -u$user -p$passwd $db << EOF 
-    DELETE FROM fruit WHERE fruit_id = 107
+    DELETE FROM fruit WHERE HEX(name) = 'F09F8D90'
 EOF
 }
 
@@ -84,6 +90,13 @@ run() {
             echo "Can only update to \"fruit\""
         fi
         ;;
+    "updPK")
+        if [ "fruit" = $table ]; then
+            updPK
+        else
+            echo "Can only updPK to \"fruit\""
+        fi
+        ;;
     "delete")
         if [ "fruit" = $table ]; then
             delete
@@ -122,5 +135,5 @@ elif [ "$#" -gt 1 ]; then
 elif [ "$#" -gt 0 ]; then
     run "$1"
 else
-    echo "Usage: $(basename $0) put|add|update|delete|count|scan|truncate host table"
+    echo "Usage: $(basename $0) put|add|update|updPK|delete|count|scan|truncate host table"
 fi
