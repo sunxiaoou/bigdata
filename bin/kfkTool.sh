@@ -37,6 +37,7 @@ case $ACTION in
       exit 1
     fi
     $KAFKA_BIN/kafka-topics.sh --describe --topic $TOPIC_NAME --bootstrap-server $KAFKA_HOSTNAME:$KAFKA_PORT
+    $KAFKA_BIN/kafka-configs.sh --describe --entity-type topics --entity-name $TOPIC_NAME --bootstrap-server $KAFKA_HOSTNAME:$KAFKA_PORT
     ;;
 
   createTopic)
